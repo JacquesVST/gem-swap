@@ -8,6 +8,10 @@ let playField = { x: canvasSize.x - 2 * margin, y: canvasSize.y - 2 * margin };
 let gridInputX = document.getElementById('gridX');
 let gridInputY = document.getElementById('gridY');
 let resetButton = document.getElementById('resetBtn');
+let scoreCounter = document.getElementById('scoreCounter');
+
+let score;
+let initialShuffle = true;
 
 let possibleColors = [
   [231, 76, 60], //red
@@ -16,14 +20,14 @@ let possibleColors = [
   [244, 208, 63], //yellow
 ]
 
-
-
 class Item {
-  constructor(shape, color, position, matrixPosition) {
+  constructor(shape, color, position, matrixPosition, empty = false) {
+    this.position = position;
     this.shape = shape;
     this.color = color;
-    this.position = position;
     this.matrixPosition = matrixPosition;
+    this.empty = empty
+    this.matched = false;
   }
 }
 
@@ -36,11 +40,10 @@ class Position {
 }
 
 function setup() {
-  gridInputX.value = 8
-  gridInputY.value = 5
+  gridInputX.value = 20
+  gridInputY.value = 15
 
   resetButton.onclick = () => {
-    console.log(grid)
     setupPlayfield();
   }
 
@@ -48,6 +51,10 @@ function setup() {
 }
 
 function draw() {
+  removeMatches(findMatches());
+
+  applyGravity();
+
   background(0);
   drawPlayField();
   drawGrid();
@@ -66,10 +73,11 @@ let lastItem;
 
 function mouseClicked(event) {
   if (event.isTrusted) {
+    initialShuffle = false;
     lastClick = new Position(event.x, event.y)
-    
-    for (let x = 0; x < grid.items.length; x++) {
-      for (let y = 0; y < grid.items[x].length; y++) {
+
+    for (let x = 0; x < grid.size.x; x++) {
+      for (let y = 0; y < grid.size.y; y++) {
         let item = grid.items[x][y];
         let limits = [item.position.x, item.position.x + grid.sideSize, item.position.y, item.position.y + grid.sideSize]
         if (checkLPositionInLimit(...[...limits, lastClick])) {
@@ -77,16 +85,8 @@ function mouseClicked(event) {
           if (!lastItem) {
             lastItem = item
           } else {
-            let pivot = {...lastItem};
+            swap(item, lastItem, true);
 
-            lastItem.position = item.position;
-            lastItem.matrixPosition = item.matrixPosition;
-            grid.items[item.matrixPosition.x][item.matrixPosition.y] = lastItem;
-
-            item.position = pivot.position;
-            item.matrixPosition = pivot.matrixPosition;
-            grid.items[pivot.matrixPosition.x][pivot.matrixPosition.y] = item
-            
             lastItem = undefined
             lastClick = new Position(0, 0)
           }
@@ -94,6 +94,32 @@ function mouseClicked(event) {
       }
     }
   }
+}
+
+function swap(item1, item2, shoudCheckRange = false) {
+  if (item1.matrixPosition.checksum === item2.matrixPosition.checksum) {
+    return
+  }
+
+  if (shoudCheckRange && checkItemRange(item1.matrixPosition, item2.matrixPosition)) {
+    return
+  }
+
+  let pivot = { ...item2 }
+
+  item2.position = item1.position;
+  item2.matrixPosition = item1.matrixPosition;
+  grid.items[item1.matrixPosition.x][item1.matrixPosition.y] = item2;
+
+  item1.position = pivot.position;
+  item1.matrixPosition = pivot.matrixPosition;
+  grid.items[pivot.matrixPosition.x][pivot.matrixPosition.y] = item1;
+}
+
+function checkItemRange(pos1, pos2) {
+  let xRange = [pos2.x + 1, pos2.x - 1].includes(pos1.x)
+  let yRange = [pos2.y + 1, pos2.y - 1].includes(pos1.y)
+  return !(!xRange ^ !yRange);
 }
 
 function drawPlayField() {
@@ -134,9 +160,30 @@ let grid = {
   centeringPaddingX: 0,
   centeringPaddingY: 0,
   items: [],
+  iterate: (callback, breakCondition, yTox = true) => {
+    for (let y = 0; y < (yTox ? grid.size.y : grid.size.x); y++) {
+      if (breakCondition && breakCondition()) {
+        break;
+      }
+      for (let x = 0; x < (yTox ? grid.size.x : grid.size.y); x++) {
+        if (breakCondition && breakCondition()) {
+          break;
+        }
+        if (callback) {
+          callback(yTox ? x : y, yTox ? y : x);
+        }
+      }
+    }
+  }
+}
+
+function gridHasEmptyCells() {
+  return !grid.items.flat().every(item => !item.empty);
 }
 
 function defineGrid() {
+  score = 0;
+  initialShuffle = true;
   updateGridValue();
 
   do {
@@ -152,8 +199,13 @@ function defineGrid() {
     grid.items[x] = []
     for (let y = 0; y < grid.size.y; y++) {
       let currentYMargin = grid.centeringPaddingY / 2 + margin + padding + (y * grid.sideSize) + (y * padding);
+
+
       let rgn = Math.floor(Math.random() * possibleColors.length);
-      grid.items[x][y] = new Item(rgn, possibleColors[rgn], new Position(currentXMargin, currentYMargin), new Position(x,y));
+      grid.items[x][y] = y === 1 ?
+        new Item(rgn, possibleColors[rgn], new Position(currentXMargin, currentYMargin), new Position(x, y)) :
+        new Item(undefined, undefined, new Position(currentXMargin, currentYMargin), new Position(x, y), true);
+
     }
   }
 }
@@ -188,15 +240,95 @@ function drawGridItems() {
   for (let x = 0; x < grid.items.length; x++) {
     for (let y = 0; y < grid.items[x].length; y++) {
       let item = grid.items[x][y];
-      noStroke()
-      fill(...item.color);
-      ellipse(
-        item.position.x + grid.halfSideSize,
-        item.position.y + grid.halfSideSize,
-        grid.halfSideSize
-      );
+      if (!item.empty) {
+        noStroke()
+        fill(...item.color, item.matched ? 255 : 255);
+        ellipse(
+          item.position.x + grid.halfSideSize,
+          item.position.y + grid.halfSideSize,
+          grid.halfSideSize
+        );
+      }
     }
   }
+}
+
+function findMatches() {
+  let matches = []
+  grid.iterate((x, y) => {
+    let item = grid.items[x][y];
+
+    if (!item.empty) {
+
+      let horizontalMatch = [item]
+
+      // horizontal match
+      let sameShape = true
+      let increment = 1;
+      while (sameShape && increment + x < grid.size.x) {
+        let currentItem = grid.items[x + increment][y]
+        sameShape = currentItem.shape === item.shape;
+        if (sameShape) {
+          horizontalMatch.push(currentItem);
+          increment++;
+        }
+      }
+
+      // vertical match
+      sameShape = true
+      increment = 1;
+      let verticalMatch = [item]
+      while (sameShape && increment + y < grid.size.y) {
+        let currentItem = grid.items[x][y + increment]
+        sameShape = currentItem.shape === item.shape;
+        if (sameShape) {
+          verticalMatch.push(currentItem);
+          increment++;
+        }
+      }
+
+      let omniMatch = [...(horizontalMatch.length > 2 ? horizontalMatch : []), ...(verticalMatch.length > 2 ? verticalMatch : [])]
+
+      if (omniMatch.length) {
+        omniMatch.forEach(item => {
+          item.matched = true
+        })
+        matches.push(omniMatch)
+      }
+    }
+  }, (x, y) => {
+    return matches.length > 0;
+  });
+  return matches
+}
+
+function removeMatches(matches) {
+  matches.forEach(match => {
+    match.forEach(item => {
+      grid.items[item.matrixPosition.x][item.matrixPosition.y] = new Item(undefined, undefined, item.position, item.matrixPosition, true)
+      if (!initialShuffle) {
+        updateScore(match);
+      }
+    })
+  })
+}
+
+function applyGravity() {
+  grid.iterate((x, y) => {
+    if (y === 0 && grid.items[x][y].empty) {
+      let rgn = Math.floor(Math.random() * possibleColors.length);
+      grid.items[x][0] = new Item(rgn, possibleColors[rgn], grid.items[x][0].position, grid.items[x][0].matrixPosition);
+    }
+    if (y < grid.size.y - 1 && grid.items[x][y + 1].empty) {
+      sleep(5).then(() => swap(grid.items[x][y], grid.items[x][y + 1]))
+    }
+  });
+}
+
+function sleep(millisecondsDuration) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, millisecondsDuration);
+  })
 }
 
 
@@ -204,6 +336,11 @@ function updateGridValue() {
   grid.sideSize = 0
   grid.size.x = gridInputX.value;
   grid.size.y = gridInputY.value;
+}
+
+function updateScore(match) {
+  score += 100 * match.length * (match.length - 1) * 0.5;
+  scoreCounter.innerHTML = "SCORE: " + score
 }
 
 function checkMouseOver(minX, maxX, minY, maxY) {
