@@ -10,15 +10,31 @@
 </head>
 
 <body>
+
   <main>
   </main>
-  <div style="margin-left: 8px">
+  <div style="margin-left: 16px; width: 900px;">
+    <h1 style=" text-align: center;">BEJEWELED</h1>
+    <div style="width: 100%; display: table;">
+      <div style="width: 50%; display: table-cell; text-align: center;">
+        <h3>SCORE:</h3><strong id="scoreCounter">0</strong>
+      </div>
+      <div style="width: 50%; display: table-cell; text-align: center;">
+        <h3>COMBO:</h3><strong id="comboCounter">0</strong>
+      </div>
 
-    <h1>BEJEWELED</h1>
-    <h3 id="scoreCounter">SCORE:</h3>
-    <span>GRID: </span><br>
-    <span>X: </span><input type="number" id="gridX"><span>Y: <input type="number" id="gridY"><br><br>
-    <input type="button" id="resetBtn" value="RESET">
+    </div>
+  </div>
+  <div style="width: 100%;text-align: center;bottom: 0px;position:fixed; background-color: rgb(20,20,20);">
+    <div style="margin-left: 16px; bottom: 16px">
+      
+    
+    <h3 style="margin-bottom: 0px;">GRID: </h3><br>
+    <span>X: </span>
+    <input type="number" id="gridX">&nbsp;&nbsp;
+    <span>Y: <input type="number" id="gridY">&nbsp;&nbsp;
+      <input type="button" id="resetBtn" value="RESET">
+    </div>
   </div>
   <script src="sketch.js"></script>
 </body>

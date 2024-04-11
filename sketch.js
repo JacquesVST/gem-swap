@@ -1,7 +1,7 @@
 let padding = 4;
 let radius = 4;
 let margin = 16;
-let canvasSize = { x: 800, y: 600 };
+let canvasSize = { x: 900, y: 600 };
 
 let playField = { x: canvasSize.x - 2 * margin, y: canvasSize.y - 2 * margin };
 
@@ -9,15 +9,20 @@ let gridInputX = document.getElementById('gridX');
 let gridInputY = document.getElementById('gridY');
 let resetButton = document.getElementById('resetBtn');
 let scoreCounter = document.getElementById('scoreCounter');
+let comboCounter = document.getElementById('comboCounter');
 
 let score;
+let combo;
+let stackCombo = false;
 let initialShuffle = true;
 
 let possibleColors = [
-  [231, 76, 60], //red
+  [231, 76, 60],  //red
   [46, 204, 113], //green
   [46, 134, 193], //blue
   [244, 208, 63], //yellow
+  [243, 156, 18], //orange
+  [240, 98, 146], //pink
 ]
 
 class Item {
@@ -39,11 +44,121 @@ class Position {
   }
 }
 
+class Shape {
+  constructor(id, color) {
+    this.id = id;
+    this.color = color;
+  }
+}
+
+class Grid {
+  constructor(width, height) {
+    this.width = width;
+    this.height = height;
+    this.sideSize = 0;
+    this.centeringPaddingX = 0;
+    this.centeringPaddingY = 0;
+
+    this.generateEmptyCells();
+  }
+
+  generateEmptyCells = function () {
+    this.cells = [...Array(this.width)].map(
+      (row, x) => [...Array(this.height)].map(
+        (cell, y) => {
+          return new Cell(new Position(x, y))
+        }
+      )
+
+    )
+  }
+
+  calculateSpacing = function (playfield) {
+
+  }
+
+  iterateXtoY = function (callback, breakX, breakY) {
+    for (let x = 0; x < this.width; x++) {
+      if (breakX && breakX(x)) {
+        break
+      }
+      for (let y = 0; y < this.height; y++) {
+        if (breakY && breakY(x, y)) {
+          break
+        }
+        callback(x, y);
+      }
+    }
+
+    iterateYtoX = function (callback, breakX, breakY) {
+      for (let y = 0; y < this.height; y++) {
+        if (breakY && breakY(y)) {
+          break
+        }
+        for (let x = 0; x < this.width; x++) {
+          if (breakX && breakX(x, y)) {
+            break
+          }
+          callback(x, y);
+        }
+      }
+    }
+  }
+
+
+}
+
+class Cell {
+  constructor(position) {
+    this.position = position
+  }
+
+  setCanvasPosition = function (canvasPosition) {
+    this.canvasPosition = canvasPosition
+  }
+
+  setItem = function (item) {
+    this.item = item
+  }
+}
+
+let grid = {
+  size: new Position(0, 0),
+  sideSize: 0,
+  halfSideSize: 0,
+  centeringPaddingX: 0,
+  centeringPaddingY: 0,
+  items: [],
+  iterate: (callback, breakCondition, yTox = true) => {
+    for (let y = 0; y < (yTox ? grid.size.y : grid.size.x); y++) {
+      if (breakCondition && breakCondition()) {
+        break;
+      }
+      for (let x = 0; x < (yTox ? grid.size.x : grid.size.y); x++) {
+        if (breakCondition && breakCondition()) {
+          break;
+        }
+        if (callback) {
+          callback(yTox ? x : y, yTox ? y : x);
+        }
+      }
+    }
+  }
+}
+
 function setup() {
-  gridInputX.value = 20
-  gridInputY.value = 15
+  gridInputX.value = 12
+  gridInputY.value = 8
+  new Grid(parseInt(gridInputX.value, 10), parseInt(gridInputY.value, 10));
 
   resetButton.onclick = () => {
+    initialShuffle = true;
+    updateScore([], 0)
+    updateCombo([], 0)
+    lastItem = undefined
+    lastClick = new Position(0, 0)
+    stackCombo = false;
+    comboCounter.style = 'font-size: 1em'
     setupPlayfield();
   }
 
@@ -64,7 +179,7 @@ function draw() {
 
 function setupPlayfield() {
   createCanvas(canvasSize.x, canvasSize.y);
-  noCursor();
+  //noCursor();
   defineGrid();
 }
 
@@ -73,7 +188,6 @@ let lastItem;
 
 function mouseClicked(event) {
   if (event.isTrusted) {
-    initialShuffle = false;
     lastClick = new Position(event.x, event.y)
 
     for (let x = 0; x < grid.size.x; x++) {
@@ -81,10 +195,14 @@ function mouseClicked(event) {
         let item = grid.items[x][y];
         let limits = [item.position.x, item.position.x + grid.sideSize, item.position.y, item.position.y + grid.sideSize]
         if (checkLPositionInLimit(...[...limits, lastClick])) {
+          initialShuffle = false;
 
           if (!lastItem) {
             lastItem = item
+            stackCombo = false;
+            combo = 0
           } else {
+            stackCombo = true;
             swap(item, lastItem, true);
 
             lastItem = undefined
@@ -138,11 +256,11 @@ let trail = []
 let trailLength = 0
 function drawCursorTrail() {
 
-  trail.push([mouseX, mouseY]);
+  trail.push([mouseX + 5, mouseY + 10]);
 
   for (let i = 0; i < trail.length; i++) {
     noStroke()
-    fill(163, 228, 215, trailLength)
+    fill(255,255,255, trailLength > 220 ? 0 : trailLength)
     let trailSize = map(i, 0, trail.length, 1, 16);
     ellipse(trail[i][0], trail[i][1], trailSize);
     if (trailLength > 255) {
@@ -153,29 +271,7 @@ function drawCursorTrail() {
   }
 }
 
-let grid = {
-  size: new Position(0, 0),
-  sideSize: 0,
-  halfSideSize: 0,
-  centeringPaddingX: 0,
-  centeringPaddingY: 0,
-  items: [],
-  iterate: (callback, breakCondition, yTox = true) => {
-    for (let y = 0; y < (yTox ? grid.size.y : grid.size.x); y++) {
-      if (breakCondition && breakCondition()) {
-        break;
-      }
-      for (let x = 0; x < (yTox ? grid.size.x : grid.size.y); x++) {
-        if (breakCondition && breakCondition()) {
-          break;
-        }
-        if (callback) {
-          callback(yTox ? x : y, yTox ? y : x);
-        }
-      }
-    }
-  }
-}
+
 
 function gridHasEmptyCells() {
   return !grid.items.flat().every(item => !item.empty);
@@ -183,6 +279,7 @@ function gridHasEmptyCells() {
 
 function defineGrid() {
   score = 0;
+  combo = 0;
   initialShuffle = true;
   updateGridValue();
 
@@ -199,7 +296,6 @@ function defineGrid() {
     grid.items[x] = []
     for (let y = 0; y < grid.size.y; y++) {
       let currentYMargin = grid.centeringPaddingY / 2 + margin + padding + (y * grid.sideSize) + (y * padding);
-
 
       let rgn = Math.floor(Math.random() * possibleColors.length);
       grid.items[x][y] = y === 1 ?
@@ -241,16 +337,29 @@ function drawGridItems() {
     for (let y = 0; y < grid.items[x].length; y++) {
       let item = grid.items[x][y];
       if (!item.empty) {
-        noStroke()
+        strokeWeight(2);
+        stroke(0)
         fill(...item.color, item.matched ? 255 : 255);
-        ellipse(
+        polygon(
           item.position.x + grid.halfSideSize,
           item.position.y + grid.halfSideSize,
-          grid.halfSideSize
+          grid.halfSideSize/1.5,
+          item.shape + 3
         );
       }
     }
   }
+}
+
+function polygon(x, y, radius, npoints) {
+  let angle = TWO_PI / npoints;
+  beginShape();
+  for (let a = HALF_PI * 3; a < HALF_PI * 7; a += angle) {
+    let sx = x + cos(a) * radius;
+    let sy = y + sin(a) * radius;
+    vertex(sx, sy);
+  }
+  endShape(CLOSE);
 }
 
 function findMatches() {
@@ -303,6 +412,9 @@ function findMatches() {
 }
 
 function removeMatches(matches) {
+  if (stackCombo)  {
+    updateCombo(matches)
+  }
   matches.forEach(match => {
     match.forEach(item => {
       grid.items[item.matrixPosition.x][item.matrixPosition.y] = new Item(undefined, undefined, item.position, item.matrixPosition, true)
@@ -338,9 +450,17 @@ function updateGridValue() {
   grid.size.y = gridInputY.value;
 }
 
-function updateScore(match) {
+function updateScore(match, zero = 1) {
   score += 100 * match.length * (match.length - 1) * 0.5;
-  scoreCounter.innerHTML = "SCORE: " + score
+  scoreCounter.innerHTML = ' ' + (score * zero)
+}
+
+function updateCombo(matches, zero = 1) {
+  combo += [...matches].length;
+  comboCounter.innerHTML = ' ' + (combo * zero)
+  
+  let fontSize =  combo > 0 ? combo : 1;
+  comboCounter.style = 'font-size: ' + fontSize + 'em'
 }
 
 function checkMouseOver(minX, maxX, minY, maxY) {
