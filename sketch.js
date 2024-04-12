@@ -422,8 +422,6 @@ function findMatches(grid) {
         matches.push(omniMatch)
       }
     }
-  }, (x, y) => {
-    return matches.length > 0;
   });
   return matches
 }
@@ -434,12 +432,13 @@ function removeMatches(matches) {
   }
 
   matches.forEach(match => {
+    if (!initialShuffle) {
+      updateScore(match);
+    }
     match.forEach(item => {
-      globalGrid.cells[item.position.x][item.position.y].item = undefined
-      if (!initialShuffle) {
-        updateScore(match);
-      }
-    })
+      globalGrid.getCellbyPosition(item.position).item = undefined
+
+    });
   })
 }
 
@@ -465,7 +464,7 @@ function updateScore(match, resetCounter = false) {
     initialShuffle = true;
   }
 
-  score += 100 * match.length * (match.length - 1) * 0.5;
+  score += 100 * match.length * combo;
   scoreCounter.innerHTML = score
 
   bestScore = bestScore > score ? bestScore : score;
