@@ -1,20 +1,23 @@
+/*
 let padding = 4;
 let radius = 4;
 let margin = 16;
 let canvasSize = { x: 900, y: 600 };
-
-let playField = { x: canvasSize.x - 2 * margin, y: canvasSize.y - 2 * margin };
-
+*/
 let gridInputX = document.getElementById('gridX');
 let gridInputY = document.getElementById('gridY');
 let resetButton = document.getElementById('resetBtn');
 let scoreCounter = document.getElementById('scoreCounter');
 let comboCounter = document.getElementById('comboCounter');
 
-let score;
-let combo;
+let score = 0;
+let combo = 0;
+
 let stackCombo = false;
 let initialShuffle = true;
+
+let globalGrid;
+let globalCanvas;
 
 let possibleColors = [
   [231, 76, 60],  //red
@@ -25,14 +28,44 @@ let possibleColors = [
   [240, 98, 146], //pink
 ]
 
-class Item {
-  constructor(shape, color, position, matrixPosition, empty = false) {
-    this.position = position;
-    this.shape = shape;
+class CanvasInfo {
+  constructor(margin, padding, radius) {
+    this.margin = margin
+    this.padding = padding
+    this.radius = radius
+
+    this.playfieldBackground = 20
+    this.calculateCanvasAndPlayfield();
+  }
+
+  calculateCanvasAndPlayfield = function () {
+    let screenWidth = document.body.clientWidth;
+    let screenHeight = (screenWidth / 16) * 9;
+
+    this.canvasSize = new Position(screenWidth, screenHeight)
+    this.playfield = new Position(this.canvasSize.x - 2 * this.margin, this.canvasSize.y - 2 * this.margin)
+    createCanvas(this.canvasSize.x, this.canvasSize.y);
+
+  }
+
+  drawPlayfield = function () {
+    background(0);
+    noStroke()
+    fill(this.playfieldBackground);
+    rect(
+      this.margin,
+      this.margin,
+      this.playfield.x,
+      this.playfield.y,
+      this.radius + this.padding
+    );
+  }
+}
+
+class Shape {
+  constructor(sides, color) {
+    this.sides = sides;
     this.color = color;
-    this.matrixPosition = matrixPosition;
-    this.empty = empty
-    this.matched = false;
   }
 }
 
@@ -44,10 +77,32 @@ class Position {
   }
 }
 
-class Shape {
-  constructor(id, color) {
-    this.id = id;
-    this.color = color;
+class Item {
+  constructor(shape, position, sideSize) {
+    this.shape = shape;
+    this.position = position;
+    this.sideSize = sideSize
+    this.id = generateId();
+  }
+
+  static generateRandomItem = function (position, gridSideSize, possibleShapes = possibleColors) {
+    let randomShape = Math.floor(Math.random() * possibleShapes.length);
+    let shape = new Shape(randomShape + 3, possibleShapes[randomShape])
+    return new Item(shape, position, gridSideSize / 3);
+  }
+
+  renewPosition = function (position) {
+    this.position = position;
+    return { ...this }
+  }
+}
+
+class Cell {
+  constructor(position) {
+    this.position = position
+    this.canvasPosition = new Position(0, 0)
+    this.item = undefined
+    this.id = generateId();
   }
 }
 
@@ -56,8 +111,10 @@ class Grid {
     this.width = width;
     this.height = height;
     this.sideSize = 0;
-    this.centeringPaddingX = 0;
-    this.centeringPaddingY = 0;
+    this.horizontalCenterPadding = 0;
+    this.verticalCenterPadding = 0;
+
+    this.selectedCellPos = undefined;
 
     this.generateEmptyCells();
   }
@@ -69,12 +126,35 @@ class Grid {
           return new Cell(new Position(x, y))
         }
       )
-
     )
   }
 
-  calculateSpacing = function (playfield) {
+  calculateSpacing = function (canvas) {
+    do {
+      this.sideSize++;
+      this.horizontalCenterPadding = canvas.playfield.x - (this.width * this.sideSize) - (this.width * canvas.padding) - canvas.padding
+      this.verticalCenterPadding = canvas.playfield.y - (this.height * this.sideSize) - (this.height * canvas.padding) - canvas.padding
+    } while (this.horizontalCenterPadding - this.width >= 0 && this.verticalCenterPadding - this.height >= 0)
 
+    this.iterateXtoY((x, y) => {
+      let currentXMargin = (this.horizontalCenterPadding / 2) + (x * this.sideSize) + (x * canvas.padding) + canvas.padding + canvas.margin;
+      let currentYMargin = (this.verticalCenterPadding / 2) + (y * this.sideSize) + (y * canvas.padding) + canvas.padding + canvas.margin;
+
+      this.cells[x][y].canvasPosition = new Position(currentXMargin, currentYMargin);
+    });
+  }
+
+  isFull = function () {
+    return [...this.cells.flat()].every(cell => cell.item);
+  }
+
+  generateItems = function () {
+    this.iterateYtoX((x, y) => {
+      let cell = this.getCellbyPosition(new Position(x, y));
+      if (!cell.item && cell.position.y === 0) {
+        this.cells[x][y].item = Item.generateRandomItem(this.cells[x][y].position, this.sideSize)
+      }
+    })
   }
 
   iterateXtoY = function (callback, breakX, breakY) {
@@ -89,266 +169,114 @@ class Grid {
         callback(x, y);
       }
     }
+  }
 
-    iterateYtoX = function (callback, breakX, breakY) {
-      for (let y = 0; y < this.height; y++) {
-        if (breakY && breakY(y)) {
+  iterateYtoX = function (callback, breakX, breakY) {
+    for (let y = 0; y < this.height; y++) {
+      if (breakY && breakY(y)) {
+        break
+      }
+      for (let x = 0; x < this.width; x++) {
+        if (breakX && breakX(x, y)) {
           break
         }
-        for (let x = 0; x < this.width; x++) {
-          if (breakX && breakX(x, y)) {
-            break
-          }
-          callback(x, y);
-        }
+        callback(x, y);
       }
     }
   }
 
+  swap = function (position1, position2, shouldCheckRange = false) {
 
-}
-
-class Cell {
-  constructor(position) {
-    this.position = position
-  }
-
-  setCanvasPosition = function (canvasPosition) {
-    this.canvasPosition = canvasPosition
-  }
-
-  setItem = function (item) {
-    this.item = item
-  }
-}
-
-let grid = {
-  size: new Position(0, 0),
-  sideSize: 0,
-  halfSideSize: 0,
-  centeringPaddingX: 0,
-  centeringPaddingY: 0,
-  items: [],
-  iterate: (callback, breakCondition, yTox = true) => {
-    for (let y = 0; y < (yTox ? grid.size.y : grid.size.x); y++) {
-      if (breakCondition && breakCondition()) {
-        break;
-      }
-      for (let x = 0; x < (yTox ? grid.size.x : grid.size.y); x++) {
-        if (breakCondition && breakCondition()) {
-          break;
-        }
-        if (callback) {
-          callback(yTox ? x : y, yTox ? y : x);
-        }
-      }
+    if (position1.checksum === position2.checksum) {
+      return
     }
-  }
-}
 
-function setup() {
-  gridInputX.value = 12
-  gridInputY.value = 8
-  new Grid(parseInt(gridInputX.value, 10), parseInt(gridInputY.value, 10));
-
-  resetButton.onclick = () => {
-    initialShuffle = true;
-    updateScore([], 0)
-    updateCombo([], 0)
-    lastItem = undefined
-    lastClick = new Position(0, 0)
-    stackCombo = false;
-    comboCounter.style = 'font-size: 1em'
-    setupPlayfield();
-  }
-
-  setupPlayfield();
-}
-
-function draw() {
-  removeMatches(findMatches());
-
-  applyGravity();
-
-  background(0);
-  drawPlayField();
-  drawGrid();
-  drawGridItems();
-  drawCursorTrail();
-}
-
-function setupPlayfield() {
-  createCanvas(canvasSize.x, canvasSize.y);
-  //noCursor();
-  defineGrid();
-}
-
-let lastClick = new Position(0, 0)
-let lastItem;
-
-function mouseClicked(event) {
-  if (event.isTrusted) {
-    lastClick = new Position(event.x, event.y)
-
-    for (let x = 0; x < grid.size.x; x++) {
-      for (let y = 0; y < grid.size.y; y++) {
-        let item = grid.items[x][y];
-        let limits = [item.position.x, item.position.x + grid.sideSize, item.position.y, item.position.y + grid.sideSize]
-        if (checkLPositionInLimit(...[...limits, lastClick])) {
-          initialShuffle = false;
-
-          if (!lastItem) {
-            lastItem = item
-            stackCombo = false;
-            combo = 0
-          } else {
-            stackCombo = true;
-            swap(item, lastItem, true);
-
-            lastItem = undefined
-            lastClick = new Position(0, 0)
-          }
-        }
-      }
+    if (shouldCheckRange && !canReach(position1, position2)) {
+      return
     }
-  }
-}
 
-function swap(item1, item2, shoudCheckRange = false) {
-  if (item1.matrixPosition.checksum === item2.matrixPosition.checksum) {
-    return
-  }
+    let item1 = this.getItembyPosition(position1);
+    let item2 = this.getItembyPosition(position2);
 
-  if (shoudCheckRange && checkItemRange(item1.matrixPosition, item2.matrixPosition)) {
-    return
+    this.getCellbyPosition(position1).item = item2 ? item2.renewPosition(position1) : undefined
+    this.getCellbyPosition(position2).item = item1 ? item1.renewPosition(position2) : undefined;
+
   }
 
-  let pivot = { ...item2 }
-
-  item2.position = item1.position;
-  item2.matrixPosition = item1.matrixPosition;
-  grid.items[item1.matrixPosition.x][item1.matrixPosition.y] = item2;
-
-  item1.position = pivot.position;
-  item1.matrixPosition = pivot.matrixPosition;
-  grid.items[pivot.matrixPosition.x][pivot.matrixPosition.y] = item1;
-}
-
-function checkItemRange(pos1, pos2) {
-  let xRange = [pos2.x + 1, pos2.x - 1].includes(pos1.x)
-  let yRange = [pos2.y + 1, pos2.y - 1].includes(pos1.y)
-  return !(!xRange ^ !yRange);
-}
-
-function drawPlayField() {
-  noStroke()
-  fill(20);
-  rect(
-    margin,
-    margin,
-    playField.x,
-    playField.y,
-    radius + padding
-  );
-}
-
-let trail = []
-let trailLength = 0
-function drawCursorTrail() {
-
-  trail.push([mouseX + 5, mouseY + 10]);
-
-  for (let i = 0; i < trail.length; i++) {
-    noStroke()
-    fill(255,255,255, trailLength > 220 ? 0 : trailLength)
-    let trailSize = map(i, 0, trail.length, 1, 16);
-    ellipse(trail[i][0], trail[i][1], trailSize);
-    if (trailLength > 255) {
-      trail.shift();
-      trailLength = 0;
-    }
-    trailLength += 20;
-  }
-}
-
-
-
-function gridHasEmptyCells() {
-  return !grid.items.flat().every(item => !item.empty);
-}
-
-function defineGrid() {
-  score = 0;
-  combo = 0;
-  initialShuffle = true;
-  updateGridValue();
-
-  do {
-    grid.sideSize++;
-    grid.centeringPaddingX = playField.x - (grid.size.x * grid.sideSize) - (grid.size.x * padding) - padding
-    grid.centeringPaddingY = playField.y - (grid.size.y * grid.sideSize) - (grid.size.y * padding) - padding
-  } while (grid.centeringPaddingX - grid.size.x >= 0 && grid.centeringPaddingY - grid.size.y >= 0)
-
-  grid.halfSideSize = grid.sideSize / 2;
-
-  for (let x = 0; x < grid.size.x; x++) {
-    let currentXMargin = grid.centeringPaddingX / 2 + margin + padding + (x * grid.sideSize) + (x * padding);
-    grid.items[x] = []
-    for (let y = 0; y < grid.size.y; y++) {
-      let currentYMargin = grid.centeringPaddingY / 2 + margin + padding + (y * grid.sideSize) + (y * padding);
-
-      let rgn = Math.floor(Math.random() * possibleColors.length);
-      grid.items[x][y] = y === 1 ?
-        new Item(rgn, possibleColors[rgn], new Position(currentXMargin, currentYMargin), new Position(x, y)) :
-        new Item(undefined, undefined, new Position(currentXMargin, currentYMargin), new Position(x, y), true);
-
-    }
-  }
-}
-
-function drawGrid() {
-  for (let x = 0; x < grid.size.x; x++) {
-    let currentXMargin = grid.centeringPaddingX / 2 + margin + padding + (x * grid.sideSize) + (x * padding);
-    for (let y = 0; y < grid.size.y; y++) {
-      let currentYMargin = grid.centeringPaddingY / 2 + margin + padding + (y * grid.sideSize) + (y * padding);
-
+  draw = function (canvas) { //ok
+    this.cells.flat().forEach(cell => {
       noStroke()
-      let limits = [currentXMargin, currentXMargin + grid.sideSize, currentYMargin, currentYMargin + grid.sideSize]
+      let limits = [
+        cell.canvasPosition.x,
+        cell.canvasPosition.x + this.sideSize,
+        cell.canvasPosition.y,
+        cell.canvasPosition.y + this.sideSize
+      ]
 
-      if (checkMouseOver(...limits) || checkLPositionInLimit(...[...limits, lastClick])) {
+      let isSelectedCell = this.selectedCellPos ? cell.position.checksum === this.selectedCellPos.checksum : false;
+      if (checkMouseOver(...limits) || isSelectedCell) {
         fill(175, 122, 197);
       } else {
         fill(136, 78, 160);
       }
 
       rect(
-        currentXMargin,
-        currentYMargin,
-        grid.sideSize,
-        grid.sideSize,
-        radius
+        cell.canvasPosition.x,
+        cell.canvasPosition.y,
+        this.sideSize,
+        this.sideSize,
+        canvas.radius
       );
-    }
+    })
   }
-}
 
-function drawGridItems() {
-  for (let x = 0; x < grid.items.length; x++) {
-    for (let y = 0; y < grid.items[x].length; y++) {
-      let item = grid.items[x][y];
-      if (!item.empty) {
+  drawItems = function () { //ok
+    this.cells.flat().map(cell => cell.item).forEach(item => {
+      if (item) {
+        let cellRef = this.getCellbyPosition(item.position);
         strokeWeight(2);
         stroke(0)
-        fill(...item.color, item.matched ? 255 : 255);
+        fill(...item.shape.color, 255);
         polygon(
-          item.position.x + grid.halfSideSize,
-          item.position.y + grid.halfSideSize,
-          grid.halfSideSize/1.5,
-          item.shape + 3
+          cellRef.canvasPosition.x + this.sideSize / 2,
+          cellRef.canvasPosition.y + this.sideSize / 2,
+          item.sideSize,
+          item.shape.sides
         );
       }
-    }
+    })
   }
+
+  getCellbyPosition = function (position) {
+    return this.cells[position.x][position.y];
+  }
+
+
+  getItembyPosition = function (position) {
+    return this.cells[position.x][position.y].item;
+  }
+
+  getNeighbourCell = function (cell, xOffset = 0, yOffset = 0) {
+    let absoluteX = cell.position.x + xOffset
+    let absoluteY = cell.position.y + yOffset
+
+    if (absoluteX >= 0 && absoluteX < this.width && absoluteY >= 0 && absoluteY < this.height) {
+      return this.cells[absoluteX][absoluteY];
+    }
+
+    return undefined;
+  }
+
+}
+
+function canReach(pos1, pos2) {
+  if (pos1.x === pos2.x) {
+    return [pos1.y - 1, pos1.y + 1].includes(pos2.y);
+  } else if (pos1.y === pos2.y) {
+    return [pos1.x - 1, pos1.x + 1].includes(pos2.x);
+  }
+  return false
+
 }
 
 function polygon(x, y, radius, npoints) {
@@ -362,23 +290,93 @@ function polygon(x, y, radius, npoints) {
   endShape(CLOSE);
 }
 
-function findMatches() {
-  let matches = []
-  grid.iterate((x, y) => {
-    let item = grid.items[x][y];
+function setup() {
+  gridInputX.value = 7
+  gridInputY.value = 5
 
-    if (!item.empty) {
+  resetButton.onclick = () => {
+    setupGame();
+  }
 
+  setupGame();
+}
+
+function setupGame() {
+  setTimeout(() => {
+    globalCanvas = new CanvasInfo(16, 4, 4);
+    globalGrid = new Grid(parseInt(gridInputX.value, 10), parseInt(gridInputY.value, 10));
+    globalGrid.calculateSpacing(globalCanvas);
+
+    updateScore([], true)
+    updateCombo([], true)
+  }, 0);
+
+}
+
+function draw() {
+  removeMatches(findMatches(globalGrid));
+
+  if (!globalGrid.isFull()) {
+    applyGravity(globalGrid);
+    globalGrid.generateItems();
+  }
+
+  globalCanvas.drawPlayfield();
+  globalGrid.draw(globalCanvas);
+  globalGrid.drawItems();
+}
+
+function mouseClicked(event) {
+  if (event.isTrusted) {
+    let lastClick = new Position(event.x, event.y)
+    let clickFound = false
+    globalGrid.iterateXtoY((x, y) => {
+      let cell = globalGrid.cells[x][y];
+
+      let limits = [
+        cell.canvasPosition.x,
+        cell.canvasPosition.x + globalGrid.sideSize,
+        cell.canvasPosition.y,
+        cell.canvasPosition.y + globalGrid.sideSize
+      ]
+
+      if (checkPositionInLimit(...[...limits, lastClick])) {
+        clickFound = true
+        initialShuffle = false;
+
+        if (!globalGrid.selectedCellPos) {
+          globalGrid.selectedCellPos = cell.position
+          stackCombo = false;
+          combo = 0
+        } else {
+          stackCombo = true;
+          globalGrid.swap(cell.position, globalGrid.selectedCellPos, true);
+          globalGrid.selectedCellPos = undefined
+          lastClick = new Position(0, 0)
+        }
+      }
+    }, () => clickFound)
+  }
+}
+
+
+function findMatches(grid) {
+  let matches = [];
+  grid.iterateYtoX((x, y) => {
+    let cell = grid.getCellbyPosition(new Position(x, y));
+
+    if (cell.item) {
+      let item = cell.item
       let horizontalMatch = [item]
 
       // horizontal match
       let sameShape = true
       let increment = 1;
-      while (sameShape && increment + x < grid.size.x) {
-        let currentItem = grid.items[x + increment][y]
-        sameShape = currentItem.shape === item.shape;
+      while (sameShape && (increment + x) < grid.width) {
+        let nextItem = grid.getNeighbourCell(cell, increment, 0).item
+        sameShape = nextItem && item.shape.sides === nextItem.shape.sides;
         if (sameShape) {
-          horizontalMatch.push(currentItem);
+          horizontalMatch.push(nextItem);
           increment++;
         }
       }
@@ -387,11 +385,11 @@ function findMatches() {
       sameShape = true
       increment = 1;
       let verticalMatch = [item]
-      while (sameShape && increment + y < grid.size.y) {
-        let currentItem = grid.items[x][y + increment]
-        sameShape = currentItem.shape === item.shape;
+      while (sameShape && increment + y < grid.height) {
+        let nextItem = grid.cells[x][y + increment].item
+        sameShape = nextItem && item.shape.sides === nextItem.shape.sides;
         if (sameShape) {
-          verticalMatch.push(currentItem);
+          verticalMatch.push(nextItem);
           increment++;
         }
       }
@@ -399,9 +397,6 @@ function findMatches() {
       let omniMatch = [...(horizontalMatch.length > 2 ? horizontalMatch : []), ...(verticalMatch.length > 2 ? verticalMatch : [])]
 
       if (omniMatch.length) {
-        omniMatch.forEach(item => {
-          item.matched = true
-        })
         matches.push(omniMatch)
       }
     }
@@ -412,12 +407,13 @@ function findMatches() {
 }
 
 function removeMatches(matches) {
-  if (stackCombo)  {
+  if (stackCombo) {
     updateCombo(matches)
   }
+
   matches.forEach(match => {
     match.forEach(item => {
-      grid.items[item.matrixPosition.x][item.matrixPosition.y] = new Item(undefined, undefined, item.position, item.matrixPosition, true)
+      globalGrid.cells[item.position.x][item.position.y].item = undefined
       if (!initialShuffle) {
         updateScore(match);
       }
@@ -425,14 +421,12 @@ function removeMatches(matches) {
   })
 }
 
-function applyGravity() {
-  grid.iterate((x, y) => {
-    if (y === 0 && grid.items[x][y].empty) {
-      let rgn = Math.floor(Math.random() * possibleColors.length);
-      grid.items[x][0] = new Item(rgn, possibleColors[rgn], grid.items[x][0].position, grid.items[x][0].matrixPosition);
-    }
-    if (y < grid.size.y - 1 && grid.items[x][y + 1].empty) {
-      sleep(5).then(() => swap(grid.items[x][y], grid.items[x][y + 1]))
+function applyGravity(grid) {
+  grid.iterateYtoX((x, y) => {
+    if (y < grid.height - 1 && !grid.cells[x][y + 1].item) {
+      sleep(5).then(() => {
+        grid.swap(grid.cells[x][y].position, grid.cells[x][y + 1].position)
+      })
     }
   });
 }
@@ -443,23 +437,28 @@ function sleep(millisecondsDuration) {
   })
 }
 
+function updateScore(match, resetCounter = false) {
+  if (resetCounter) {
+    score = 0
+    initialShuffle = true;
+  }
 
-function updateGridValue() {
-  grid.sideSize = 0
-  grid.size.x = gridInputX.value;
-  grid.size.y = gridInputY.value;
-}
-
-function updateScore(match, zero = 1) {
   score += 100 * match.length * (match.length - 1) * 0.5;
-  scoreCounter.innerHTML = ' ' + (score * zero)
+  scoreCounter.innerHTML = score
 }
 
-function updateCombo(matches, zero = 1) {
+function updateCombo(matches, resetCounter = false) {
+  if (resetCounter) {
+    combo = 0
+    initialShuffle = true;
+    stackCombo = false;
+    comboCounter.style = 'font-size: 1em'
+  }
+
   combo += [...matches].length;
-  comboCounter.innerHTML = ' ' + (combo * zero)
-  
-  let fontSize =  combo > 0 ? combo : 1;
+  comboCounter.innerHTML = combo
+
+  let fontSize = combo > 0 ? combo : 1;
   comboCounter.style = 'font-size: ' + fontSize + 'em'
 }
 
@@ -467,6 +466,10 @@ function checkMouseOver(minX, maxX, minY, maxY) {
   return mouseX > minX && mouseX < maxX && mouseY > minY && mouseY < maxY;
 }
 
-function checkLPositionInLimit(minX, maxX, minY, maxY, pos) {
+function checkPositionInLimit(minX, maxX, minY, maxY, pos) {
   return pos.x > minX && pos.x < maxX && pos.y > minY && pos.y < maxY;
+}
+
+function generateId() {
+  return "id" + Math.random().toString(16).slice(2)
 }
