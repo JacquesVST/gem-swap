@@ -1,10 +1,31 @@
-html, body {
-    margin: 0;
-    padding: 0;
-    background-color: black;
-    color: white;
-  }
-  canvas {
-    display: block;
-  }
-  
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: black;
+  color: white;
+}
+
+canvas {
+  display: block;
+}
+
+.game-ui {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+
+.game-ui-block {
+  width: 100%;
+}
+
+.centered {
+  text-align: center;
+}
+
+.grid-form {
+  width: 100%;
+  bottom: 0px;position:fixed; 
+  background-color: rgb(20,20,20);
+}

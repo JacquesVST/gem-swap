@@ -13,26 +13,25 @@
 
   <main>
   </main>
-  <div style="margin-left: 16px; width: 100%;">
-    <h1 style=" text-align: center;">BEJEWELED</h1>
-    <div style="width: 100%; display: table;">
-      <div style="width: 50%; display: table-cell; text-align: center;">
-        <h3>SCORE:</h3><strong id="scoreCounter">0</strong>
+  <h1 class="centered">BEJEWELED</h1>
+  <div class="game-ui">
+      <div class="game-ui-block centered">
+        <h3>SCORE:</h3><strong id="scoreCounter">0</strong>&nbsp;/&nbsp;<strong id="bestScoreCounter">0</strong>
       </div>
-      <div style="width: 50%; display: table-cell; text-align: center;">
-        <h3>COMBO:</h3><strong id="comboCounter">0</strong>
+      <div  class="game-ui-block centered">
+        <h3>MOVES:</h3><strong id="moveCounter">100</strong>
       </div>
-
-    </div>
+      <div  class="game-ui-block centered">
+        <h3>COMBO:</h3><strong id="comboCounter">0</strong>&nbsp;/&nbsp;<strong id="bestComboCounter">0</strong>
+      </div>
   </div>
-  <div style="width: 100%;text-align: center;bottom: 0px;position:fixed; background-color: rgb(20,20,20);">
-    <div style="margin-left: 16px; bottom: 16px">
-      
-    <h3 style="margin-bottom: 0px;">GRID: </h3><br>
-    <span>X: </span>
-    <input type="number" id="gridX">&nbsp;&nbsp;
-    <span>Y: <input type="number" id="gridY">&nbsp;&nbsp;
-      <input type="button" id="resetBtn" value="RESET">
+  <div class="grid-form centered">
+    <div style="bottom: 16px">
+      <h3 style="margin-bottom: 0px;">GRID: </h3><br>
+      <span>X: </span>
+      <input type="number" id="gridX">&nbsp;&nbsp;
+      <span>Y: <input type="number" id="gridY">&nbsp;&nbsp;
+      <input type="button" id="resetBtn" value="RESET"><br><br>
     </div>
   </div>
   <script src="sketch.js"></script>

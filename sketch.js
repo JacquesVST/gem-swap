@@ -1,17 +1,17 @@
-/*
-let padding = 4;
-let radius = 4;
-let margin = 16;
-let canvasSize = { x: 900, y: 600 };
-*/
 let gridInputX = document.getElementById('gridX');
 let gridInputY = document.getElementById('gridY');
 let resetButton = document.getElementById('resetBtn');
 let scoreCounter = document.getElementById('scoreCounter');
+let bestScoreCounter = document.getElementById('bestScoreCounter');
 let comboCounter = document.getElementById('comboCounter');
+let bestComboCounter = document.getElementById('bestComboCounter');
+let moveCounter = document.getElementById('moveCounter');
 
 let score = 0;
+let bestScore = 0;
 let combo = 0;
+let bestCombo = 0;
+let moves = 100;
 
 let stackCombo = false;
 let initialShuffle = true;
@@ -185,22 +185,29 @@ class Grid {
     }
   }
 
-  swap = function (position1, position2, shouldCheckRange = false) {
+  swap = function (position1, position2, humanSwap = false) {
 
     if (position1.checksum === position2.checksum) {
       return
     }
 
-    if (shouldCheckRange && !canReach(position1, position2)) {
+    if (humanSwap && !canReach(position1, position2)) {
       return
     }
 
     let item1 = this.getItembyPosition(position1);
     let item2 = this.getItembyPosition(position2);
 
+    if (humanSwap && item1 && item2 && item1.shape.sides === item2.shape.sides) {
+      return
+    }
+
     this.getCellbyPosition(position1).item = item2 ? item2.renewPosition(position1) : undefined
     this.getCellbyPosition(position2).item = item1 ? item1.renewPosition(position2) : undefined;
 
+    if (humanSwap) {
+      updateMoves(moves - 1);
+    }
   }
 
   draw = function (canvas) { //ok
@@ -309,16 +316,31 @@ function setupGame() {
 
     updateScore([], true)
     updateCombo([], true)
+    updateMoves(15)
+
+    if (!isLooping()) {
+      loop()
+    }
   }, 0);
 
 }
 
 function draw() {
+
   removeMatches(findMatches(globalGrid));
 
   if (!globalGrid.isFull()) {
     applyGravity(globalGrid);
     globalGrid.generateItems();
+  } else {
+    if (moves === 0) {
+
+      if (confirm('YOU LOST! RESET ?')) {
+        setupGame();
+      } else {
+        noLoop();
+      }
+    }
   }
 
   globalCanvas.drawPlayfield();
@@ -445,6 +467,9 @@ function updateScore(match, resetCounter = false) {
 
   score += 100 * match.length * (match.length - 1) * 0.5;
   scoreCounter.innerHTML = score
+
+  bestScore = bestScore > score ? bestScore : score;
+  bestScoreCounter.innerHTML = bestScore
 }
 
 function updateCombo(matches, resetCounter = false) {
@@ -458,9 +483,20 @@ function updateCombo(matches, resetCounter = false) {
   combo += [...matches].length;
   comboCounter.innerHTML = combo
 
+  bestCombo = bestCombo > combo ? bestCombo : combo;
+  bestComboCounter.innerHTML = bestCombo
+
   let fontSize = combo > 0 ? combo : 1;
   comboCounter.style = 'font-size: ' + fontSize + 'em'
 }
+
+function updateMoves(value) {
+  moves = value
+
+  moveCounter.innerHTML = moves
+  moveCounter.style = value > 10 ? 'color: white' : 'color: red';
+}
+
 
 function checkMouseOver(minX, maxX, minY, maxY) {
   return mouseX > minX && mouseX < maxX && mouseY > minY && mouseY < maxY;
