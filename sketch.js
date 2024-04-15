@@ -17,6 +17,7 @@ let initialShuffle = true;
 let globalRun;
 let globalGrid;
 let globalCanvas;
+let globalAnimations;
 
 class ProgressBar {
   constructor(maxValue, value, title, color) {
@@ -123,8 +124,8 @@ class Run {
     let runInfo = [
       new ProgressBar(
         totalEnemies,
-        this.defeatedEnemies + 1,
-        'Game',
+        this.defeatedEnemies,
+        'Progress',
         [227, 227, 227]
       ),
       new ProgressBar(
@@ -136,25 +137,25 @@ class Run {
       new ProgressBar(
         this.stagesPerFloor,
         stage.number,
-        'Floor',
+        'Stage',
         [49, 102, 214]
       ),
       new ProgressBar(
         this.enemyPerStage,
         enemy.number,
-        'Stage',
+        'Enemies',
         [122, 214, 49]
       ),
       new ProgressBar(
         enemy.health,
-        enemy.currentHealth - 1,
-        'Enemy',
+        enemy.currentHealth,
+        enemy.name + ' Health',
         [87, 49, 214]
       ),
       new ProgressBar(
         this.character.health,
-        this.character.currentHealth - 1,
-        'Health',
+        this.character.currentHealth,
+        'Your Health',
         [214, 87, 49]
       ),
     ]
@@ -187,35 +188,45 @@ class Stage {
 
     this.enemies = [...Array(this.floor.run.enemyPerStage)].map(
       (enemy, index) => {
-        let bossMultiplier = 1
 
         let isBoss = index === this.floor.run.enemyPerStage - 1
-        if (isBoss) {
-          bossMultiplier = 2 * this.floor.number
-        }
 
-        let maxHealth = 1500 * bossMultiplier * (1 + ((this.floor.number - 1) / 2))
-        let minHealth = 500 * bossMultiplier * (1 + ((this.floor.number - 1) / 2))
-
-        let enemyBaseHealth = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth)
-        let enemyBaseAttack = 10 * bossMultiplier
-
-        let enemyTotalHealth = enemyBaseHealth * (1 + ((this.floor.number - 1) / 10)) * (1 + ((this.number - 1) / 100))
-        let enemyTotalAttack = enemyBaseAttack * (1 + ((this.floor.number - 1) / 10)) * (1 + ((this.number - 1) / 100))
-        return new Enemy(index + 1, enemyTotalHealth, enemyTotalAttack, isBoss ? 'Boss' : 'Enemy', { ...this })
+        return new Enemy(index + 1, isBoss, this.floor.number - 1, this.number - 1);
       }
     )
   }
 }
 
 class Enemy {
-  constructor(number, health, attack, type, stage) {
+  constructor(number, isBoss, currentFloorIndex, currentStageIndex) {
     this.number = number
-    this.health = health
-    this.currentHealth = health;
-    this.attack = attack
-    this.type = type
-    this.stage = stage
+    this.isBoss = isBoss
+
+    this.name = isBoss ? 'Boss' : 'Enemy';
+
+    this.health = 0
+    this.currentHealth = 0;
+    this.attack = 0
+
+    this.calculateStats(currentFloorIndex, currentStageIndex)
+  }
+
+  calculateStats = function (currentFloorIndex, currentStageIndex) {
+    let bossMultiplier = 1
+
+    if (this.isBoss) {
+      bossMultiplier = 2 * (currentFloorIndex + 1);
+    }
+
+    let maxHealth = 1500 * bossMultiplier * (1 + (currentFloorIndex / 2));
+    let minHealth = 500 * bossMultiplier * (1 + (currentFloorIndex / 2));
+
+    let enemyBaseAttack = 10 * bossMultiplier;
+    let enemyBaseHealth = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth);
+
+    this.attack = enemyBaseAttack * (1 + (currentFloorIndex / 10)) * (1 + (currentStageIndex / 100))
+    this.health = enemyBaseHealth * (1 + (currentFloorIndex / 10)) * (1 + (currentStageIndex / 100))
+    this.currentHealth = this.health;
   }
 
   damage = function (damage, run) {
@@ -479,6 +490,62 @@ class Grid {
 
 }
 
+class TextAnimation {
+  constructor(text, size, color, stroke, align, initialPosition, relativeEndPosition, frames) {
+    this.text = text;
+    this.size = size;
+    this.color = color;
+    this.stroke = stroke;
+    this.align = align;
+    this.initialPosition = initialPosition;
+    this.relativeEndPosition = relativeEndPosition;
+    this.frames = frames;
+    this.id = generateId();
+
+    this.fade = 200;
+    this.velocityX = 0;
+    this.velocityY = 0;
+    this.velocityFade = 0;
+    this.calculateVelocity();
+  }
+
+  calculateVelocity = function () {
+    this.velocityX = this.relativeEndPosition.x / this.frames;
+    this.velocityY = this.relativeEndPosition.y / this.frames;
+    this.velocityFade = this.fade / this.frames;
+  }
+
+  draw = function () {
+    fill(...this.color, this.fade)
+    if (this.stroke > 0) {
+      stroke(0,0,0, this.fade)
+      strokeWeight(this.stroke)
+    } else {
+      noStroke();
+    }
+
+    textSize(this.size)
+    textAlign(this.align)
+    text(
+      this.text,
+      this.initialPosition.x,
+      this.initialPosition.y,
+    );
+    noStroke();
+    this.updatePosition();
+  }
+
+  updatePosition() {
+    this.initialPosition.x += this.velocityX;
+    this.initialPosition.y += this.velocityY;
+    this.fade -= this.velocityFade;
+
+    if (this.frames-- === 0) {
+      globalAnimations = globalAnimations.filter(animation => animation.id !== this.id);
+    }
+  }
+}
+
 function setup() {
   gridInputX.value = 7
   gridInputY.value = 5
@@ -492,11 +559,13 @@ function setup() {
 
 function setupGame() {
   setTimeout(() => {
-    let character = new Character(1000)
-    globalRun = new Run(character, 3, 3, 3, 15);
+    let character = new Character(100)
+    globalRun = new Run(character, 3, 3, 3, 5);
     globalCanvas = new CanvasInfo(16, 4, 4, 20);
     globalGrid = new Grid(parseInt(gridInputX.value, 10), parseInt(gridInputY.value, 10));
     globalGrid.calculateSpacing(globalCanvas);
+
+    globalAnimations = [];
 
     updateScore([], true)
     updateCombo([], true)
@@ -521,6 +590,11 @@ function draw() {
   globalRun.drawRunInfo(globalCanvas)
   globalGrid.draw(globalCanvas);
   globalGrid.drawItems(globalCanvas);
+
+  globalAnimations.forEach(animation => {
+    animation.draw();
+    animation.updatePosition(globalAnimations)
+  });
 
   if (globalRun.winState) {
     alert('YOU WON!')
@@ -616,7 +690,6 @@ function removeMatches(matches) {
     }
     match.forEach(item => {
       globalGrid.getCellbyPosition(item.position).item = undefined
-
     });
   })
 }
@@ -641,19 +714,57 @@ function canReach(pos1, pos2) {
 
 }
 
+function damagePlayerAnimation(damage) {
+  let textAnimation = new TextAnimation(
+    `-${damage} HP`,
+    20,
+    [214, 87, 49],
+    4,
+    CENTER,
+    new Position(globalCanvas.canvasSize.x / 2, globalCanvas.totalUiSize),
+    new Position(0, 200),
+    180
+  );
+
+  globalAnimations.push(textAnimation);
+}
+
 function reload() {
   updateMoves(globalRun.movesPerStage);
-  globalRun.character.damage(globalRun.findEnemy().attack)
+  let damage = globalRun.findEnemy().attack;
+  globalRun.character.damage(damage)
+  damagePlayerAnimation(Math.floor(damage))
+}
+
+function damageAnimation(damage, overkill) {
+  let varianceX = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
+  let varianceY = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
+
+  let textAnimation = new TextAnimation(
+    `${damage} DMG`,
+    20,
+    overkill ? [255, 0, 0] : [255, 255, 255],
+    4,
+    CENTER,
+    new Position(mouseX + varianceX, mouseY + varianceY),
+    new Position(0, -200),
+    180
+  );
+
+  globalAnimations.push(textAnimation);
 }
 
 function damageEnemy(run, damage) {
   let enemy = run.findEnemy()
+  let finalDamage = damage
+  let overkill = enemy.currentHealth < damage;
 
-  if (enemy.currentHealth < damage) {
-    damage = enemy.currentHealth;
+  if (overkill) {
+    finalDamage = enemy.currentHealth;
   }
 
-  enemy.damage(damage, run)
+  enemy.damage(finalDamage, run)
+  damageAnimation(damage, overkill, globalCanvas);
 }
 
 function updateScore(match, resetCounter = false) {
@@ -670,7 +781,9 @@ function updateScore(match, resetCounter = false) {
   bestScore = bestScore > globalRun.score ? bestScore : globalRun.score;
   bestScoreCounter.innerHTML = bestScore
 
-  damageEnemy(globalRun, additiveScore);
+  if (!resetCounter) {
+    damageEnemy(globalRun, additiveScore);
+  }
 }
 
 function updateCombo(matches, resetCounter = false) {
@@ -720,14 +833,36 @@ function polygon(x, y, radius, npoints) {
 function drawBar(element, index, canvas) {
   let percentageOfBar = element.value / element.maxValue
 
-  noStroke()
+  let commonMargin = (canvas.margin * (index + 2)) + (canvas.uiBarSize * index)
+  let baseElementSize = (canvas.playfield.x - (2 * canvas.padding))
+
   fill(percentageOfBar ? element.color : [20, 20, 20]);
+  noStroke()
   rect(
     canvas.margin + canvas.padding,
-    (canvas.margin * (index + 2)) + (canvas.uiBarSize * index),
-    (canvas.playfield.x - (2 * canvas.padding)) * percentageOfBar,
+    commonMargin,
+    baseElementSize * percentageOfBar,
     canvas.uiBarSize,
     canvas.radius + canvas.padding
+  );
+
+  fill(element.color)
+  stroke(0)
+  strokeWeight(4)
+  textSize(20)
+
+  textAlign(LEFT)
+  text(
+    element.title,
+    canvas.margin + canvas.padding * 4,
+    commonMargin + canvas.padding,
+  );
+
+  textAlign(RIGHT)
+  text(
+    `${Math.floor(element.value)}/${Math.floor(element.maxValue)}`,
+    canvas.margin + baseElementSize - (canvas.padding * 4),
+    commonMargin + canvas.padding,
   );
 }
 
