@@ -11,5 +11,4 @@ export class Reward {
         this.description = description
     }
 
-
 }

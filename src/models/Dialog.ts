@@ -82,23 +82,39 @@ export class Dialog {
                 canvas.radius * 2
             );
 
-            this.p5.fill(255);
-            this.p5.stroke(0);
-            this.p5.strokeWeight(4);
-            this.p5.textSize(20)
-            this.p5.text(
-                option.title,
-                canvas.canvasSize.x / 2,
-                cumulativeMargin + (2 * canvas.margin),
-            );
+            if(option.reward) {
+                this.p5.textAlign(this.p5.LEFT)
+                this.p5.fill(option.color.value);
+                this.p5.stroke(0);
+                this.p5.strokeWeight(4);
+                this.p5.textSize(10)
+                this.p5.text(
+                    option.reward.rarity,
+                    (canvas.canvasSize.x / 2) - (optionWidth / 2) + canvas.padding,
+                    cumulativeMargin + canvas.margin + (canvas.padding / 2),
+                );
 
-            this.p5.fill(200);
-            this.p5.textSize(16)
-            this.p5.text(
-                option.message,
-                canvas.canvasSize.x / 2,
-                cumulativeMargin + (4 * canvas.margin),
-            );
+                this.p5.textAlign(this.p5.CENTER)
+
+                this.p5.fill(255);
+                this.p5.stroke(0);
+                this.p5.strokeWeight(4);
+                this.p5.textSize(20)
+                this.p5.text(
+                    option.reward.name,
+                    canvas.canvasSize.x / 2,
+                    cumulativeMargin + (3 * canvas.margin),
+                );
+    
+                this.p5.fill(200);
+                this.p5.textSize(16)
+                this.p5.text(
+                    option.reward.description,
+                    canvas.canvasSize.x / 2,
+                    cumulativeMargin + (5 * canvas.margin),
+                );
+            }
+
         })
     }
 }

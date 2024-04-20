@@ -26,6 +26,7 @@ export class Run {
     possibleColors: Color[];
     possibleRewards: Reward[];
     floors: Floor[];
+    runInfo: ProgressBar[];
 
     constructor(p5: p5, character: Character, totalFloors: number, stagesPerFloor: number, enemyPerStage: number, movesPerStage: number) {
         this.p5 = p5;
@@ -89,13 +90,13 @@ export class Run {
                         this.defeatedEnemies++;
                     } else {
                         floor.currentStageIndex++;
-                        if(stageCallback){
+                        if (stageCallback) {
                             stageCallback();
                         }
                     }
                 } else {
                     this.currentFloorIndex++;
-                    if(floorCallback) {
+                    if (floorCallback) {
                         floorCallback();
                     }
                 }
@@ -116,12 +117,10 @@ export class Run {
             (reward: Reward) => {
                 return new DialogOption(
                     this.p5,
-                    reward.name,
-                    reward.description,
-                    undefined,
+                    reward,
                     false,
                     rarityColorMap[reward.rarity],
-                    reward.effect
+                    reward.effect,
                 )
             })
 
@@ -142,8 +141,7 @@ export class Run {
         let floor: Floor = this.findFloor();
 
         let totalEnemies: number = this.totalFloors * this.stagesPerFloor * this.enemyPerStage;
-
-        let runInfo: ProgressBar[] = [
+        this.runInfo = [
             new ProgressBar(
                 totalEnemies,
                 this.defeatedEnemies,
@@ -182,7 +180,7 @@ export class Run {
             ),
         ];
 
-        runInfo.forEach((element: ProgressBar, index: number) => {
+        this.runInfo.forEach((element: ProgressBar, index: number) => {
             drawBarCallback(element, index, canvas);
         });
     }

@@ -53,7 +53,7 @@ new p5((sketch: p5) => {
     function setupGame(): void {
         setTimeout(() => {
             let character: Character = new Character(100)
-            globalRun = new Run(sketch, character, 20, 2, 2, 10);
+            globalRun = new Run(sketch, character, 5, 5, 2, 4);
             globalCanvas = new CanvasInfo(sketch, 16, 4, 4, 20, 6);
             globalGrid = new Grid(parseInt(gridInputX.value, 10), parseInt(gridInputY.value, 10));
             globalGrid.calculateSpacing(globalCanvas);
