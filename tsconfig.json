@@ -12,5 +12,5 @@
     "rootDir": "src",
     "moduleResolution": "node"
   },
-  "exclude": ["src/sketch.js", "dist"]
+  "exclude": ["src/sketch-legacy.js", "dist"]
 }
