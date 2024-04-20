@@ -10,9 +10,7 @@ let moveCounter = document.getElementById('moveCounter');
 let bestScore = 0;
 let bestCombo = 0;
 let uiBarCount = 6
-
-let stackCombo = false;
-let initialShuffle = true;
+let inAnimation = false;
 
 let globalRun;
 let globalGrid;
@@ -125,7 +123,7 @@ class Run {
       new ProgressBar(
         totalEnemies,
         this.defeatedEnemies,
-        'Progress',
+        'Run Progress',
         [227, 227, 227]
       ),
       new ProgressBar(
@@ -296,6 +294,10 @@ class Item {
     this.position = position;
     this.sideSize = sideSize
     this.id = generateId();
+
+    this.velocityX = 0;
+    this.velocityY = 0;
+    this.animationFrames = 0;
   }
 
   static generateRandomItem = function (position, gridSideSize, possibleShapes) {
@@ -307,6 +309,12 @@ class Item {
   renewPosition = function (position) {
     this.position = position;
     return { ...this }
+  }
+
+  animate = function(relativeEndPosition, frames) {
+    this.animationFrames = frames;
+    this.velocityX = this.relativeEndPosition.x / frames;
+    this.velocityY = this.relativeEndPosition.y / frames;
   }
 }
 
@@ -603,7 +611,7 @@ function draw() {
 }
 
 function mouseClicked(event) {
-  if (event.isTrusted) {
+  if (event.isTrusted && !inAnimation) {
     let lastClick = new Position(event.x, event.y)
     let clickFound = false
     globalGrid.iterateXtoY((x, y) => {
@@ -711,7 +719,6 @@ function canReach(pos1, pos2) {
     return [pos1.x - 1, pos1.x + 1].includes(pos2.x);
   }
   return false
-
 }
 
 function damagePlayerAnimation(damage) {

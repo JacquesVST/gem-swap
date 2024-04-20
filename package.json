@@ -1,0 +1,19 @@
+{
+    "name": "bejeweled",
+    "version": "1.0.0",
+    "description": "Simple p5 game",
+    "scripts": {
+        "start": "parcel src/index.html --open",
+        "build": "parcel build src/index.html"
+    },
+    "dependencies": {
+        "@types/node": "^20.12.7",
+        "@types/p5": "1.7.6",
+        "p5": "1.9.2"
+    },
+    "devDependencies": {
+        "install": "^0.13.0",
+        "npm": "^10.5.2",
+        "parcel": "^2.12.0"
+    }
+}
