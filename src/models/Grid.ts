@@ -1,10 +1,10 @@
 import * as p5 from "p5";
+import { canReach, checkPositionInLimit, polygon } from "../utils/Functions";
 import { CanvasInfo } from "./CanvasInfo";
 import { Cell } from "./Cell";
 import { Item } from "./Item";
 import { Position } from "./Position";
 import { Run } from "./Run";
-import { canReach, checkPositionInLimit, polygon } from "../utils/Functions";
 
 export class Grid {
     width: number;
@@ -94,28 +94,40 @@ export class Grid {
         }
     }
 
-    swap(position1: Position, position2: Position, run: Run, swapCompleteCallback: () => void, humanSwap: boolean = false): void {
+    validateSwap(position1: Position, position2: Position, swapCompleteCallback: () => void, humanSwap: boolean = false): () => void {
+
         if (position1.checksum === position2.checksum) {
-            return;
+            return undefined;
         }
 
         if (humanSwap && !canReach(position1, position2)) {
-            return;
+            return undefined;
         }
 
         let item1: Item | undefined = this.getItembyPosition(position1)?.renewPosition(position2);
         let item2: Item | undefined = this.getItembyPosition(position2)?.renewPosition(position1);
 
-
         if (humanSwap) {
             if (item1 && item2 && item1.shape.sides === item2.shape.sides) {
-                return;
+                return undefined;
             }
         }
 
+        return this.swap.bind(this, position1, position2, item1, item2, swapCompleteCallback);
+    }
+
+    getAnimateSwapData(position1: Position, position2: Position): AnimateSwapData {
+        let cell1: Cell = this.getCellbyPosition(position1)
+        let cell2: Cell = this.getCellbyPosition(position2)
+        let item1: Item | undefined = this.getItembyPosition(position1);
+        let item2: Item | undefined = this.getItembyPosition(position2);
+        return { item1, item2, cell1, cell2, frames: 5 }
+    }
+
+    swap(position1: Position, position2: Position, item1: Item, item2: Item, swapCompleteCallback: () => void): void {
+
         this.setCellItem(position1, item2);
         this.setCellItem(position2, item1);
-
 
         if (swapCompleteCallback) {
             swapCompleteCallback();
@@ -154,15 +166,16 @@ export class Grid {
             if (item) {
                 let cellRef: Cell = this.getCellbyPosition(item.position);
                 p5.strokeWeight(2);
-                p5.stroke(0);
-                p5.fill(item.shape.color.r, item.shape.color.g, item.shape.color.b, 255);
+                p5.stroke(0, 0, 0, 255 - item.additiveFade);
+                p5.fill(item.shape.color.r, item.shape.color.g, item.shape.color.b, 255 - item.additiveFade);
                 polygon(
-                    cellRef.canvasPosition.x + (this.sideSize / 2),
-                    cellRef.canvasPosition.y + (this.sideSize / 2),
+                    cellRef.canvasPosition.x + (this.sideSize / 2) + item.relativeEndPosition.x,
+                    cellRef.canvasPosition.y + (this.sideSize / 2) + item.relativeEndPosition.y,
                     item.sideSize,
                     item.shape.sides,
                     p5
                 );
+                item.updatePosition();
             }
         });
     }
@@ -190,4 +203,13 @@ export class Grid {
         return undefined;
     }
 
+}
+
+
+export interface AnimateSwapData { 
+    item1: Item; 
+    item2: Item; 
+    cell1: Cell; 
+    cell2: Cell;
+    frames: number;
 }

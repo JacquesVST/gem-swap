@@ -2,8 +2,7 @@ import * as p5 from "p5";
 import { CanvasInfo } from "./CanvasInfo";
 import { Character } from "./Character";
 import { Color } from "./Color";
-import { Dialog } from "./Dialog";
-import { DialogOption } from "./DialogOption";
+import { Dialog, DialogOption } from "./Dialog";
 import { Enemy } from "./Enemy";
 import { Floor } from "./Floor";
 import { ProgressBar } from "./ProgressBar";
@@ -27,6 +26,8 @@ export class Run {
     possibleRewards: Reward[];
     floors: Floor[];
     runInfo: ProgressBar[];
+
+    damageMultiplier: number = 1 ;
 
     constructor(p5: p5, character: Character, totalFloors: number, stagesPerFloor: number, enemyPerStage: number, movesPerStage: number) {
         this.p5 = p5;
@@ -135,7 +136,7 @@ export class Run {
         globalDialogs.push(dialog);
     }
 
-    drawRunInfo(canvas: CanvasInfo, drawBarCallback: (x: ProgressBar, y: number, z: CanvasInfo) => void): void {
+    drawRunInfo(canvas: CanvasInfo): void {
         let enemy: Enemy = this.findEnemy();
         let stage: Stage = this.findStage();
         let floor: Floor = this.findFloor();
@@ -181,7 +182,7 @@ export class Run {
         ];
 
         this.runInfo.forEach((element: ProgressBar, index: number) => {
-            drawBarCallback(element, index, canvas);
+            element.drawBar(this.p5, index, canvas);
         });
     }
 
@@ -196,14 +197,6 @@ export class Run {
                 }).bind(this)
             ),
             new Reward(
-                'Common',
-                'your average item #2',
-                '+1 move(s)',
-                (() => {
-                    this.movesPerStage += 1
-                }).bind(this)
-            ),
-            new Reward(
                 'Rare',
                 'your average item #3',
                 '+2 move(s)',
@@ -213,10 +206,34 @@ export class Run {
             ),
             new Reward(
                 'Epic',
-                'your average item #4',
-                '+4 move(s)',
+                'novo item epico #4',
+                'x2 DMG!',
                 (() => {
-                    this.movesPerStage += 4
+                    this.damageMultiplier = this.damageMultiplier * 2;
+                }).bind(this)
+            ),
+            new Reward(
+                'Common',
+                'Cura modesta',
+                '+ 15 HP',
+                (() => {
+                    this.character.currentHealth += 15
+                }).bind(this)
+            ),
+            new Reward(
+                'Common',
+                'Cura modesta',
+                '+ 10 HP',
+                (() => {
+                    this.character.currentHealth += 10
+                }).bind(this)
+            ),
+            new Reward(
+                'Rare',
+                'Escudão',
+                'Bloqueia primeiro hit letal',
+                (() => {
+                    this.character.hasItemThatPreventsFirstLethalDamage = true
                 }).bind(this)
             )
         ]

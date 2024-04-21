@@ -1,15 +1,17 @@
+import { AnimatableObject } from "./AnimatableObject";
 import { generateId } from "../utils/Functions";
 import { Color } from "./Color";
 import { Position } from "./Position";
 import { Shape } from "./Shape";
 
-export class Item {
+export class Item extends AnimatableObject {
     shape: Shape;
     position: Position;
     sideSize: number;
     id: string;
 
     constructor(shape: Shape, position: Position, sideSize: number) {
+        super()
         this.shape = shape;
         this.position = position;
         this.sideSize = sideSize;

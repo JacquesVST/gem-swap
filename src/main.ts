@@ -3,13 +3,11 @@ import { CanvasInfo } from "./models/CanvasInfo";
 import { Cell } from "./models/Cell";
 import { Character } from "./models/Character";
 import { Color } from "./models/Color";
-import { Dialog } from "./models/Dialog";
-import { DialogOption } from "./models/DialogOption";
+import { Dialog, DialogOption } from "./models/Dialog";
 import { Enemy } from "./models/Enemy";
-import { Grid } from "./models/Grid";
+import { AnimateSwapData, Grid } from "./models/Grid";
 import { Item } from "./models/Item";
 import { Position } from "./models/Position";
-import { ProgressBar } from "./models/ProgressBar";
 import { Run } from "./models/Run";
 import { TextAnimation } from "./models/TextAnimation";
 import { checkPositionInLimit } from "./utils/Functions";
@@ -32,6 +30,7 @@ new p5((sketch: p5) => {
     let bestScore: number = 0;
     let bestCombo: number = 0;
     let currentDialog: Dialog | undefined;
+    let inAnimation: boolean = false;
 
     let globalRun: Run;
     let globalGrid: Grid;
@@ -40,8 +39,8 @@ new p5((sketch: p5) => {
     let globalDialogs: Dialog[];
 
     sketch.setup = () => {
-        gridInputX.value = "7"
-        gridInputY.value = "5"
+        gridInputX.value = "12"
+        gridInputY.value = "8"
 
         resetButton.onclick = () => {
             setupGame();
@@ -53,7 +52,8 @@ new p5((sketch: p5) => {
     function setupGame(): void {
         setTimeout(() => {
             let character: Character = new Character(100)
-            globalRun = new Run(sketch, character, 5, 5, 2, 4);
+
+            globalRun = new Run(sketch, character, 50, 50, 50, 10);
             globalCanvas = new CanvasInfo(sketch, 16, 4, 4, 20, 6);
             globalGrid = new Grid(parseInt(gridInputX.value, 10), parseInt(gridInputY.value, 10));
             globalGrid.calculateSpacing(globalCanvas);
@@ -66,23 +66,27 @@ new p5((sketch: p5) => {
             updateCombo([], true)
             updateMoves(globalRun.movesPerStage)
         }, 0);
-
     }
 
     sketch.draw = () => {
-        removeMatches(findMatches(globalGrid));
+        sketch.frameRate(60)
+        //logic
 
         if (!globalGrid.isFull()) {
             applyGravity(globalGrid);
             globalGrid.generateItems(globalRun);
         } else {
+            if(!inAnimation) {
+                removeMatches(findMatches(globalGrid));
+            }
             if (globalRun.moves === 0) {
                 reload()
             }
         }
 
+        //animations
         globalCanvas.drawPlayfield();
-        globalRun.drawRunInfo(globalCanvas, drawBar)
+        globalRun.drawRunInfo(globalCanvas)
         globalGrid.draw(globalCanvas, sketch, !!currentDialog);
         globalGrid.drawItems(sketch);
 
@@ -126,29 +130,53 @@ new p5((sketch: p5) => {
                         globalRun.combo = 0
                     } else {
                         stackCombo = true;
-                        globalGrid.swap(cell.position, globalGrid.selectedCellPos, globalRun, updateMoves.bind(this, globalRun.moves - 1), true);
+                        swap(cell.position, globalGrid.selectedCellPos, updateMoves.bind(this, globalRun.moves - 1), true);
                         globalGrid.selectedCellPos = undefined
                         lastClick = new Position(0, 0)
                     }
                 }
-            }, () => clickFound)
+            }, () => clickFound);
         } else {
             currentDialog.options.forEach((option: DialogOption) => {
                 if (checkPositionInLimit(lastClick, ...option.limits)) {
                     option.action();
-                    currentDialog = undefined;
-                    globalDialogs.shift();
+                    globalDialogs.pop()
+                    currentDialog = undefined
                 }
             })
         }
-        updateMoves(globalRun.moves)
+        updateMoves(globalRun.moves);
     }
 
+    function swap(position1: Position, position2: Position, callback: () => void, humanSwap: boolean = true): void {
+        let swapFunc: () => void = globalGrid.validateSwap(position1, position2, callback, humanSwap);
+        if (swapFunc) {
+            animateSwap(globalGrid.getAnimateSwapData(position1, position2), swapFunc)
+        }
+    }
 
+    function animateSwap(animateSwapData: AnimateSwapData, callback: () => void): void {
+        let { item1, item2, cell1, cell2, frames } = animateSwapData;
+
+        if (item1) {
+            item1.animationEndCallback = callback
+            item1.setupNewAnimation(frames, cell2.canvasPosition.difference(cell1.canvasPosition))
+        }
+
+        if (item2) {
+            item2.setupNewAnimation(frames, cell2.canvasPosition.minus(cell1.canvasPosition))
+        }
+    }
+
+    function removeItem(item: Item) {
+        inAnimation = true;
+        item.animationEndCallback = () => { globalGrid.getCellbyPosition(item.position).item = undefined; inAnimation= false };
+        item.setupNewAnimation(5, new Position(0, 0), 255);
+    }
 
     function removeMatches(matches: Item[][]): void {
         if (stackCombo) {
-            updateCombo(matches)
+            updateCombo(matches);
         }
 
         matches.forEach((match: Item[]) => {
@@ -156,9 +184,9 @@ new p5((sketch: p5) => {
                 updateScore(match);
             }
             match.forEach((item: Item) => {
-                globalGrid.getCellbyPosition(item.position).item = undefined
+                removeItem(item);
             });
-        })
+        });
     }
 
     function findMatches(grid: Grid): Item[][] {
@@ -208,7 +236,7 @@ new p5((sketch: p5) => {
     function applyGravity(grid: Grid): void {
         grid.iterateYtoX((x: number, y: number) => {
             if (y < grid.height - 1 && !grid.cells[x][y + 1].item) {
-                grid.swap(grid.cells[x][y].position, grid.cells[x][y + 1].position, globalRun, undefined);
+                swap(grid.cells[x][y].position, grid.cells[x][y + 1].position, undefined);
             }
         });
     }
@@ -255,15 +283,18 @@ new p5((sketch: p5) => {
     }
 
     function damageEnemy(run: Run, damage: number): void {
+        damage = damage * run.damageMultiplier;
         let enemy: Enemy = run.findEnemy()
-        let finalDamage: number = damage
+        let finalDamage: number = damage;
         let overkill: boolean = enemy.currentHealth < damage;
 
         if (overkill) {
             finalDamage = enemy.currentHealth;
         }
 
-        enemy.damage(finalDamage, run, () => globalRun.newPercDialog(globalDialogs))
+        enemy.damage(finalDamage, run, () => {
+            globalRun.newPercDialog(globalDialogs)
+        })
         damageAnimation(damage, overkill);
     }
 
@@ -314,39 +345,4 @@ new p5((sketch: p5) => {
     }
 
 
-    function drawBar(element: ProgressBar, index: number, canvas: CanvasInfo): void {
-        let percentageOfBar: number = element.value / element.maxValue
-
-        let commonMargin: number = (canvas.margin * (index + 2)) + (canvas.uiBarSize * index)
-        let baseElementSize: number = (canvas.playfield.x - (2 * canvas.padding))
-
-        sketch.fill(percentageOfBar ? element.color.value : [20, 20, 20]);
-        sketch.noStroke()
-        sketch.rect(
-            canvas.margin + canvas.padding,
-            commonMargin,
-            baseElementSize * percentageOfBar,
-            canvas.uiBarSize,
-            canvas.radius + canvas.padding
-        );
-
-        sketch.fill(element.color.value)
-        sketch.stroke(0)
-        sketch.strokeWeight(4)
-        sketch.textSize(20)
-
-        sketch.textAlign(sketch.LEFT)
-        sketch.text(
-            element.title,
-            canvas.margin + canvas.padding * 4,
-            commonMargin + canvas.padding,
-        );
-
-        sketch.textAlign(sketch.RIGHT)
-        sketch.text(
-            `${Math.floor(element.value)}/${Math.floor(element.maxValue)}`,
-            canvas.margin + baseElementSize - (canvas.padding * 4),
-            commonMargin + canvas.padding,
-        );
-    }
 });

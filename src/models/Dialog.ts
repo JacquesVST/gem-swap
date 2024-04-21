@@ -1,9 +1,9 @@
 import * as p5 from "p5";
-import { checkPositionInLimit } from "../utils/Functions";
+import { checkPositionInLimit, generateId } from "../utils/Functions";
 import { CanvasInfo } from "./CanvasInfo";
 import { Color } from "./Color";
-import { DialogOption } from "./DialogOption";
 import { Position } from "./Position";
+import { Reward } from "./Reward";
 
 export class Dialog {
     p5: p5;
@@ -11,6 +11,7 @@ export class Dialog {
     message: string;
     options: DialogOption[];
     color: Color;
+    id: string;
 
     constructor(p5: p5, title: string, message: string, options: DialogOption[], color: Color) {
         this.p5 = p5;
@@ -18,6 +19,7 @@ export class Dialog {
         this.message = message;
         this.options = options;
         this.color = color;
+        this.id = generateId();
     }
 
     draw(canvas: CanvasInfo): void {
@@ -116,5 +118,22 @@ export class Dialog {
             }
 
         })
+    }
+}
+
+export class DialogOption {
+    p5: p5;
+    reward: Reward;
+    disabled: boolean;
+    color: Color;
+    action: () => void;
+    limits: number[];
+
+    constructor(p5: p5, reward: Reward, disabled: boolean, color: Color, action: () => void) {
+        this.p5 = p5;
+        this.reward = reward;
+        this.disabled = disabled
+        this.color = color;
+        this.action = action;
     }
 }
