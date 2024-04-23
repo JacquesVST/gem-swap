@@ -6,7 +6,7 @@ import { Dialog, DialogOption } from "./Dialog";
 import { Enemy } from "./Enemy";
 import { Floor } from "./Floor";
 import { ProgressBar } from "./ProgressBar";
-import { Reward } from "./Reward";
+import { Reward, RewardPools } from "./Reward";
 import { Stage } from "./Stage";
 
 export class Run {
@@ -25,9 +25,12 @@ export class Run {
     possibleColors: Color[];
     possibleRewards: Reward[];
     floors: Floor[];
-    runInfo: ProgressBar[];
 
-    damageMultiplier: number = 1 ;
+    initialShuffle: boolean = true;
+    stackCombo: boolean = false;
+
+    damageMultiplier: number = 1;
+    progressBars: ProgressBar[];
 
     constructor(p5: p5, character: Character, totalFloors: number, stagesPerFloor: number, enemyPerStage: number, movesPerStage: number) {
         this.p5 = p5;
@@ -59,7 +62,55 @@ export class Run {
             }
         );
 
-        this.possibleRewards = this.defaultPool();
+        this.possibleRewards = RewardPools.defaultPool(this);
+        this.setupProgressBars();
+    }
+
+    setupProgressBars(): void {
+        let enemy: Enemy = this.findEnemy();
+        let stage: Stage = this.findStage();
+        let floor: Floor = this.findFloor();
+
+        let totalEnemies: number = this.totalFloors * this.stagesPerFloor * this.enemyPerStage;
+
+        this.progressBars = [
+            new ProgressBar(
+                totalEnemies,
+                this.defeatedEnemies,
+                'Run Progress',
+                new Color(227, 227, 227)
+            ),
+            new ProgressBar(
+                this.totalFloors,
+                floor.number,
+                'Floor',
+                new Color(236, 200, 19)
+            ),
+            new ProgressBar(
+                this.stagesPerFloor,
+                stage.number,
+                'Stage',
+                new Color(49, 102, 214)
+            ),
+            new ProgressBar(
+                this.enemyPerStage,
+                enemy.number,
+                'Enemies',
+                new Color(122, 214, 49)
+            ),
+            new ProgressBar(
+                enemy.health,
+                enemy.currentHealth,
+                enemy.name + ' Health',
+                new Color(87, 49, 214)
+            ),
+            new ProgressBar(
+                this.character.health,
+                this.character.currentHealth,
+                'Your Health',
+                new Color(214, 87, 49)
+            )
+        ]
     }
 
     findFloor(): Floor {
@@ -107,7 +158,7 @@ export class Run {
         }
     }
 
-    newPercDialog(globalDialogs: Dialog[]) {
+    newPercDialog(globalDialogs: Dialog[], selectCallback: () => void) {
         let rarityColorMap = {
             'Common': new Color(224, 224, 224),
             'Rare': new Color(101, 206, 80),
@@ -121,7 +172,10 @@ export class Run {
                     reward,
                     false,
                     rarityColorMap[reward.rarity],
-                    reward.effect,
+                    () => {
+                        reward.effect()
+                        selectCallback();
+                    }
                 )
             })
 
@@ -142,7 +196,7 @@ export class Run {
         let floor: Floor = this.findFloor();
 
         let totalEnemies: number = this.totalFloors * this.stagesPerFloor * this.enemyPerStage;
-        this.runInfo = [
+        let newProgressBars = [
             new ProgressBar(
                 totalEnemies,
                 this.defeatedEnemies,
@@ -181,61 +235,14 @@ export class Run {
             ),
         ];
 
-        this.runInfo.forEach((element: ProgressBar, index: number) => {
+        this.progressBars.forEach((element: ProgressBar, index: number) => {
+            let difference: number = element.value - newProgressBars[index].value
+            if (difference !== 0) {
+                this.progressBars[index] = newProgressBars[index];
+                this.progressBars[index].animate(difference);
+            }
             element.drawBar(this.p5, index, canvas);
         });
     }
 
-    defaultPool(): Reward[] {
-        return [
-            new Reward(
-                'Common',
-                'your average item #1',
-                '+1 move(s)',
-                (() => {
-                    this.movesPerStage += 1;
-                }).bind(this)
-            ),
-            new Reward(
-                'Rare',
-                'your average item #3',
-                '+2 move(s)',
-                (() => {
-                    this.movesPerStage += 2
-                }).bind(this)
-            ),
-            new Reward(
-                'Epic',
-                'novo item epico #4',
-                'x2 DMG!',
-                (() => {
-                    this.damageMultiplier = this.damageMultiplier * 2;
-                }).bind(this)
-            ),
-            new Reward(
-                'Common',
-                'Cura modesta',
-                '+ 15 HP',
-                (() => {
-                    this.character.currentHealth += 15
-                }).bind(this)
-            ),
-            new Reward(
-                'Common',
-                'Cura modesta',
-                '+ 10 HP',
-                (() => {
-                    this.character.currentHealth += 10
-                }).bind(this)
-            ),
-            new Reward(
-                'Rare',
-                'Escudão',
-                'Bloqueia primeiro hit letal',
-                (() => {
-                    this.character.hasItemThatPreventsFirstLethalDamage = true
-                }).bind(this)
-            )
-        ]
-    }
 }

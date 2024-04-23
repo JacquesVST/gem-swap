@@ -22,10 +22,9 @@ let bestComboCounter: HTMLElement = document.getElementById('bestComboCounter');
 let moveCounter: HTMLElement = document.getElementById('moveCounter');
 let moveContainerCounter: HTMLElement = document.getElementById('moveContainerCounter');
 
-let initialShuffle: boolean = true;
-let stackCombo: boolean = false;
 
 new p5((sketch: p5) => {
+
 
     let bestScore: number = 0;
     let bestCombo: number = 0;
@@ -53,7 +52,7 @@ new p5((sketch: p5) => {
         setTimeout(() => {
             let character: Character = new Character(100)
 
-            globalRun = new Run(sketch, character, 50, 50, 50, 10);
+            globalRun = new Run(sketch, character, 10, 10, 3, 10);
             globalCanvas = new CanvasInfo(sketch, 16, 4, 4, 20, 6);
             globalGrid = new Grid(parseInt(gridInputX.value, 10), parseInt(gridInputY.value, 10));
             globalGrid.calculateSpacing(globalCanvas);
@@ -122,14 +121,14 @@ new p5((sketch: p5) => {
 
                 if (checkPositionInLimit(lastClick, ...limits)) {
                     clickFound = true
-                    initialShuffle = false;
+                    globalRun.initialShuffle = false;
 
                     if (!globalGrid.selectedCellPos) {
                         globalGrid.selectedCellPos = cell.position
-                        stackCombo = false;
+                        globalRun.stackCombo = false;
                         globalRun.combo = 0
                     } else {
-                        stackCombo = true;
+                        globalRun.stackCombo = true;
                         swap(cell.position, globalGrid.selectedCellPos, updateMoves.bind(this, globalRun.moves - 1), true);
                         globalGrid.selectedCellPos = undefined
                         lastClick = new Position(0, 0)
@@ -175,12 +174,12 @@ new p5((sketch: p5) => {
     }
 
     function removeMatches(matches: Item[][]): void {
-        if (stackCombo) {
+        if (globalRun.stackCombo) {
             updateCombo(matches);
         }
 
         matches.forEach((match: Item[]) => {
-            if (!initialShuffle) {
+            if (!globalRun.initialShuffle) {
                 updateScore(match);
             }
             match.forEach((item: Item) => {
@@ -266,7 +265,7 @@ new p5((sketch: p5) => {
     function updateScore(match: Item[], resetCounter: boolean = false): void {
         if (resetCounter) {
             globalRun.score = 0
-            initialShuffle = true;
+            globalRun.initialShuffle = true;
         }
 
         let additiveScore: number = 100 * match.length * globalRun.combo;
@@ -293,7 +292,12 @@ new p5((sketch: p5) => {
         }
 
         enemy.damage(finalDamage, run, () => {
-            globalRun.newPercDialog(globalDialogs)
+            run.stackCombo = false;
+            run.initialShuffle = true;
+            globalRun.newPercDialog(globalDialogs, () => {
+            //     run.stackCombo = true;
+            // run.initialShuffle = false;
+            })
         })
         damageAnimation(damage, overkill);
     }
@@ -320,8 +324,8 @@ new p5((sketch: p5) => {
     function updateCombo(matches: Item[][], resetCounter: boolean = false): void {
         if (resetCounter) {
             globalRun.combo = 0
-            initialShuffle = true;
-            stackCombo = false;
+            globalRun.initialShuffle = true;
+            globalRun.stackCombo = false;
             comboCounter.setAttribute('style', 'font-size: 1em');
         }
 
