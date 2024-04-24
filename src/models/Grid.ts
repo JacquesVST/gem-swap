@@ -5,6 +5,7 @@ import { Cell } from "./Cell";
 import { Item } from "./Item";
 import { Position } from "./Position";
 import { Run } from "./Run";
+import { Shape } from "./Shape";
 
 export class Grid {
     width: number;
@@ -61,7 +62,8 @@ export class Grid {
         this.iterateYtoX((x: number, y: number) => {
             let cell: Cell = this.getCellbyPosition(new Position(x, y));
             if (!cell.item && cell.position.y === 0) {
-                this.cells[x][y].item = Item.generateRandomItem(this.cells[x][y].position, this.sideSize, run.possibleColors);
+                let shapes: Shape[] = Object.entries(run.possibleShapes).map(entry => entry[1] as Shape)
+                this.cells[x][y].item = Item.generateRandomItem(this.cells[x][y].position, this.sideSize, shapes);
             }
         });
     }

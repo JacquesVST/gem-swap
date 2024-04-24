@@ -10,6 +10,10 @@ export class Character {
         this.currentHealth = health;
     }
 
+    static defaultCharacter() {
+        return new Character(100);
+    }
+
     damage(damage: number, damageCallback: (damage: number) => void, deathCallback: () => void): void {
         if (this.hasItemThatPreventsFirstLethalDamage && !this.hasUsedItemThatPreventsFirstLethalDamage) {
             if (damage >= this.currentHealth) {
@@ -19,7 +23,7 @@ export class Character {
         }
         
         this.currentHealth -= damage;
-        if (this.currentHealth <= 0) {
+        if (this.currentHealth - 1 <= 0) {
             alert('YOU LOST!');
             if (deathCallback) {
                 deathCallback();
@@ -30,3 +34,5 @@ export class Character {
         }
     }
 }
+
+

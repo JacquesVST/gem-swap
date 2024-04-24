@@ -23,9 +23,9 @@ export class Item extends AnimatableObject {
         return this;
     }
 
-    static generateRandomItem(position: Position, gridSideSize: number, possibleShapes: Color[]): Item {
+    static generateRandomItem(position: Position, gridSideSize: number, possibleShapes: Shape[]): Item {
         let randomShape = Math.floor(Math.random() * possibleShapes.length);
-        let shape = new Shape(randomShape + 3, possibleShapes[randomShape]);
+        let shape = possibleShapes[randomShape];
         return new Item(shape, position, gridSideSize / 3);
     }
 }

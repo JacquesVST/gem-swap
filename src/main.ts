@@ -8,12 +8,10 @@ import { Enemy } from "./models/Enemy";
 import { AnimateSwapData, Grid } from "./models/Grid";
 import { Item } from "./models/Item";
 import { Position } from "./models/Position";
-import { Run } from "./models/Run";
+import { Run, RunConfig } from "./models/Run";
 import { TextAnimation } from "./models/TextAnimation";
 import { checkPositionInLimit } from "./utils/Functions";
 
-let gridInputX: HTMLInputElement = document.getElementById('gridX') as HTMLInputElement;
-let gridInputY: HTMLInputElement = document.getElementById('gridY') as HTMLInputElement;
 let resetButton: HTMLElement = document.getElementById('resetBtn');
 let scoreCounter: HTMLElement = document.getElementById('scoreCounter');
 let bestScoreCounter: HTMLElement = document.getElementById('bestScoreCounter');
@@ -29,17 +27,14 @@ new p5((sketch: p5) => {
     let bestScore: number = 0;
     let bestCombo: number = 0;
     let currentDialog: Dialog | undefined;
-    let inAnimation: boolean = false;
 
     let globalRun: Run;
-    let globalGrid: Grid;
     let globalCanvas: CanvasInfo;
-    let globalAnimations: TextAnimation[];
-    let globalDialogs: Dialog[];
+    let globalAnimations: TextAnimation[] = [];
+    let globalDialogs: Dialog[] = [];
 
     sketch.setup = () => {
-        gridInputX.value = "12"
-        gridInputY.value = "8"
+        globalCanvas = new CanvasInfo(sketch, 16, 4, 4, 20, 5);
 
         resetButton.onclick = () => {
             setupGame();
@@ -49,92 +44,100 @@ new p5((sketch: p5) => {
     }
 
     function setupGame(): void {
-        setTimeout(() => {
-            let character: Character = new Character(100)
-
-            globalRun = new Run(sketch, character, 10, 10, 3, 10);
-            globalCanvas = new CanvasInfo(sketch, 16, 4, 4, 20, 6);
-            globalGrid = new Grid(parseInt(gridInputX.value, 10), parseInt(gridInputY.value, 10));
-            globalGrid.calculateSpacing(globalCanvas);
+        if (globalRun) {
+            globalRun.winState = false
+        }
+        Run.newGameDialog(sketch, globalDialogs, (config: RunConfig) => {
+            globalRun = new Run(sketch, Character.defaultCharacter(), config.floors, config.stages, config.enemies, config.moves)
+            globalRun.setupGrid(new Grid(config.gridX, config.gridY));
+            globalRun.setupCanvas(globalCanvas);
+            globalRun.grid.calculateSpacing(globalCanvas);
 
             globalAnimations = [];
-            globalDialogs = [];
+            globalRun.inAnimation = false
             currentDialog = undefined;
 
             updateScore([], true)
             updateCombo([], true)
             updateMoves(globalRun.movesPerStage)
-        }, 0);
+        })
     }
 
     sketch.draw = () => {
-        sketch.frameRate(60)
         //logic
-
-        if (!globalGrid.isFull()) {
-            applyGravity(globalGrid);
-            globalGrid.generateItems(globalRun);
-        } else {
-            if(!inAnimation) {
-                removeMatches(findMatches(globalGrid));
+        if (globalRun) {
+            if (!globalRun.grid.isFull()) {
+                applyGravity(globalRun.grid);
+                globalRun.grid.generateItems(globalRun);
+            } else {
+                if (!globalRun.inAnimation) {
+                    removeMatches(findMatches(globalRun.grid));
+                }
+                if (globalRun.moves === 0) {
+                    reload()
+                }
             }
-            if (globalRun.moves === 0) {
-                reload()
+
+            //animations
+            globalCanvas.drawPlayfield();
+            globalRun.drawRunInfo(globalCanvas)
+            globalRun.grid.draw(globalCanvas, sketch, !!currentDialog);
+            globalRun.grid.drawItems(sketch);
+
+            globalAnimations.forEach((animation: TextAnimation) => {
+                animation.draw(sketch, globalAnimations);
+                animation.updatePosition(globalAnimations)
+            });
+
+            if (globalRun.winState) {
+                alert('YOU WON!')
+                setupGame();
             }
         }
-
-        //animations
-        globalCanvas.drawPlayfield();
-        globalRun.drawRunInfo(globalCanvas)
-        globalGrid.draw(globalCanvas, sketch, !!currentDialog);
-        globalGrid.drawItems(sketch);
-
-        globalAnimations.forEach((animation: TextAnimation) => {
-            animation.draw(sketch, globalAnimations);
-            animation.updatePosition(globalAnimations)
-        });
 
         globalDialogs.forEach((dialog: Dialog) => {
             currentDialog = dialog;
             dialog.draw(globalCanvas);
         });
 
-        if (globalRun.winState) {
-            alert('YOU WON!')
-            setupGame();
-        }
     }
 
     sketch.mouseClicked = () => {
         let lastClick: Position = new Position(sketch.mouseX, sketch.mouseY)
         if (!currentDialog) {
             let clickFound: boolean = false;
-            globalGrid.iterateXtoY((x: number, y: number) => {
-                let cell: Cell = globalGrid.cells[x][y];
+            globalRun.grid.iterateXtoY((x: number, y: number) => {
+                let cell: Cell = globalRun.grid.cells[x][y];
 
                 let limits: number[] = [
                     cell.canvasPosition.x,
-                    cell.canvasPosition.x + globalGrid.sideSize,
+                    cell.canvasPosition.x + globalRun.grid.sideSize,
                     cell.canvasPosition.y,
-                    cell.canvasPosition.y + globalGrid.sideSize
+                    cell.canvasPosition.y + globalRun.grid.sideSize
                 ]
 
                 if (checkPositionInLimit(lastClick, ...limits)) {
                     clickFound = true
                     globalRun.initialShuffle = false;
 
-                    if (!globalGrid.selectedCellPos) {
-                        globalGrid.selectedCellPos = cell.position
+                    if (!globalRun.grid.selectedCellPos) {
+                        globalRun.grid.selectedCellPos = cell.position
                         globalRun.stackCombo = false;
                         globalRun.combo = 0
                     } else {
                         globalRun.stackCombo = true;
-                        swap(cell.position, globalGrid.selectedCellPos, updateMoves.bind(this, globalRun.moves - 1), true);
-                        globalGrid.selectedCellPos = undefined
+                        let movesLeft: number = globalRun.moves - 1;
+                        if (Math.random() < globalRun.moveSaver) {
+                            movesLeft = globalRun.moves
+                        }
+
+                        swap(cell.position, globalRun.grid.selectedCellPos, updateMoves.bind(this, movesLeft), true);
+                        globalRun.grid.selectedCellPos = undefined
                         lastClick = new Position(0, 0)
                     }
                 }
             }, () => clickFound);
+            updateMoves(globalRun.moves);
         } else {
             currentDialog.options.forEach((option: DialogOption) => {
                 if (checkPositionInLimit(lastClick, ...option.limits)) {
@@ -144,13 +147,12 @@ new p5((sketch: p5) => {
                 }
             })
         }
-        updateMoves(globalRun.moves);
     }
 
     function swap(position1: Position, position2: Position, callback: () => void, humanSwap: boolean = true): void {
-        let swapFunc: () => void = globalGrid.validateSwap(position1, position2, callback, humanSwap);
+        let swapFunc: () => void = globalRun.grid.validateSwap(position1, position2, callback, humanSwap);
         if (swapFunc) {
-            animateSwap(globalGrid.getAnimateSwapData(position1, position2), swapFunc)
+            animateSwap(globalRun.grid.getAnimateSwapData(position1, position2), swapFunc)
         }
     }
 
@@ -168,8 +170,11 @@ new p5((sketch: p5) => {
     }
 
     function removeItem(item: Item) {
-        inAnimation = true;
-        item.animationEndCallback = () => { globalGrid.getCellbyPosition(item.position).item = undefined; inAnimation= false };
+        globalRun.inAnimation = true;
+        item.animationEndCallback = () => {
+            globalRun.grid.getCellbyPosition(item.position).item = undefined;
+            globalRun.inAnimation = false
+        };
         item.setupNewAnimation(5, new Position(0, 0), 255);
     }
 
@@ -267,8 +272,12 @@ new p5((sketch: p5) => {
             globalRun.score = 0
             globalRun.initialShuffle = true;
         }
+        let bonusDmg: number = globalRun.damageBoost;
+        if (match[0]?.shape) {
+            bonusDmg += match[0].shape.bonusDmg;
+        }
 
-        let additiveScore: number = 100 * match.length * globalRun.combo;
+        let additiveScore: number = (100 * match.length * globalRun.combo) + bonusDmg;
 
         globalRun.score += additiveScore
         scoreCounter.innerHTML = globalRun.score + ''
@@ -294,12 +303,27 @@ new p5((sketch: p5) => {
         enemy.damage(finalDamage, run, () => {
             run.stackCombo = false;
             run.initialShuffle = true;
-            globalRun.newPercDialog(globalDialogs, () => {
-            //     run.stackCombo = true;
-            // run.initialShuffle = false;
-            })
-        })
+            updateMoves(run.movesPerStage)
+            globalRun.newPercDialog(globalDialogs, undefined)
+        }, () => {
+            newFloorAnimation()
+        });
         damageAnimation(damage, overkill);
+    }
+
+    function newFloorAnimation(): void {
+        let floorComplete: TextAnimation = new TextAnimation(
+            `Floor Complete`,
+            40,
+            new Color(255, 255, 255),
+            4,
+            sketch.CENTER,
+            new Position(globalCanvas.canvasSize.x / 2, globalCanvas.canvasSize.y / 2 + globalCanvas.totalUiSize),
+            new Position(0, -200),
+            240
+        );
+        globalAnimations.push(floorComplete);
+
     }
 
     function damageAnimation(damage: number, overkill: boolean): void {

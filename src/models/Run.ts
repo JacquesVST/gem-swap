@@ -2,12 +2,14 @@ import * as p5 from "p5";
 import { CanvasInfo } from "./CanvasInfo";
 import { Character } from "./Character";
 import { Color } from "./Color";
-import { Dialog, DialogOption } from "./Dialog";
+import { DefaultDialogOption, Dialog, RewardDialogOption } from "./Dialog";
 import { Enemy } from "./Enemy";
 import { Floor } from "./Floor";
+import { Grid } from "./Grid";
 import { ProgressBar } from "./ProgressBar";
 import { Reward, RewardPools } from "./Reward";
 import { Stage } from "./Stage";
+import { Shape } from "./Shape";
 
 export class Run {
     p5: p5;
@@ -22,14 +24,19 @@ export class Run {
     currentFloorIndex: number;
     defeatedEnemies: number;
     winState: boolean;
-    possibleColors: Color[];
+    inAnimation: boolean;
+    possibleShapes = {};
     possibleRewards: Reward[];
     floors: Floor[];
+    grid: Grid
+    canvas: CanvasInfo;
 
     initialShuffle: boolean = true;
     stackCombo: boolean = false;
 
     damageMultiplier: number = 1;
+    damageBoost: number = 0;
+    moveSaver: number = 0;
     progressBars: ProgressBar[];
 
     constructor(p5: p5, character: Character, totalFloors: number, stagesPerFloor: number, enemyPerStage: number, movesPerStage: number) {
@@ -46,15 +53,16 @@ export class Run {
         this.currentFloorIndex = 0;
         this.defeatedEnemies = 0;
         this.winState = false;
+        this.inAnimation = false;
 
-        this.possibleColors = [
-            new Color(231, 76, 60), //red
-            new Color(46, 204, 113), //green
-            new Color(46, 134, 193), //blue
-            new Color(244, 208, 63), //yellow
-            new Color(243, 156, 18), //orange
-            new Color(240, 98, 146), //pink
-        ];
+        this.possibleShapes = {
+            red: new Shape(3, new Color(231, 76, 60)), //red
+            green: new Shape(4, new Color(46, 204, 113)), //green
+            blue: new Shape(5, new Color(46, 134, 193)), //blue
+            yellow: new Shape(6, new Color(244, 208, 63)), //yellow
+            orange: new Shape(7, new Color(243, 156, 18)), //orange
+            pink: new Shape(8, new Color(240, 98, 146)), //pink
+        };
 
         this.floors = [...Array(this.totalFloors)].map(
             (floor: Floor, index: number) => {
@@ -64,6 +72,14 @@ export class Run {
 
         this.possibleRewards = RewardPools.defaultPool(this);
         this.setupProgressBars();
+    }
+
+    setupGrid(grid: Grid) {
+        this.grid = grid;
+    }
+
+    setupCanvas(canvas: CanvasInfo) {
+        this.canvas = canvas;
     }
 
     setupProgressBars(): void {
@@ -93,15 +109,9 @@ export class Run {
                 new Color(49, 102, 214)
             ),
             new ProgressBar(
-                this.enemyPerStage,
-                enemy.number,
-                'Enemies',
-                new Color(122, 214, 49)
-            ),
-            new ProgressBar(
                 enemy.health,
                 enemy.currentHealth,
-                enemy.name + ' Health',
+                enemy.name + ' Health (' + enemy.number + '/' + this.enemyPerStage + ')',
                 new Color(87, 49, 214)
             ),
             new ProgressBar(
@@ -134,20 +144,20 @@ export class Run {
         let floor: Floor = this.findFloor();
 
         if (enemy.currentHealth <= 0) {
-
+            this.defeatedEnemies++;
             if (floor.number < this.totalFloors) {
                 if (stage.number < this.stagesPerFloor) {
                     if (enemy.number < this.enemyPerStage) {
                         stage.currentEnemyIndex++;
-                        this.defeatedEnemies++;
                     } else {
                         floor.currentStageIndex++;
+                        this.moves = this.movesPerStage
                         if (stageCallback) {
                             stageCallback();
                         }
                     }
                 } else {
-                    this.currentFloorIndex++;
+                    this.currentFloorIndex++;                 
                     if (floorCallback) {
                         floorCallback();
                     }
@@ -165,16 +175,19 @@ export class Run {
             'Epic': new Color(84, 80, 206)
         }
 
-        let randomRewards: DialogOption[] = this.possibleRewards.sort(() => Math.random() - Math.random()).slice(0, 3).map(
+        let randomRewards: RewardDialogOption[] = this.possibleRewards.sort(() => Math.random() - Math.random()).slice(0, 3).map(
             (reward: Reward) => {
-                return new DialogOption(
+                return new RewardDialogOption(
                     this.p5,
                     reward,
                     false,
                     rarityColorMap[reward.rarity],
                     () => {
                         reward.effect()
-                        selectCallback();
+                        if (selectCallback) {
+                            selectCallback();
+
+                        }
                     }
                 )
             })
@@ -184,6 +197,78 @@ export class Run {
             'Pick a reward',
             'Choose one from the options below',
             randomRewards,
+            new Color(40, 40, 40)
+        )
+
+        globalDialogs.push(dialog);
+    }
+
+    static newGameDialog(p5: p5, globalDialogs: Dialog[], selectCallback: (config: RunConfig) => void) {
+        let options: DefaultDialogOption[] = [
+            new DefaultDialogOption(
+                p5,
+                false,
+                new Color(46, 204, 113),
+                () => {
+                    let runConfig: RunConfig = {
+                        enemies: 5,
+                        stages: 3,
+                        floors: 3,
+                        moves: 10,
+                        gridX: 12,
+                        gridY: 8,
+                    }
+                    selectCallback(runConfig);
+                },
+                'Easy',
+                '5 Enemies, 3 Stages, 3 Floors',
+                '12x8 grid'
+            ),
+            new DefaultDialogOption(
+                p5,
+                false,
+                new Color(244, 208, 63),
+                () => {
+                    let runConfig: RunConfig = {
+                        enemies: 5,
+                        stages: 5,
+                        floors: 5,
+                        moves: 10,
+                        gridX: 10,
+                        gridY: 8,
+                    }
+                    selectCallback(runConfig);
+                },
+                'Normal',
+                '5 Enemies, 5 Stages, 5 Floors',
+                '10x8 grid'
+            ),
+            new DefaultDialogOption(
+                p5,
+                false,
+                new Color(231, 76, 60),
+                () => {
+                    let runConfig: RunConfig = {
+                        enemies: 10,
+                        stages: 10,
+                        floors: 8,
+                        moves: 10,
+                        gridX: 8,
+                        gridY: 6,
+                    }
+                    selectCallback(runConfig);
+                },
+                'Hard',
+                '10 Enemies, 10 Stages, 8 Floors',
+                '8x6 grid'
+            ),
+        ]
+
+        let dialog: Dialog = new Dialog(
+            p5,
+            'New Run',
+            'Select difficulty',
+            options,
             new Color(40, 40, 40)
         )
 
@@ -216,15 +301,9 @@ export class Run {
                 new Color(49, 102, 214)
             ),
             new ProgressBar(
-                this.enemyPerStage,
-                enemy.number,
-                'Enemies',
-                new Color(122, 214, 49)
-            ),
-            new ProgressBar(
                 enemy.health,
                 enemy.currentHealth,
-                enemy.name + ' Health',
+                enemy.name + ' Health (' + enemy.number + '/' + this.enemyPerStage + ')',
                 new Color(87, 49, 214)
             ),
             new ProgressBar(
@@ -245,4 +324,13 @@ export class Run {
         });
     }
 
+}
+
+export interface RunConfig {
+    enemies: number;
+    stages: number;
+    floors: number;
+    moves: number;
+    gridX: number;
+    gridY: number
 }

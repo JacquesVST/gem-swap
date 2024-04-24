@@ -58,7 +58,7 @@ export class Dialog {
         );
 
         let optionWidth: number = dialogWidth - (canvas.margin * 2);
-        let optionHeight: number = (dialogHeigth / this.options.length) * 0.75;
+        let optionHeight: number = (dialogHeigth / this.options.length) - canvas.margin * 4;
 
         this.options.forEach((option: DialogOption, index: number) => {
             let cumulativeMargin: number = (index * (optionHeight + canvas.margin)) + (canvas.margin * 8);
@@ -84,7 +84,7 @@ export class Dialog {
                 canvas.radius * 2
             );
 
-            if(option.reward) {
+            if (option instanceof RewardDialogOption) {
                 this.p5.textAlign(this.p5.LEFT)
                 this.p5.fill(option.color.value);
                 this.p5.stroke(0);
@@ -107,7 +107,7 @@ export class Dialog {
                     canvas.canvasSize.x / 2,
                     cumulativeMargin + (3 * canvas.margin),
                 );
-    
+
                 this.p5.fill(200);
                 this.p5.textSize(16)
                 this.p5.text(
@@ -117,23 +117,74 @@ export class Dialog {
                 );
             }
 
+            if (option instanceof DefaultDialogOption) {
+                this.p5.textAlign(this.p5.CENTER)
+
+                this.p5.fill(255);
+                this.p5.stroke(0);
+                this.p5.strokeWeight(4);
+                this.p5.textSize(20)
+                this.p5.text(
+                    option.text,
+                    canvas.canvasSize.x / 2,
+                    cumulativeMargin + (2 * canvas.margin),
+                );
+
+                this.p5.fill(200);
+                this.p5.textSize(16)
+                this.p5.text(
+                    option.subtext,
+                    canvas.canvasSize.x / 2,
+                    cumulativeMargin + (4 * canvas.margin),
+                );
+
+                this.p5.fill(200);
+                this.p5.textSize(16)
+                this.p5.text(
+                    option.subsubtext,
+                    canvas.canvasSize.x / 2,
+                    cumulativeMargin + (6 * canvas.margin),
+                );
+            }
+
         })
     }
 }
 
+
 export class DialogOption {
     p5: p5;
-    reward: Reward;
     disabled: boolean;
     color: Color;
     action: () => void;
     limits: number[];
 
-    constructor(p5: p5, reward: Reward, disabled: boolean, color: Color, action: () => void) {
+    constructor(p5: p5, disabled: boolean, color: Color, action: () => void) {
         this.p5 = p5;
-        this.reward = reward;
         this.disabled = disabled
         this.color = color;
         this.action = action;
+    }
+}
+
+export class RewardDialogOption extends DialogOption {
+    reward: Reward;
+
+    constructor(p5: p5, reward: Reward, disabled: boolean, color: Color, action: () => void) {
+        super(p5, disabled, color, action)
+        this.reward = reward;
+    }
+}
+
+export class DefaultDialogOption extends DialogOption {
+    text: string;
+    subtext: string;
+    subsubtext: string
+
+    constructor(p5: p5, disabled: boolean, color: Color, action: () => void, text: string, subtext: string, subsubtext: string) {
+        super(p5, disabled, color, action)
+        this.text = text;
+        this.subtext = subtext
+        this.subsubtext = subsubtext
     }
 }

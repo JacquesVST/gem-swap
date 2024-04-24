@@ -39,8 +39,8 @@ export class Enemy {
         this.currentHealth = this.health;
     }
 
-    damage(damage: number, run: Run, callback: () => void): void {
+    damage(damage: number, run: Run, stageCallback: () => void, floorCallback: () => void): void {
         this.currentHealth -= damage;
-        run.checkUpdateProgress(callback, undefined);
+        run.checkUpdateProgress(stageCallback, floorCallback);
     }
 }
