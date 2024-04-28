@@ -30,6 +30,11 @@ export class CanvasInfo {
         let screenWidth: number = document.body.clientWidth;
         let screenHeight: number = ((screenWidth / 16) * 9) + this.totalUiSize;
 
+        let maxHeight: number = window.innerHeight - 360;
+        if (screenHeight > maxHeight) {
+            screenHeight = maxHeight
+        }
+
         this.canvasSize = new Position(screenWidth, screenHeight);
         this.playfield = new Position(this.canvasSize.x - 2 * this.margin, (this.canvasSize.y - 2 * this.margin));
         this.p5.createCanvas(this.canvasSize.x, this.canvasSize.y);

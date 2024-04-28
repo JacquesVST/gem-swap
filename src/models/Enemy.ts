@@ -12,7 +12,7 @@ export class Enemy {
         this.number = number;
         this.isBoss = isBoss;
 
-        this.name = isBoss ? 'Boss' : 'Enemy';
+        this.name = isBoss ? '☠️ Boss' : 'Enemy';
 
         this.health = 0;
         this.currentHealth = 0;
@@ -31,10 +31,10 @@ export class Enemy {
         let maxHealth: number = 1500 * bossMultiplier * (1 + (currentFloorIndex / 2));
         let minHealth: number = 500 * bossMultiplier * (1 + (currentFloorIndex / 2));
 
-        let enemyBaseAttack: number = 10 * bossMultiplier;
+        let enemyBaseAttack: number = 10 * (this.isBoss ? bossMultiplier / 1.5 : 1);
         let enemyBaseHealth: number = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth);
 
-        this.attack = enemyBaseAttack * (1 + (currentFloorIndex / 10)) * (1 + (currentStageIndex / 100));
+        this.attack = enemyBaseAttack * (1 + (currentFloorIndex / 10)) * (1 + (currentStageIndex / 10));
         this.health = enemyBaseHealth * (1 + (currentFloorIndex / 10)) * (1 + (currentStageIndex / 100));
         this.currentHealth = this.health;
     }

@@ -4,6 +4,7 @@ body {
   padding: 0;
   background-color: black;
   color: white;
+  font-family: "Open Sans", sans-serif;
 }
 
 canvas {
@@ -28,4 +29,36 @@ canvas {
   width: 100%;
   bottom: 0px;position:fixed; 
   background-color: rgb(20,20,20);
+}
+
+.reward-ui {
+  width: 100%;
+  display: flex;
+  justify-content: left;
+}
+
+.reward {
+  width: calc(100% / 3);
+  border: 1px solid rgb(220,220,220);
+  color: #000;
+  padding-bottom: 8px;
+}
+
+.rarity {
+  font-style: italic;
+  float: left;
+  margin-left: 8px;
+  margin-top: 8px;
+}
+
+.rarity-Common {
+  background-color: rgb(224, 224, 224);
+}
+
+.rarity-Rare{
+  background-color: rgb(101, 206, 80)
+}
+
+.rarity-Epic{
+  background-color: rgb(84, 80, 206)
 }

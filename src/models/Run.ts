@@ -8,8 +8,8 @@ import { Floor } from "./Floor";
 import { Grid } from "./Grid";
 import { ProgressBar } from "./ProgressBar";
 import { Reward, RewardPools } from "./Reward";
-import { Stage } from "./Stage";
 import { Shape } from "./Shape";
+import { Stage } from "./Stage";
 
 export class Run {
     p5: p5;
@@ -59,9 +59,9 @@ export class Run {
             red: new Shape(3, new Color(231, 76, 60)), //red
             green: new Shape(4, new Color(46, 204, 113)), //green
             blue: new Shape(5, new Color(46, 134, 193)), //blue
-            yellow: new Shape(6, new Color(244, 208, 63)), //yellow
-            orange: new Shape(7, new Color(243, 156, 18)), //orange
-            pink: new Shape(8, new Color(240, 98, 146)), //pink
+          //  yellow: new Shape(6, new Color(244, 208, 63)), //yellow
+          //  orange: new Shape(7, new Color(243, 156, 18)), //orange
+          //  pink: new Shape(8, new Color(240, 98, 146)), //pink
         };
 
         this.floors = [...Array(this.totalFloors)].map(
@@ -70,7 +70,6 @@ export class Run {
             }
         );
 
-        this.possibleRewards = RewardPools.defaultPool(this);
         this.setupProgressBars();
     }
 
@@ -112,7 +111,7 @@ export class Run {
                 enemy.health,
                 enemy.currentHealth,
                 enemy.name + ' Health (' + enemy.number + '/' + this.enemyPerStage + ')',
-                new Color(87, 49, 214)
+                enemy.isBoss ? new Color(87, 49, 214) : new Color(86, 101, 115)
             ),
             new ProgressBar(
                 this.character.health,
@@ -128,14 +127,14 @@ export class Run {
     }
 
     findStage(): Stage {
-        let stageIndex: number = this.findFloor().currentStageIndex;
-        return this.floors[this.currentFloorIndex].stages[stageIndex];
+        let stageIndex: number = this.findFloor()?.currentStageIndex;
+        return this.floors[this.currentFloorIndex]?.stages[stageIndex];
     }
 
     findEnemy(): Enemy {
-        let stageIndex: number = this.findFloor().currentStageIndex;
-        let enemyIndex: number = this.findStage().currentEnemyIndex;
-        return this.floors[this.currentFloorIndex].stages[stageIndex].enemies[enemyIndex];
+        let stageIndex: number = this.findFloor()?.currentStageIndex;
+        let enemyIndex: number = this.findStage()?.currentEnemyIndex;
+        return this.floors[this.currentFloorIndex]?.stages[stageIndex]?.enemies[enemyIndex];
     }
 
     checkUpdateProgress(stageCallback: () => void, floorCallback: () => void): void {
@@ -143,32 +142,34 @@ export class Run {
         let stage: Stage = this.findStage();
         let floor: Floor = this.findFloor();
 
-        if (enemy.currentHealth <= 0) {
+        if (enemy?.currentHealth <= 0) {
             this.defeatedEnemies++;
-            if (floor.number < this.totalFloors) {
-                if (stage.number < this.stagesPerFloor) {
-                    if (enemy.number < this.enemyPerStage) {
-                        stage.currentEnemyIndex++;
-                    } else {
-                        floor.currentStageIndex++;
-                        this.moves = this.movesPerStage
-                        if (stageCallback) {
-                            stageCallback();
-                        }
-                    }
-                } else {
-                    this.currentFloorIndex++;                 
-                    if (floorCallback) {
-                        floorCallback();
-                    }
-                }
-            } else {
-                this.winState = true;
+            stage.currentEnemyIndex++;
+        }
+
+        if (stage?.currentEnemyIndex === this.enemyPerStage) {
+            floor.currentStageIndex++
+            this.moves = this.movesPerStage
+            if (stageCallback) {
+                stageCallback();
             }
+        }
+
+        if (floor?.currentStageIndex === this.stagesPerFloor) {
+            this.currentFloorIndex++
+            if (floorCallback) {
+                floorCallback();
+            }
+        }
+
+        if (this.currentFloorIndex >= this.totalFloors) {
+            this.winState = true
         }
     }
 
     newPercDialog(globalDialogs: Dialog[], selectCallback: () => void) {
+        this.possibleRewards = RewardPools.defaultPool(this);
+
         let rarityColorMap = {
             'Common': new Color(224, 224, 224),
             'Rare': new Color(101, 206, 80),
@@ -183,10 +184,10 @@ export class Run {
                     false,
                     rarityColorMap[reward.rarity],
                     () => {
-                        reward.effect()
+                        reward.effect();
+                        this.character.rewards.push(reward);
                         if (selectCallback) {
                             selectCallback();
-
                         }
                     }
                 )
@@ -253,8 +254,8 @@ export class Run {
                         stages: 10,
                         floors: 8,
                         moves: 10,
-                        gridX: 8,
-                        gridY: 6,
+                        gridX: 30,
+                        gridY: 20,
                     }
                     selectCallback(runConfig);
                 },
@@ -279,49 +280,50 @@ export class Run {
         let enemy: Enemy = this.findEnemy();
         let stage: Stage = this.findStage();
         let floor: Floor = this.findFloor();
+        if (enemy && floor && stage) {
+            let totalEnemies: number = this.totalFloors * this.stagesPerFloor * this.enemyPerStage;
+            let newProgressBars = [
+                new ProgressBar(
+                    totalEnemies,
+                    this.defeatedEnemies,
+                    'Run Progress',
+                    new Color(227, 227, 227)
+                ),
+                new ProgressBar(
+                    this.totalFloors,
+                    floor.number,
+                    'Floor',
+                    new Color(236, 200, 19)
+                ),
+                new ProgressBar(
+                    this.stagesPerFloor,
+                    stage.number,
+                    'Stage',
+                    new Color(49, 102, 214)
+                ),
+                new ProgressBar(
+                    enemy.health,
+                    enemy.currentHealth,
+                    enemy.name + ' Health (' + enemy.number + '/' + this.enemyPerStage + ')',
+                    enemy.isBoss ? new Color(87, 49, 214) : new Color(86, 101, 115)
+                ),
+                new ProgressBar(
+                    this.character.health,
+                    this.character.currentHealth,
+                    'Your Health',
+                    new Color(214, 87, 49)
+                ),
+            ];
 
-        let totalEnemies: number = this.totalFloors * this.stagesPerFloor * this.enemyPerStage;
-        let newProgressBars = [
-            new ProgressBar(
-                totalEnemies,
-                this.defeatedEnemies,
-                'Run Progress',
-                new Color(227, 227, 227)
-            ),
-            new ProgressBar(
-                this.totalFloors,
-                floor.number,
-                'Floor',
-                new Color(236, 200, 19)
-            ),
-            new ProgressBar(
-                this.stagesPerFloor,
-                stage.number,
-                'Stage',
-                new Color(49, 102, 214)
-            ),
-            new ProgressBar(
-                enemy.health,
-                enemy.currentHealth,
-                enemy.name + ' Health (' + enemy.number + '/' + this.enemyPerStage + ')',
-                new Color(87, 49, 214)
-            ),
-            new ProgressBar(
-                this.character.health,
-                this.character.currentHealth,
-                'Your Health',
-                new Color(214, 87, 49)
-            ),
-        ];
-
-        this.progressBars.forEach((element: ProgressBar, index: number) => {
-            let difference: number = element.value - newProgressBars[index].value
-            if (difference !== 0) {
-                this.progressBars[index] = newProgressBars[index];
-                this.progressBars[index].animate(difference);
-            }
-            element.drawBar(this.p5, index, canvas);
-        });
+            this.progressBars.forEach((element: ProgressBar, index: number) => {
+                let difference: number = element.value - newProgressBars[index].value
+                if (difference !== 0) {
+                    this.progressBars[index] = newProgressBars[index];
+                    this.progressBars[index].animate(difference);
+                }
+                element.drawBar(this.p5, index, canvas);
+            });
+        }
     }
 
 }
