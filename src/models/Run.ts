@@ -59,9 +59,9 @@ export class Run {
             red: new Shape(3, new Color(231, 76, 60)), //red
             green: new Shape(4, new Color(46, 204, 113)), //green
             blue: new Shape(5, new Color(46, 134, 193)), //blue
-          //  yellow: new Shape(6, new Color(244, 208, 63)), //yellow
-          //  orange: new Shape(7, new Color(243, 156, 18)), //orange
-          //  pink: new Shape(8, new Color(240, 98, 146)), //pink
+            yellow: new Shape(6, new Color(244, 208, 63)), //yellow
+            orange: new Shape(7, new Color(243, 156, 18)), //orange
+            pink: new Shape(8, new Color(240, 98, 146)), //pink
         };
 
         this.floors = [...Array(this.totalFloors)].map(
@@ -254,8 +254,8 @@ export class Run {
                         stages: 10,
                         floors: 8,
                         moves: 10,
-                        gridX: 30,
-                        gridY: 20,
+                        gridX: 8,
+                        gridY: 6,
                     }
                     selectCallback(runConfig);
                 },
