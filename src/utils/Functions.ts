@@ -28,3 +28,7 @@ export function polygon(x: number, y: number, radius: number, npoints: number, p
 export function checkPositionInLimit(position: Position, ...coords: number[]): boolean {
     return position.x > coords[0] && position.x < coords[1] && position.y > coords[2] && position.y < coords[3];
 }
+
+export function formatNumber(number: number): string {
+    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }

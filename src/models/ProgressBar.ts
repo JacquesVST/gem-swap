@@ -1,6 +1,7 @@
 import * as p5 from "p5";
 import { CanvasInfo } from "./CanvasInfo";
 import { Color } from "./Color";
+import { formatNumber } from "../utils/Functions";
 
 export class ProgressBar {
     maxValue: number;
@@ -11,6 +12,7 @@ export class ProgressBar {
     frames: number = 0;
     velocity: number = 0;
     delta: number = 0;
+    callback: () => void;
 
     constructor(maxValue: number, value: number, title: string, color: Color) {
         this.maxValue = maxValue;
@@ -19,10 +21,11 @@ export class ProgressBar {
         this.color = color;
     }
 
-    animate(difference: number) {
-        this.frames = 10
+    animate(difference: number, callback: () => void) {
+        this.frames = 25
         this.velocity = difference / this.frames;
         this.delta = difference;
+        this.callback = callback;
     }
 
     drawBar(p5: p5, index: number, canvas: CanvasInfo): void {
@@ -32,13 +35,14 @@ export class ProgressBar {
         let baseElementSize: number = (canvas.playfield.x - (2 * canvas.padding))
 
         let finalElementSize = (baseElementSize * percentageOfBar) + this.delta
+        finalElementSize = finalElementSize > baseElementSize ? baseElementSize : finalElementSize,
 
         p5.fill(percentageOfBar ? this.color.value : [20, 20, 20]);
         p5.noStroke()
         p5.rect(
             canvas.margin + canvas.padding,
             commonMargin,
-            finalElementSize > baseElementSize ? baseElementSize : finalElementSize,
+            finalElementSize <= 1 ? 1 : finalElementSize,
             canvas.uiBarSize,
             canvas.radius + canvas.padding
         );
@@ -57,7 +61,7 @@ export class ProgressBar {
 
         p5.textAlign(p5.RIGHT)
         p5.text(
-            `${Math.floor(this.value)}/${Math.floor(this.maxValue)}`,
+            `${formatNumber(Math.floor(this.value))}/${formatNumber(Math.floor(this.maxValue))}`,
             canvas.margin + baseElementSize - (canvas.padding * 4),
             commonMargin + canvas.padding,
         );
@@ -70,6 +74,10 @@ export class ProgressBar {
         if (this.frames === 0){
             this.delta = 0
             this.velocity = 0
+            if(this.callback) {
+                this.callback();
+                this.callback = undefined
+            }
         }
     }
 }

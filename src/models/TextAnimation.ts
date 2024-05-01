@@ -11,14 +11,16 @@ export class TextAnimation {
     align: p5.LEFT | p5.CENTER | p5.RIGHT;
     initialPosition: Position;
     relativeEndPosition: Position;
+    relativeSize: number;
     frames: number;
     id: string;
     fade: number;
     velocityX: number;
     velocityY: number;
     velocityFade: number;
+    velocitySize: number;
 
-    constructor(text: string, size: number, color: Color, stroke: number, align: p5.LEFT | p5.CENTER | p5.RIGHT, initialPosition: Position, relativeEndPosition: Position, frames: number) {
+    constructor(text: string, size: number, color: Color, stroke: number, align: p5.LEFT | p5.CENTER | p5.RIGHT, initialPosition: Position, relativeEndPosition: Position, frames: number, relativeSize: number = 0) {
         this.text = text;
         this.size = size;
         this.color = color;
@@ -26,6 +28,7 @@ export class TextAnimation {
         this.align = align;
         this.initialPosition = initialPosition;
         this.relativeEndPosition = relativeEndPosition;
+        this.relativeSize = relativeSize;
         this.frames = frames;
         this.id = generateId();
 
@@ -40,6 +43,7 @@ export class TextAnimation {
         this.velocityX = this.relativeEndPosition.x / this.frames;
         this.velocityY = this.relativeEndPosition.y / this.frames;
         this.velocityFade = this.fade / this.frames;
+        this.velocitySize = this.relativeSize / this.frames;
     }
 
     draw(p5: p5, globalAnimations: TextAnimation[]): void {
@@ -66,6 +70,7 @@ export class TextAnimation {
         this.initialPosition.x += this.velocityX;
         this.initialPosition.y += this.velocityY;
         this.fade -= this.velocityFade;
+        this.size += this.velocitySize;
 
         if (this.frames-- === 0) {
             globalAnimations = globalAnimations.filter((animation: TextAnimation) => animation.id !== this.id);

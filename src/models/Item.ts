@@ -1,6 +1,5 @@
 import { AnimatableObject } from "./AnimatableObject";
 import { generateId } from "../utils/Functions";
-import { Color } from "./Color";
 import { Position } from "./Position";
 import { Shape } from "./Shape";
 

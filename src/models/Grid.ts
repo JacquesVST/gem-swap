@@ -118,12 +118,12 @@ export class Grid {
         return this.swap.bind(this, position1, position2, item1, item2, swapCompleteCallback);
     }
 
-    getAnimateSwapData(position1: Position, position2: Position): AnimateSwapData {
+    getAnimateSwapData(position1: Position, position2: Position, humanSwap: boolean): AnimateSwapData {
         let cell1: Cell = this.getCellbyPosition(position1)
         let cell2: Cell = this.getCellbyPosition(position2)
         let item1: Item | undefined = this.getItembyPosition(position1);
         let item2: Item | undefined = this.getItembyPosition(position2);
-        return { item1, item2, cell1, cell2, frames: 5 }
+        return { item1, item2, cell1, cell2, frames: humanSwap ? 10 : 5 }
     }
 
     swap(position1: Position, position2: Position, item1: Item, item2: Item, swapCompleteCallback: () => void): void {

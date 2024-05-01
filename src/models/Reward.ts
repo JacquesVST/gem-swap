@@ -25,7 +25,7 @@ export class RewardPools {
             new Reward(
                 1,
                 'Common',
-                'Extra move',
+                'Extra Move',
                 '+1 move',
                 (() => {
                     run.movesPerStage += 1;
@@ -34,7 +34,7 @@ export class RewardPools {
             new Reward(
                 1,
                 'Common',
-                'Max Hp Gain',
+                'Max Health Gain',
                 '+5 HP Max',
                 (() => {
                     run.character.health += 5
@@ -44,7 +44,7 @@ export class RewardPools {
             new Reward(
                 1,
                 'Common',
-                'HP Recovery',
+                'Instant Health',
                 '+10% HP',
                 (() => {
                     run.character.heal(run.character.health/10)
@@ -56,7 +56,7 @@ export class RewardPools {
                 'Damage Boost',
                 '+25 base DMG',
                 (() => {
-                    run.damageBoost += 25
+                    run.character.attack += 25
                 }).bind(run)
             ),
             new Reward(
@@ -135,7 +135,7 @@ export class RewardPools {
             new Reward(
                 1,
                 'Rare',
-                '4 way match health regen',
+                '4+ Match Regeneration',
                 'Gain 1% HP every 4+ items in a single match',
                 (() => {
                     run.character.hpRegenFromReward += 1;
@@ -163,9 +163,9 @@ export class RewardPools {
                 1,
                 'Epic',
                 'Big Damage Boost',
-                'x1.5 DMG!',
+                'x1.5 DMG',
                 (() => {
-                    run.damageMultiplier *= 1.5;
+                    run.character.damageMultiplier *= 1.5;
                 }).bind(run)
             ),
             (() => {

@@ -10,11 +10,15 @@ export class Position {
         this.checksum = 'X' + x + 'Y' + y;
     }
 
-    difference(position: Position) {
-        return new Position(position.x - this.x, position.y - this.y);
+    difference(other: Position) {
+        return new Position(other.x - this.x, other.y - this.y);
     }
 
-    minus(position: Position) {
-        return new Position(this.x - position.x, this.y - position.y);
+    minus(other: Position) {
+        return new Position(this.x - other.x, this.y - other.y);
+    }
+
+    average(other: Position) {
+        return new Position((this.x + other.x) / 2, (this.y + other.y) / 2);
     }
 }

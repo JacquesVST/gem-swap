@@ -34,8 +34,7 @@ export class Run {
     initialShuffle: boolean = true;
     stackCombo: boolean = false;
 
-    damageMultiplier: number = 1;
-    damageBoost: number = 0;
+    damage: number = 0;
     moveSaver: number = 0;
     progressBars: ProgressBar[];
 
@@ -71,10 +70,6 @@ export class Run {
         );
 
         this.setupProgressBars();
-    }
-
-    setupGrid(grid: Grid) {
-        this.grid = grid;
     }
 
     setupCanvas(canvas: CanvasInfo) {
@@ -137,7 +132,7 @@ export class Run {
         return this.floors[this.currentFloorIndex]?.stages[stageIndex]?.enemies[enemyIndex];
     }
 
-    checkUpdateProgress(stageCallback: () => void, floorCallback: () => void): void {
+    checkUpdateProgress(deathCallback: () => void, stageCallback: () => void, floorCallback: () => void): void {
         let enemy: Enemy = this.findEnemy();
         let stage: Stage = this.findStage();
         let floor: Floor = this.findFloor();
@@ -145,6 +140,9 @@ export class Run {
         if (enemy?.currentHealth <= 0) {
             this.defeatedEnemies++;
             stage.currentEnemyIndex++;
+            if (deathCallback) {
+                deathCallback();
+            }
         }
 
         if (stage?.currentEnemyIndex === this.enemyPerStage) {
@@ -276,7 +274,7 @@ export class Run {
         globalDialogs.push(dialog);
     }
 
-    drawRunInfo(canvas: CanvasInfo): void {
+    drawRunInfo(canvas: CanvasInfo, callback: () => void): void {
         let enemy: Enemy = this.findEnemy();
         let stage: Stage = this.findStage();
         let floor: Floor = this.findFloor();
@@ -318,8 +316,9 @@ export class Run {
             this.progressBars.forEach((element: ProgressBar, index: number) => {
                 let difference: number = element.value - newProgressBars[index].value
                 if (difference !== 0) {
+                    this.inAnimation = true
                     this.progressBars[index] = newProgressBars[index];
-                    this.progressBars[index].animate(difference);
+                    this.progressBars[index].animate(difference, callback)
                 }
                 element.drawBar(this.p5, index, canvas);
             });

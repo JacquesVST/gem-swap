@@ -12,7 +12,7 @@ export class Enemy {
         this.number = number;
         this.isBoss = isBoss;
 
-        this.name = isBoss ? '☠️ Boss' : 'Enemy';
+        this.name = isBoss ? 'Boss' : 'Enemy';
 
         this.health = 0;
         this.currentHealth = 0;
@@ -31,16 +31,16 @@ export class Enemy {
         let maxHealth: number = 1500 * bossMultiplier * (1 + (currentFloorIndex / 2));
         let minHealth: number = 500 * bossMultiplier * (1 + (currentFloorIndex / 2));
 
-        let enemyBaseAttack: number = 10 * (this.isBoss ? bossMultiplier / 1.5 : 1);
+        let enemyBaseAttack: number = 10 * (this.isBoss ? 1 + (bossMultiplier / 3) : 1);
         let enemyBaseHealth: number = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth);
 
-        this.attack = enemyBaseAttack * (1 + (currentFloorIndex / 10)) * (1 + (currentStageIndex / 10));
+        this.attack = enemyBaseAttack * (1 + (currentFloorIndex / 2)) * (1 + (currentStageIndex / 2));
         this.health = enemyBaseHealth * (1 + (currentFloorIndex / 10)) * (1 + (currentStageIndex / 100));
         this.currentHealth = this.health;
     }
 
-    damage(damage: number, run: Run, stageCallback: () => void, floorCallback: () => void): void {
+    damage(damage: number, run: Run, deathCallback: () => void, stageCallback: () => void, floorCallback: () => void): void {
         this.currentHealth -= damage;
-        run.checkUpdateProgress(stageCallback, floorCallback);
+        run.checkUpdateProgress(deathCallback, stageCallback, floorCallback);
     }
 }

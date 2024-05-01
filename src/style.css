@@ -11,6 +11,13 @@ canvas {
   display: block;
 }
 
+#runInfo{
+  visibility: hidden;
+}
+
+.show {
+  visibility: visible !important
+}
 .game-ui {
   width: 100%;
   display: flex;
@@ -19,6 +26,7 @@ canvas {
 
 .game-ui-block {
   width: 100%;
+  height: 120px;
 }
 
 .centered {
@@ -31,24 +39,42 @@ canvas {
   background-color: rgb(20,20,20);
 }
 
+.stats-ui {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.stat {
+  width: calc(100% / 4);
+  padding: 16px;
+}
+
+
 .reward-ui {
   width: 100%;
   display: flex;
-  justify-content: left;
+  justify-content: center;
+}
+
+.reward-wrap{
+  width: 25%;
 }
 
 .reward {
-  width: calc(100% / 3);
+  margin-left: 4px;
+  margin-right: 4px;
+  margin-bottom: 8px;
   border: 1px solid rgb(220,220,220);
   color: #000;
-  padding-bottom: 8px;
+  padding: 8px;
+  display: block;
+  min-height: 150px;
 }
 
 .rarity {
   font-style: italic;
   float: left;
-  margin-left: 8px;
-  margin-top: 8px;
 }
 
 .rarity-Common {
@@ -61,4 +87,8 @@ canvas {
 
 .rarity-Epic{
   background-color: rgb(84, 80, 206)
+}
+
+.shielded {
+  color: rgb(101, 206, 80);
 }
