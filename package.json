@@ -4,7 +4,11 @@
     "description": "Simple p5 game",
     "scripts": {
         "start": "parcel src/index.html --open",
-        "build": "parcel build src/index.html"
+        "prebuild-dev": "shx rm -rf dist/*",
+        "build-dev": "parcel build ./src/index.html --no-optimize --public-url ./",
+        "prebuild": "shx rm -rf dist/*",
+        "build": "parcel build ./src/index.html --public-url ./",
+        "push-gh-pages": "push-dir --dir=dist --branch=gh-pages --cleanup --verbose"
     },
     "dependencies": {
         "@types/node": "^20.12.7",
@@ -14,6 +18,7 @@
     "devDependencies": {
         "install": "^0.13.0",
         "npm": "^10.5.2",
-        "parcel": "^2.12.0"
+        "parcel": "^2.12.0",
+        "shx": "^0.3.2"
     }
 }
