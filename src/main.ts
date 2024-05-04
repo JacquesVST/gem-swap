@@ -3,7 +3,7 @@ import { CanvasInfo } from "./models/CanvasInfo";
 import { Cell } from "./models/Cell";
 import { Character } from "./models/Character";
 import { Color } from "./models/Color";
-import { Dialog, DialogOption } from "./models/Dialog";
+import { Dialog, DialogOption, RewardDialogOption } from "./models/Dialog";
 import { Enemy } from "./models/Enemy";
 import { AnimateSwapData, Grid } from "./models/Grid";
 import { Item } from "./models/Item";
@@ -91,24 +91,23 @@ new p5((sketch: p5) => {
             run.grid.draw(canvas, sketch, !!currentDialog);
             run.grid.drawItems(sketch);
 
-            textAnimations.forEach((animation: TextAnimation) => {
-                animation.draw(sketch, textAnimations);
-                animation.updatePosition(textAnimations)
-            });
-
             if (run.winState) {
                 setTimeout(() => {
                     let finalScore: number = run.score;
                     dialogs = [];
                     alert('YOU WON!\nwith a score of: ' + formatNumber(finalScore))
                     setupGame();
-                }, 5000);
+                }, 0);
             }
         }
 
         dialogs.forEach((dialog: Dialog) => {
             currentDialog = dialog;
             dialog.draw(canvas, run?.character);
+        });
+
+        textAnimations.forEach((animation: TextAnimation) => {
+            animation.draw(sketch, textAnimations);
         });
     }
 
@@ -138,15 +137,15 @@ new p5((sketch: p5) => {
                     } else {
                         run.stackCombo = true;
                         let movesLeft: number = run.character.moves - 1;
-                        if (Math.random() < run.character.moveSaver) {
-                            movesLeft = run.character.moves
-                            moveSavedAnimation();
-                        }
 
                         swap(cell.position, run.grid.selectedCellPos, (() => {
+                            if (Math.random() < run.character.moveSaver) {
+                                movesLeft = run.character.moves
+                                moveSavedAnimation();
+                            }
                             run.character.moves = movesLeft
                             updatePlayerStatsAndRewards();
-                        }).bind(this, movesLeft), true);
+                        }).bind(this), true);
                         run.grid.selectedCellPos = undefined
                         lastClick = new Position(0, 0)
                     }
@@ -160,7 +159,10 @@ new p5((sketch: p5) => {
                     selectedIndex = index;
                     if (!option.disabled) {
                         option.action();
-                        option.disabled = true;
+                        if (option instanceof RewardDialogOption && option?.reward?.price) {
+                            goldAnimation(option.reward.price * -1)
+                            option.disabled = true;
+                        }
                     }
                 }
             })
@@ -380,7 +382,7 @@ new p5((sketch: p5) => {
             }, () => {
                 newFloorAnimation()
                 if (!run.winState) {
-                    run.newShopDialog(dialogs, updatePlayerStatsAndRewards.bind(this),(() => {
+                    run.newShopDialog(dialogs, updatePlayerStatsAndRewards.bind(this), (() => {
                         currentDialog = undefined
                         dialogs.pop();
                     }).bind(this))
@@ -426,16 +428,32 @@ new p5((sketch: p5) => {
         let varianceX: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
         let varianceY: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
 
-        let textAnimation: TextAnimation = new TextAnimation(
-            `+${amount} Gold`,
-            20,
-            new Color(244, 208, 63),
-            4,
-            sketch.CENTER,
-            new Position((canvas.canvasSize.x / 2) + varianceX, (canvas.totalUiSize - canvas.uiBarSize - canvas.margin) + varianceY),
-            new Position(0, 100),
-            180
-        );
+        let textAnimation: TextAnimation;
+        if (amount > 0) {
+
+            textAnimation = new TextAnimation(`+${amount} Gold`,
+                20,
+                new Color(244, 208, 63),
+                4,
+                sketch.CENTER,
+                new Position((canvas.canvasSize.x / 2) + varianceX, (canvas.totalUiSize - canvas.uiBarSize - canvas.margin) + varianceY),
+                new Position(0, 100),
+                180
+            );
+        }
+
+        if (amount < 0) {
+            textAnimation = new TextAnimation(
+                `${amount} Gold`,
+                20,
+                new Color(231, 76, 60),
+                4,
+                sketch.CENTER,
+                new Position(sketch.mouseX + varianceX, sketch.mouseY + varianceY),
+                new Position(0, 100),
+                180
+            );
+        }
 
         textAnimations.push(textAnimation);
     }

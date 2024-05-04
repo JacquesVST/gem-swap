@@ -1,5 +1,4 @@
 import { Color } from "./Color";
-import { Grid } from "./Grid";
 import { Run } from "./Run";
 import { Shape } from "./Shape";
 
@@ -32,57 +31,83 @@ export class Reward {
 export class RewardPools {
     static shopPool(run: Run): Reward[] {
         return [
-            new Reward(
-                1,
-                'Common',
-                'Max Instant health',
-                'Full heal',
-                (() => {
-                    run.character.gold -= 20;
-                    run.character.heal(run.character.health);
-                }).bind(run),
-                20,
-            ),
-            new Reward(
-                1,
-                'Common',
-                'Extra Moves',
-                '+3 moves',
-                (() => {
-                    run.character.gold -= 50;
-                    run.movesPerStage += 3;
-                }).bind(run),
-                50,
-            ),
-            new Reward(
-                1,
-                'Rare',
-                'Horizontal Expansion',
-                '+1 column',
-                (() => {
-                    run.character.gold -= 100;
-                    run.grid.width++;
-                    run.grid.generateEmptyCells();
-                    run.grid.calculateSpacing(run.canvas);
-                }).bind(run),
-                100,
-            ),
-            new Reward(
-                1,
-                'Rare',
-                'Vertical Expansion',
-                '+1 row',
-                (() => {
-                    run.character.gold -= 100;
-                    run.grid.height++;
-                    run.grid.generateEmptyCells();
-                    run.grid.calculateSpacing(run.canvas);
-                }).bind(run),
-                100,
-            ),
+            (() => {
+                let price: number = 20;
+                return new Reward(
+                    1,
+                    'Common',
+                    'Max Instant health',
+                    'Full heal',
+                    (() => {
+                        run.character.gold -= price;
+                        run.character.heal(run.character.health);
+                    }).bind(run),
+                    price,
+                );
+            })(),
+            (() => {
+                let price: number = 50;
+                return new Reward(
+                    1,
+                    'Common',
+                    'Extra Moves',
+                    '+3 moves',
+                    (() => {
+                        run.character.gold -= price;
+                        run.movesPerStage += 3;
+                    }).bind(run),
+                    price,
+                );
+            })(),
+            (() => {
+                let price: number = 100;
+                return new Reward(
+                    1,
+                    'Rare',
+                    'Horizontal Expansion',
+                    '+1 column',
+                    (() => {
+                        run.character.gold -= price;
+                        run.grid.width++;
+                        run.grid.generateEmptyCells();
+                        run.grid.calculateSpacing(run.canvas);
+                    }).bind(run),
+                    price,
+                );
+            })(),
+            (() => {
+                let price: number = 100;
+                return new Reward(
+                    1,
+                    'Rare',
+                    'Vertical Expansion',
+                    '+1 row',
+                    (() => {
+                        run.character.gold -= price;
+                        run.grid.height++;
+                        run.grid.generateEmptyCells();
+                        run.grid.calculateSpacing(run.canvas);
+                    }).bind(run),
+                    price,
+                );
+            })(),
+            (() => {
+                let price: number = 150;
+                return new Reward(
+                    1,
+                    'Epic',
+                    'More options',
+                    '+1 boss reward option',
+                    (() => {
+                        run.character.gold -= price;
+                        run.rewardOptions++;
+                    }).bind(run),
+                    price,
+                );
+            })()
         ]
     }
-    
+
     static defaultPool(run: Run): Reward[] {
         return [
             new Reward(

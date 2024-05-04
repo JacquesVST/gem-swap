@@ -28,6 +28,7 @@ export class Run {
     damage: number = 0;
     currentFloorIndex: number = 0;
     defeatedEnemies: number = 0;
+    rewardOptions: number = 3;
 
     initialAnimation: boolean = true;
     inAnimation: boolean = false;
@@ -211,7 +212,7 @@ export class Run {
     }
 
     newPercDialog(globalDialogs: Dialog[], selectCallback: () => void) {
-        let randomRewards: RewardDialogOption[] = RewardPools.defaultPool(this).sort(() => Math.random() - Math.random()).slice(0, 3).map(
+        let randomRewards: RewardDialogOption[] = RewardPools.defaultPool(this).sort(() => Math.random() - Math.random()).slice(0, this.rewardOptions).map(
             (reward: Reward) => {
                 return new RewardDialogOption(
                     this.p5,
