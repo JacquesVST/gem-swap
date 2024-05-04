@@ -39,6 +39,10 @@ export class Grid {
     }
 
     calculateSpacing(canvas: CanvasInfo): void {
+       this.verticalCenterPadding = 0;
+       this.verticalCenterPadding = 0;
+       this.sideSize = 0;
+       
         do {
             this.sideSize++;
             this.horizontalCenterPadding = canvas.playfield.x - (this.width * this.sideSize) - (this.width * canvas.padding) - canvas.padding;
@@ -123,7 +127,7 @@ export class Grid {
         let cell2: Cell = this.getCellbyPosition(position2)
         let item1: Item | undefined = this.getItembyPosition(position1);
         let item2: Item | undefined = this.getItembyPosition(position2);
-        return { item1, item2, cell1, cell2, frames: humanSwap ? 10 : 5 }
+        return { item1, item2, cell1, cell2, frames: humanSwap ? 10 : 3 }
     }
 
     swap(position1: Position, position2: Position, item1: Item, item2: Item, swapCompleteCallback: () => void): void {

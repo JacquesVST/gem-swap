@@ -3,23 +3,26 @@ import { Reward } from "./Reward";
 export class Character {
     health: number;
     attack: number;
+    moves: number;
     currentHealth: number;
-    rewards: Reward[];
     
+    rewards: Reward[] = [];
     hasItemThatPreventsFirstLethalDamage: boolean = false;
     hasUsedItemThatPreventsFirstLethalDamage: boolean = false;
     hpRegenFromReward: number = 0;
     damageMultiplier: number = 1;
+    moveSaver: number = 0;
+    gold: number = 0;
 
-    constructor(health: number, attack: number) {
+    constructor(health: number, attack: number, moves: number) {
         this.health = health;
         this.attack = attack;
+        this.moves = moves;
         this.currentHealth = health;
-        this.rewards = [];
     }
 
     static defaultCharacter() {
-        return new Character(100, 100);
+        return new Character(100, 100, 0);
     }
 
     heal(heal: number): void {

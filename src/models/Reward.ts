@@ -1,4 +1,5 @@
-import { Character } from "./Character";
+import { Color } from "./Color";
+import { Grid } from "./Grid";
 import { Run } from "./Run";
 import { Shape } from "./Shape";
 
@@ -7,19 +8,81 @@ export class Reward {
     name: string;
     description: string;
     weight: number;
+    price: number;
     effect: () => void;
 
-    constructor(weight: number, rarity: string, name: string, description: string, effect: () => void) {
+    constructor(weight: number, rarity: string, name: string, description: string, effect: () => void, price?: number) {
         this.weight = weight
         this.rarity = rarity
         this.name = name
         this.description = description
+        this.price = price;
         this.effect = effect
     }
 
+    static rarityColors(): { [key: string]: Color } {
+        return {
+            'Common': new Color(224, 224, 224),
+            'Rare': new Color(101, 206, 80),
+            'Epic': new Color(84, 80, 206)
+        }
+    }
 }
 
 export class RewardPools {
+    static shopPool(run: Run): Reward[] {
+        return [
+            new Reward(
+                1,
+                'Common',
+                'Max Instant health',
+                'Full heal',
+                (() => {
+                    run.character.gold -= 20;
+                    run.character.heal(run.character.health);
+                }).bind(run),
+                20,
+            ),
+            new Reward(
+                1,
+                'Common',
+                'Extra Moves',
+                '+3 moves',
+                (() => {
+                    run.character.gold -= 50;
+                    run.movesPerStage += 3;
+                }).bind(run),
+                50,
+            ),
+            new Reward(
+                1,
+                'Rare',
+                'Horizontal Expansion',
+                '+1 column',
+                (() => {
+                    run.character.gold -= 100;
+                    run.grid.width++;
+                    run.grid.generateEmptyCells();
+                    run.grid.calculateSpacing(run.canvas);
+                }).bind(run),
+                100,
+            ),
+            new Reward(
+                1,
+                'Rare',
+                'Vertical Expansion',
+                '+1 row',
+                (() => {
+                    run.character.gold -= 100;
+                    run.grid.height++;
+                    run.grid.generateEmptyCells();
+                    run.grid.calculateSpacing(run.canvas);
+                }).bind(run),
+                100,
+            ),
+        ]
+    }
+    
     static defaultPool(run: Run): Reward[] {
         return [
             new Reward(
@@ -47,7 +110,7 @@ export class RewardPools {
                 'Instant Health',
                 '+10% HP',
                 (() => {
-                    run.character.heal(run.character.health/10)
+                    run.character.heal(run.character.health / 10)
                 }).bind(run)
             ),
             new Reward(
@@ -114,18 +177,18 @@ export class RewardPools {
                 }).bind(run)
             ),
             (() => {
-                let randomColor: number = Math.floor(Math.random() * Object.entries(run.possibleShapes).length);
-                let chosenColor: [string, any] = Object.entries(run.possibleShapes)[randomColor]
+                let randomShape: number = Math.floor(Math.random() * run.possibleShapes.length);
+                let chosenShape: Shape = run.possibleShapes[randomShape];
                 return new Reward(
                     1,
                     'Rare',
-                    `Eliminate all ${chosenColor[0]} items`,
-                    `Remove current ${chosenColor[0]} items from the board`,
+                    `Eliminate all ${chosenShape.id} items`,
+                    `Remove current ${chosenShape.id} items from the board`,
                     (() => {
                         run.initialShuffle = false;
                         run.stackCombo = true;
                         run.grid.cells.flat().forEach((cell) => {
-                            if (cell?.item?.shape?.sides === randomColor + 3) {
+                            if (cell?.item?.shape?.id === chosenShape.id) {
                                 cell.item = undefined
                             }
                         });
@@ -147,7 +210,7 @@ export class RewardPools {
                 'Move Saver',
                 '10% chance of not consuming moves',
                 (() => {
-                    run.moveSaver += 0.10
+                    run.character.moveSaver += 0.10
                 }).bind(run)
             ),
             new Reward(1,
@@ -169,26 +232,26 @@ export class RewardPools {
                 }).bind(run)
             ),
             (() => {
-                if (Object.entries(run.possibleShapes).length >= 4) {
-                    let randomColor: number = Math.floor(Math.random() * Object.entries(run.possibleShapes).length);
-                    let chosenColor: [string, any] = Object.entries(run.possibleShapes)[randomColor]
+                if (run.possibleShapes.length >= 4) {
+                    let randomShape: number = Math.floor(Math.random() * run.possibleShapes.length);
+                    let chosenShape: Shape = run.possibleShapes[randomShape];
                     return new Reward(
                         1,
                         'Epic',
-                        `Ban ${chosenColor[0]} items`,
-                        `No more ${chosenColor[0]} items for the rest of the run`,
+                        `Ban ${chosenShape.id} items`,
+                        `No more ${chosenShape.id} items for the rest of the run`,
                         (() => {
-                            delete run.possibleShapes[chosenColor[0]]
+                            run.possibleShapes.splice(randomShape, 1)
                             run.initialShuffle = false;
                             run.stackCombo = true;
                             run.grid.cells.flat().forEach((cell) => {
-                                if (cell?.item?.shape?.sides === randomColor + 3) {
+                                if (cell?.item?.shape?.id === chosenShape.id) {
                                     cell.item = undefined
                                 }
                             });
                         }).bind(run)
                     )
-                } 
+                }
                 return new Reward(
                     1,
                     'Epic',
@@ -205,10 +268,10 @@ export class RewardPools {
 
 function giveColorBonusDmg(run: Run, color: string) {
     let bonus: number = 50;
-    let shape: Shape = run.possibleShapes[color];
-    shape.bonusDmg = bonus;
+    let shape: Shape = run.possibleShapes.find((shape: Shape) => shape.id = color)
+    shape.bonusDmg += bonus;
     run.grid.cells.flat().forEach((cell) => {
-        if (cell?.item?.shape?.color?.checksum === shape.color.checksum) {
+        if (cell?.item?.shape?.id === shape.id) {
             cell.item.shape.bonusDmg += bonus;
         }
     });

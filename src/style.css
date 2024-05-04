@@ -77,6 +77,11 @@ canvas {
   float: left;
 }
 
+.price {
+  font-style: italic;
+  float: right;
+}
+
 .rarity-Common {
   background-color: rgb(224, 224, 224);
 }

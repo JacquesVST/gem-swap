@@ -7,6 +7,7 @@ export class Enemy {
     health: number;
     currentHealth: number;
     attack: number;
+    gold: number;
 
     constructor(number: number, isBoss: boolean, currentFloorIndex: number, currentStageIndex: number) {
         this.number = number;
@@ -26,6 +27,9 @@ export class Enemy {
 
         if (this.isBoss) {
             bossMultiplier = 2 * (currentFloorIndex + 1);
+            this.gold = Math.floor(Math.random() * (25 - 11) + 10);
+        } else {
+            this.gold = Math.floor(Math.random() * (5 - 1));
         }
 
         let maxHealth: number = 1500 * bossMultiplier * (1 + (currentFloorIndex / 2));

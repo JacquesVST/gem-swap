@@ -36,8 +36,6 @@ new p5((sketch: p5) => {
     let textAnimations: TextAnimation[] = [];
     let dialogs: Dialog[] = [];
 
-    let initialAnimation: boolean = true;
-
     sketch.setup = () => {
         canvas = new CanvasInfo(sketch, 16, 4, 4, 20, 5);
         sketch.textFont('Open Sans')
@@ -51,10 +49,9 @@ new p5((sketch: p5) => {
 
     function setupGame(): void {
         if (run) {
-            run.winState = false
+            run = undefined;
         }
         Run.newGameDialog(sketch, dialogs, (config: RunConfig) => {
-            initialAnimation = true;
             run = new Run(sketch, Character.defaultCharacter(), config.floors, config.stages, config.enemies, config.moves)
             run.grid = new Grid(config.gridX, config.gridY);
             run.setupCanvas(canvas);
@@ -62,7 +59,6 @@ new p5((sketch: p5) => {
 
             textAnimations = [];
             run.inAnimation = false
-            currentDialog = undefined;
 
             updateScore([], true);
             updateCombo([], true);
@@ -70,76 +66,49 @@ new p5((sketch: p5) => {
 
             //clear board before drawing
 
-            let iterations: number = 50;
-            let intervalWithCallback = (duration: number, callback: () => void) => {
-                let count: number = 0;
-                let interval = setInterval(() => {
-                    if (!run.grid.isFull()) {
-                        applyGravity(run.grid, false);
-                        run.grid.generateItems(run);
-                    } else {
-                        removeMatches(findMatches(run.grid), false);
-                    }
-                    count++
-                    if (count === duration) {
-                        clearInterval(interval)
-                        callback();
-                    }
-                }, 1);
-            }
-
-            intervalWithCallback(iterations, () => {
-                initialAnimation = false;
-            })
+            clearBoard();
         })
     }
 
     sketch.draw = () => {
         //logic
-        if (run && !initialAnimation) {
+        if (run && !run.initialAnimation) {
             if (!run.grid.isFull()) {
                 applyGravity(run.grid);
                 run.grid.generateItems(run);
             } else {
-                if (!run.inAnimation) {
+                if (!run.inAnimation && !currentDialog) {
                     removeMatches(findMatches(run.grid), true);
                 }
-                if (run.moves === 0) {
+                if (run.character.moves === 0) {
                     reload()
                 }
             }
 
-
             //animations
             canvas.drawPlayfield();
-            if (run.findEnemy()) {
-                run.drawRunInfo(canvas, () => { run.inAnimation = false })
-                run.grid.draw(canvas, sketch, !!currentDialog);
-                run.grid.drawItems(sketch);
-            }
+            run.drawRunInfo(canvas, () => { run.inAnimation = false })
+            run.grid.draw(canvas, sketch, !!currentDialog);
+            run.grid.drawItems(sketch);
 
             textAnimations.forEach((animation: TextAnimation) => {
                 animation.draw(sketch, textAnimations);
                 animation.updatePosition(textAnimations)
             });
 
-
             if (run.winState) {
                 setTimeout(() => {
                     let finalScore: number = run.score;
-                    run = undefined
                     dialogs = [];
                     alert('YOU WON!\nwith a score of: ' + formatNumber(finalScore))
                     setupGame();
-                }, 500);
+                }, 5000);
             }
-
-            updatePlayerStatsAndRewards();
         }
 
         dialogs.forEach((dialog: Dialog) => {
             currentDialog = dialog;
-            dialog.draw(canvas);
+            dialog.draw(canvas, run?.character);
         });
     }
 
@@ -168,26 +137,41 @@ new p5((sketch: p5) => {
                         updateDamage(0, true);
                     } else {
                         run.stackCombo = true;
-                        let movesLeft: number = run.moves - 1;
-                        if (Math.random() < run.moveSaver) {
-                            movesLeft = run.moves
+                        let movesLeft: number = run.character.moves - 1;
+                        if (Math.random() < run.character.moveSaver) {
+                            movesLeft = run.character.moves
+                            moveSavedAnimation();
                         }
 
-                        swap(cell.position, run.grid.selectedCellPos, (() => { run.moves = movesLeft }).bind(this, movesLeft), true);
+                        swap(cell.position, run.grid.selectedCellPos, (() => {
+                            run.character.moves = movesLeft
+                            updatePlayerStatsAndRewards();
+                        }).bind(this, movesLeft), true);
                         run.grid.selectedCellPos = undefined
                         lastClick = new Position(0, 0)
                     }
                 }
-
             }, () => clickFound);
         } else {
-            currentDialog.options.forEach((option: DialogOption) => {
+            let selectedIndex: number = -1;
+
+            currentDialog.options.forEach((option: DialogOption, index: number) => {
                 if (checkPositionInLimit(lastClick, ...option.limits)) {
-                    option.action();
-                    dialogs.pop()
-                    currentDialog = undefined
+                    selectedIndex = index;
+                    if (!option.disabled) {
+                        option.action();
+                        option.disabled = true;
+                    }
                 }
             })
+
+            if (selectedIndex >= 0) {
+                if (currentDialog && !currentDialog.keep) {
+                    currentDialog = undefined
+                    dialogs.pop()
+                }
+            }
+            updatePlayerStatsAndRewards();
         }
     }
 
@@ -222,11 +206,35 @@ new p5((sketch: p5) => {
                 run.grid.getCellbyPosition(item.position).item = undefined;
                 run.inAnimation = false
             }).bind(this);
-            item.setupNewAnimation(10, new Position(0, 0), 255);
+            item.setupNewAnimation(run.stackCombo ? 10 : 3, new Position(0, 0), 255);
         } else {
             run.grid.getCellbyPosition(item.position).item = undefined;
         }
 
+    }
+
+    function clearBoard(): void {
+        let iterations: number = 50;
+        let intervalWithCallback = (duration: number, callback: () => void) => {
+            let count: number = 0;
+            let interval = setInterval(() => {
+                if (!run.grid.isFull()) {
+                    applyGravity(run.grid, false);
+                    run.grid.generateItems(run);
+                } else {
+                    removeMatches(findMatches(run.grid), false);
+                }
+                count++
+                if (count === duration) {
+                    clearInterval(interval)
+                    callback();
+                }
+            }, 1);
+        }
+
+        intervalWithCallback(iterations, () => {
+            run.initialAnimation = false;
+        })
     }
 
     function removeMatches(matches: Item[][], animate: boolean = true): void {
@@ -236,7 +244,7 @@ new p5((sketch: p5) => {
 
         matches.forEach((match: Item[]) => {
             if (!run.initialShuffle) {
-                if (run.character.rewards.findIndex((reward: Reward) => reward.name === '4 way match health regen') >= 0) {
+                if (run.character.hpRegenFromReward > 0) {
                     if (match.length >= 4) {
                         run.character.heal(run.character.health / 100 * run.character.hpRegenFromReward);
                     }
@@ -303,7 +311,7 @@ new p5((sketch: p5) => {
     }
 
     function reload(): void {
-        run.moves = run.movesPerStage;
+        run.character.moves = run.movesPerStage;
         let damage: number = run.findEnemy().attack;
         run.character.takeDamage(damage, ((damage: number, shielded: boolean) => {
             damagePlayerAnimation(Math.floor(damage), shielded)
@@ -313,21 +321,6 @@ new p5((sketch: p5) => {
             setupGame();
         }).bind(this))
 
-    }
-
-    function damagePlayerAnimation(damage: number, shielded: boolean = false): void {
-        let textAnimation: TextAnimation = new TextAnimation(
-            shielded ? 'Shielded' : `-${damage} HP`,
-            20,
-            shielded ? new Color(101, 206, 80) : new Color(214, 87, 49),
-            4,
-            sketch.CENTER,
-            new Position(canvas.canvasSize.x / 2, canvas.totalUiSize),
-            new Position(0, 200),
-            180
-        );
-
-        textAnimations.push(textAnimation);
     }
 
     function updateScore(match: Item[], resetCounter: boolean = false): void {
@@ -369,18 +362,96 @@ new p5((sketch: p5) => {
 
         enemy.damage(finalDamage, run,
             () => {
+                run.character.gold += enemy.gold;
+                if (enemy.gold > 0) {
+                    goldAnimation(enemy.gold);
+                }
+                enemy.gold = 0;
                 if (run.findEnemy()?.number === run.enemyPerStage) {
                     bossFightAnimation();
                 }
             }, () => {
                 run.stackCombo = false;
                 run.initialShuffle = true;
-                run.moves = run.movesPerStage;
-                run.newPercDialog(dialogs, updatePlayerStatsAndRewards.bind(this))
+                run.character.moves = run.movesPerStage;
+                if (!run.winState) {
+                    run.newPercDialog(dialogs, updatePlayerStatsAndRewards.bind(this))
+                }
             }, () => {
                 newFloorAnimation()
+                if (!run.winState) {
+                    run.newShopDialog(dialogs, updatePlayerStatsAndRewards.bind(this),(() => {
+                        currentDialog = undefined
+                        dialogs.pop();
+                    }).bind(this))
+                }
             });
         damageAnimation(damage, overkill, position);
+    }
+
+    function damageAnimation(damage: number, overkill: boolean, positon: Position): void {
+        let varianceX: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
+        let varianceY: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
+
+        let textAnimation: TextAnimation = new TextAnimation(
+            `${damage} DMG`,
+            20,
+            overkill ? new Color(231, 76, 60) : new Color(224, 224, 224),
+            4,
+            sketch.CENTER,
+            new Position(positon.x + varianceX, positon.y + varianceY),
+            new Position(0, -200),
+            180
+        );
+
+        textAnimations.push(textAnimation);
+    }
+
+    function damagePlayerAnimation(damage: number, shielded: boolean = false): void {
+        let textAnimation: TextAnimation = new TextAnimation(
+            shielded ? 'Shielded' : `-${damage} HP`,
+            20,
+            shielded ? new Color(101, 206, 80) : new Color(231, 76, 60),
+            4,
+            sketch.CENTER,
+            new Position(canvas.canvasSize.x / 2, canvas.totalUiSize),
+            new Position(0, 200),
+            180
+        );
+
+        textAnimations.push(textAnimation);
+    }
+
+    function goldAnimation(amount: number) {
+        let varianceX: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
+        let varianceY: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
+
+        let textAnimation: TextAnimation = new TextAnimation(
+            `+${amount} Gold`,
+            20,
+            new Color(244, 208, 63),
+            4,
+            sketch.CENTER,
+            new Position((canvas.canvasSize.x / 2) + varianceX, (canvas.totalUiSize - canvas.uiBarSize - canvas.margin) + varianceY),
+            new Position(0, 100),
+            180
+        );
+
+        textAnimations.push(textAnimation);
+    }
+
+    function moveSavedAnimation(): void {
+        let floorComplete: TextAnimation = new TextAnimation(
+            `Move saved`,
+            20,
+            new Color(101, 206, 80),
+            4,
+            sketch.CENTER,
+            new Position(sketch.mouseX, sketch.mouseY),
+            new Position(0, -200),
+            240,
+        );
+        textAnimations.push(floorComplete);
     }
 
     function bossFightAnimation(): void {
@@ -396,14 +467,13 @@ new p5((sketch: p5) => {
             -40
         );
         textAnimations.push(floorComplete);
-
     }
 
     function newFloorAnimation(): void {
         let floorComplete: TextAnimation = new TextAnimation(
             `Floor Complete`,
             40,
-            new Color(255, 255, 255),
+            new Color(224, 224, 224),
             4,
             sketch.CENTER,
             new Position(canvas.canvasSize.x / 2, canvas.canvasSize.y / 2 + canvas.totalUiSize),
@@ -411,26 +481,9 @@ new p5((sketch: p5) => {
             240
         );
         textAnimations.push(floorComplete);
-
     }
 
-    function damageAnimation(damage: number, overkill: boolean, positon: Position): void {
-        let varianceX: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
-        let varianceY: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
 
-        let textAnimation: TextAnimation = new TextAnimation(
-            `${damage} DMG`,
-            20,
-            overkill ? new Color(255, 0, 0) : new Color(255, 255, 255),
-            4,
-            sketch.CENTER,
-            new Position(positon.x + varianceX, positon.y + varianceY),
-            new Position(0, -200),
-            180
-        );
-
-        textAnimations.push(textAnimation);
-    }
 
     function updateCombo(matches: Item[][], resetCounter: boolean = false): void {
         if (resetCounter) {
@@ -475,8 +528,6 @@ new p5((sketch: p5) => {
 
         let statsContent: string = '';
         if (run?.character) {
-            let hasShield: boolean = run.character.hasItemThatPreventsFirstLethalDamage && !run.character.hasUsedItemThatPreventsFirstLethalDamage;
-
             statsContent += '<div class="stats-ui">'
 
             statsContent += '<div class="stat">'
@@ -488,11 +539,11 @@ new p5((sketch: p5) => {
             statsContent += '</div>';
 
             statsContent += '<div class="stat">'
-            statsContent += `<strong>Moves:</strong>&nbsp;<span style="${run.moves > 5 ? 'color: white' : 'color: red'}">${run.moves}</span><span>&nbsp;/&nbsp;${run.movesPerStage}</span>`
+            statsContent += `<strong>Moves:</strong>&nbsp;<span style="${run.character.moves > 5 ? 'color: white' : 'color: red'}">${run.character.moves}</span><span>&nbsp;/&nbsp;${run.movesPerStage}</span>`
             statsContent += '</div>';
 
             statsContent += '<div class="stat">'
-            statsContent += hasShield ? `<strong class="shield">Shielded</strong>` : ''
+            statsContent += `<strong>Gold:</strong>&nbsp;<span>${run.character.gold}</span>`
             statsContent += '</div>';
 
             statsContent += '</div>';
@@ -510,9 +561,13 @@ new p5((sketch: p5) => {
                 rewardsContent += `
                 <div class="reward-wrap">
                 <div class="centered reward rarity-${reward.rarity}">
-                <span class="rarity">${reward.rarity}</span><br>
-                    <h3>${reward.name}</h3>
-                    <strong>${reward.description}</strong>
+                <span class="rarity">${reward.rarity}</span>`;
+
+                rewardsContent += reward.price ? `<span class="price">$ ${reward.price}</span><br>` : '<br>';
+
+                rewardsContent += `    
+                <h3>${reward.name}</h3>
+                <strong>${reward.description}</strong>
                 </div>
                 </div>
                 <br>`

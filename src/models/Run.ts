@@ -18,25 +18,25 @@ export class Run {
     stagesPerFloor: number;
     enemyPerStage: number;
     movesPerStage: number;
-    moves: number;
-    score: number;
-    combo: number;
-    currentFloorIndex: number;
-    defeatedEnemies: number;
-    winState: boolean;
-    inAnimation: boolean;
-    possibleShapes = {};
-    possibleRewards: Reward[];
+
+    possibleShapes: Shape[];
     floors: Floor[];
-    grid: Grid
-    canvas: CanvasInfo;
+    progressBars: ProgressBar[];
+
+    score: number = 0;
+    combo: number = 0;
+    damage: number = 0;
+    currentFloorIndex: number = 0;
+    defeatedEnemies: number = 0;
+
+    initialAnimation: boolean = true;
+    inAnimation: boolean = false;
 
     initialShuffle: boolean = true;
     stackCombo: boolean = false;
 
-    damage: number = 0;
-    moveSaver: number = 0;
-    progressBars: ProgressBar[];
+    grid: Grid;
+    canvas: CanvasInfo;
 
     constructor(p5: p5, character: Character, totalFloors: number, stagesPerFloor: number, enemyPerStage: number, movesPerStage: number) {
         this.p5 = p5;
@@ -46,22 +46,8 @@ export class Run {
         this.enemyPerStage = enemyPerStage;
         this.movesPerStage = movesPerStage;
 
-        this.moves = movesPerStage;
-        this.score = 0;
-        this.combo = 0;
-        this.currentFloorIndex = 0;
-        this.defeatedEnemies = 0;
-        this.winState = false;
-        this.inAnimation = false;
-
-        this.possibleShapes = {
-            red: new Shape(3, new Color(231, 76, 60)), //red
-            green: new Shape(4, new Color(46, 204, 113)), //green
-            blue: new Shape(5, new Color(46, 134, 193)), //blue
-            yellow: new Shape(6, new Color(244, 208, 63)), //yellow
-            orange: new Shape(7, new Color(243, 156, 18)), //orange
-            pink: new Shape(8, new Color(240, 98, 146)), //pink
-        };
+        this.character.moves = movesPerStage;
+        this.possibleShapes = Shape.defaultShapes();
 
         this.floors = [...Array(this.totalFloors)].map(
             (floor: Floor, index: number) => {
@@ -72,49 +58,12 @@ export class Run {
         this.setupProgressBars();
     }
 
-    setupCanvas(canvas: CanvasInfo) {
-        this.canvas = canvas;
+    get winState(): boolean {
+        return this.defeatedEnemies === this.totalFloors * this.stagesPerFloor * this.enemyPerStage;
     }
 
-    setupProgressBars(): void {
-        let enemy: Enemy = this.findEnemy();
-        let stage: Stage = this.findStage();
-        let floor: Floor = this.findFloor();
-
-        let totalEnemies: number = this.totalFloors * this.stagesPerFloor * this.enemyPerStage;
-
-        this.progressBars = [
-            new ProgressBar(
-                totalEnemies,
-                this.defeatedEnemies,
-                'Run Progress',
-                new Color(227, 227, 227)
-            ),
-            new ProgressBar(
-                this.totalFloors,
-                floor.number,
-                'Floor',
-                new Color(236, 200, 19)
-            ),
-            new ProgressBar(
-                this.stagesPerFloor,
-                stage.number,
-                'Stage',
-                new Color(49, 102, 214)
-            ),
-            new ProgressBar(
-                enemy.health,
-                enemy.currentHealth,
-                enemy.name + ' Health (' + enemy.number + '/' + this.enemyPerStage + ')',
-                enemy.isBoss ? new Color(87, 49, 214) : new Color(86, 101, 115)
-            ),
-            new ProgressBar(
-                this.character.health,
-                this.character.currentHealth,
-                'Your Health',
-                new Color(214, 87, 49)
-            )
-        ]
+    setupCanvas(canvas: CanvasInfo) {
+        this.canvas = canvas;
     }
 
     findFloor(): Floor {
@@ -132,6 +81,106 @@ export class Run {
         return this.floors[this.currentFloorIndex]?.stages[stageIndex]?.enemies[enemyIndex];
     }
 
+
+    setupProgressBars(): void {
+        let enemy: Enemy = this.findEnemy();
+        let stage: Stage = this.findStage();
+        let floor: Floor = this.findFloor();
+
+        let totalEnemies: number = this.totalFloors * this.stagesPerFloor * this.enemyPerStage;
+
+        this.progressBars = [
+            new ProgressBar(
+                totalEnemies,
+                this.defeatedEnemies,
+                'Run Progress',
+                new Color(224, 224, 224)
+            ),
+            new ProgressBar(
+                this.totalFloors,
+                floor.number,
+                'Floor',
+                new Color(244, 208, 63)
+            ),
+            new ProgressBar(
+                this.stagesPerFloor,
+                stage.number,
+                'Stage',
+                new Color(46, 134, 193)
+            ),
+            new ProgressBar(
+                enemy.health,
+                enemy.currentHealth,
+                enemy.name + ' Health (' + enemy.number + '/' + this.enemyPerStage + ')',
+                enemy.isBoss ? new Color(87, 49, 214) : new Color(86, 101, 115)
+            ),
+            new ProgressBar(
+                this.character.health,
+                this.character.currentHealth,
+                'Your Health',
+                new Color(231, 76, 60),
+            )
+        ]
+    }
+
+    drawRunInfo(canvas: CanvasInfo, callback: () => void): void {
+        let enemy: Enemy = this.findEnemy();
+        let stage: Stage = this.findStage();
+        let floor: Floor = this.findFloor();
+
+        if (this.winState) {
+            floor = this.floors[this.totalFloors - 1];
+            stage = floor.stages[this.stagesPerFloor - 1];
+            enemy = stage.enemies[this.enemyPerStage - 1];
+        }
+
+        let totalEnemies: number = this.totalFloors * this.stagesPerFloor * this.enemyPerStage;
+        let newProgressBars = [
+            new ProgressBar(
+                totalEnemies,
+                this.defeatedEnemies,
+                'Run Progress',
+                new Color(224, 224, 224)
+            ),
+            new ProgressBar(
+                this.totalFloors,
+                floor.number,
+                'Floor',
+                new Color(244, 208, 63)
+            ),
+            new ProgressBar(
+                this.stagesPerFloor,
+                stage.number,
+                'Stage',
+                new Color(46, 134, 193)
+            ),
+            new ProgressBar(
+                enemy.health,
+                enemy.currentHealth,
+                enemy.name + ' Health (' + enemy.number + '/' + this.enemyPerStage + ')',
+                enemy.isBoss ? new Color(87, 49, 214) : new Color(86, 101, 115)
+            ),
+            new ProgressBar(
+                this.character.health,
+                this.character.currentHealth,
+                'Your Health',
+                new Color(231, 76, 60),
+            ),
+        ];
+
+        this.progressBars.forEach((element: ProgressBar, index: number) => {
+            let difference: number = element.value - newProgressBars[index].value
+
+            if (difference !== 0) {
+                this.inAnimation = true
+                this.progressBars[index] = newProgressBars[index];
+                this.progressBars[index].animate(difference, callback)
+            }
+
+            element.drawBar(this.p5, index, canvas);
+        });
+    }
+
     checkUpdateProgress(deathCallback: () => void, stageCallback: () => void, floorCallback: () => void): void {
         let enemy: Enemy = this.findEnemy();
         let stage: Stage = this.findStage();
@@ -147,7 +196,7 @@ export class Run {
 
         if (stage?.currentEnemyIndex === this.enemyPerStage) {
             floor.currentStageIndex++
-            this.moves = this.movesPerStage
+            this.character.moves = this.movesPerStage
             if (stageCallback) {
                 stageCallback();
             }
@@ -159,28 +208,16 @@ export class Run {
                 floorCallback();
             }
         }
-
-        if (this.currentFloorIndex >= this.totalFloors) {
-            this.winState = true
-        }
     }
 
     newPercDialog(globalDialogs: Dialog[], selectCallback: () => void) {
-        this.possibleRewards = RewardPools.defaultPool(this);
-
-        let rarityColorMap = {
-            'Common': new Color(224, 224, 224),
-            'Rare': new Color(101, 206, 80),
-            'Epic': new Color(84, 80, 206)
-        }
-
-        let randomRewards: RewardDialogOption[] = this.possibleRewards.sort(() => Math.random() - Math.random()).slice(0, 3).map(
+        let randomRewards: RewardDialogOption[] = RewardPools.defaultPool(this).sort(() => Math.random() - Math.random()).slice(0, 3).map(
             (reward: Reward) => {
                 return new RewardDialogOption(
                     this.p5,
                     reward,
                     false,
-                    rarityColorMap[reward.rarity],
+                    Reward.rarityColors()[reward.rarity],
                     () => {
                         reward.effect();
                         this.character.rewards.push(reward);
@@ -199,7 +236,38 @@ export class Run {
             new Color(40, 40, 40)
         )
 
-        globalDialogs.push(dialog);
+        globalDialogs.unshift(dialog);
+    }
+
+    newShopDialog(globalDialogs: Dialog[], selectCallback: () => void, closeCallback?: () => void) {
+        let randomRewards: RewardDialogOption[] = RewardPools.shopPool(this).sort(() => Math.random() - Math.random()).slice(0, 3).map(
+            (reward: Reward) => {
+                return new RewardDialogOption(
+                    this.p5,
+                    reward,
+                    false,
+                    Reward.rarityColors()[reward.rarity],
+                    () => {
+                        reward.effect();
+                        this.character.rewards.push(reward);
+                        if (selectCallback) {
+                            selectCallback();
+                        }
+                    }
+                )
+            });
+
+        let dialog: Dialog = new Dialog(
+            this.p5,
+            'Floor reward shop',
+            'Buy what you can with your gold',
+            randomRewards,
+            new Color(40, 40, 40),
+            true,
+            closeCallback
+        )
+
+        globalDialogs.unshift(dialog);
     }
 
     static newGameDialog(p5: p5, globalDialogs: Dialog[], selectCallback: (config: RunConfig) => void) {
@@ -229,7 +297,7 @@ export class Run {
                 new Color(244, 208, 63),
                 () => {
                     let runConfig: RunConfig = {
-                        enemies: 5,
+                        enemies: 8,
                         stages: 5,
                         floors: 5,
                         moves: 10,
@@ -239,7 +307,7 @@ export class Run {
                     selectCallback(runConfig);
                 },
                 'Normal',
-                '5 Enemies, 5 Stages, 5 Floors',
+                '8 Enemies, 5 Stages, 5 Floors',
                 '10x8 grid'
             ),
             new DefaultDialogOption(
@@ -249,7 +317,7 @@ export class Run {
                 () => {
                     let runConfig: RunConfig = {
                         enemies: 10,
-                        stages: 10,
+                        stages: 8,
                         floors: 8,
                         moves: 10,
                         gridX: 8,
@@ -258,7 +326,7 @@ export class Run {
                     selectCallback(runConfig);
                 },
                 'Hard',
-                '10 Enemies, 10 Stages, 8 Floors',
+                '10 Enemies, 8 Stages, 8 Floors',
                 '8x6 grid'
             ),
         ]
@@ -272,57 +340,6 @@ export class Run {
         )
 
         globalDialogs.push(dialog);
-    }
-
-    drawRunInfo(canvas: CanvasInfo, callback: () => void): void {
-        let enemy: Enemy = this.findEnemy();
-        let stage: Stage = this.findStage();
-        let floor: Floor = this.findFloor();
-        if (enemy && floor && stage) {
-            let totalEnemies: number = this.totalFloors * this.stagesPerFloor * this.enemyPerStage;
-            let newProgressBars = [
-                new ProgressBar(
-                    totalEnemies,
-                    this.defeatedEnemies,
-                    'Run Progress',
-                    new Color(227, 227, 227)
-                ),
-                new ProgressBar(
-                    this.totalFloors,
-                    floor.number,
-                    'Floor',
-                    new Color(236, 200, 19)
-                ),
-                new ProgressBar(
-                    this.stagesPerFloor,
-                    stage.number,
-                    'Stage',
-                    new Color(49, 102, 214)
-                ),
-                new ProgressBar(
-                    enemy.health,
-                    enemy.currentHealth,
-                    enemy.name + ' Health (' + enemy.number + '/' + this.enemyPerStage + ')',
-                    enemy.isBoss ? new Color(87, 49, 214) : new Color(86, 101, 115)
-                ),
-                new ProgressBar(
-                    this.character.health,
-                    this.character.currentHealth,
-                    'Your Health',
-                    new Color(214, 87, 49)
-                ),
-            ];
-
-            this.progressBars.forEach((element: ProgressBar, index: number) => {
-                let difference: number = element.value - newProgressBars[index].value
-                if (difference !== 0) {
-                    this.inAnimation = true
-                    this.progressBars[index] = newProgressBars[index];
-                    this.progressBars[index].animate(difference, callback)
-                }
-                element.drawBar(this.p5, index, canvas);
-            });
-        }
     }
 
 }
