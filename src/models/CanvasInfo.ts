@@ -1,6 +1,5 @@
-import * as p5 from "p5";
+import * as P5 from "p5";
 import { Position } from "./Position";
-
 
 export class CanvasInfo {
     margin: number;
@@ -11,9 +10,9 @@ export class CanvasInfo {
     playfieldBackground: number;
     canvasSize: Position;
     playfield: Position;
-    p5: p5
+    p5: P5
 
-    constructor(p5: p5, margin: number, padding: number, radius: number, uiBarSize: number, uiBarCount: number) {
+    constructor(p5: P5, margin: number, padding: number, radius: number, uiBarSize: number, uiBarCount: number) {
         this.margin = margin;
         this.padding = padding;
         this.radius = radius;

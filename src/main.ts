@@ -1,4 +1,6 @@
-import * as p5 from "p5";
+import './global.js';
+import 'p5/lib/addons/p5.sound';
+import * as P5 from 'p5';
 import { CanvasInfo } from "./models/CanvasInfo";
 import { Cell } from "./models/Cell";
 import { Character } from "./models/Character";
@@ -12,6 +14,7 @@ import { Reward } from "./models/Reward";
 import { Run, RunConfig } from "./models/Run";
 import { TextAnimation } from "./models/TextAnimation";
 import { checkPositionInLimit, formatNumber } from "./utils/Functions";
+import * as p5 from 'p5';
 
 let resetButton: HTMLElement = document.getElementById('resetBtn');
 let scoreCounter: HTMLElement = document.getElementById('scoreCounter');
@@ -24,8 +27,9 @@ let runInfo: HTMLElement = document.getElementById('runInfo');
 let statsContainer: HTMLElement = document.getElementById('statsContainer');
 let rewardsContainer: HTMLElement = document.getElementById('rewardsContainer');
 
-new p5((sketch: p5) => {
+let audioContext = new AudioContext();
 
+const sketch = (p5Instance: P5) => {
     let bestScore: number = 0;
     let bestCombo: number = 0;
     let bestDamage: number = 0;
@@ -36,10 +40,28 @@ new p5((sketch: p5) => {
     let textAnimations: TextAnimation[] = [];
     let dialogs: Dialog[] = [];
 
-    sketch.setup = () => {
-        canvas = new CanvasInfo(sketch, 16, 4, 4, 20, 5);
-        sketch.textFont('Open Sans')
+    let sounds: {[key: string]: p5.SoundFile};
 
+    p5Instance.preload = () =>  {
+        p5Instance.soundFormats('mp3')
+        
+        sounds = {
+            bossDefeat: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/boss-defeat.mp3'),
+            defeat: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/defeat.mp3'),
+            enemyDefeat: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/enemy-defeat.mp3'),
+            item: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/item.mp3'),
+            match: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/match.mp3'),
+            move: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/move.mp3'),
+            noMove: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/no-move.mp3'),
+            select:p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/select.mp3')
+        }
+        
+    }
+
+    p5Instance.setup = () => {
+        canvas = new CanvasInfo(p5Instance, 16, 4, 4, 20, 5);
+        p5Instance.textFont('Open Sans')
+        
         resetButton.onclick = () => {
             setupGame();
         }
@@ -51,11 +73,12 @@ new p5((sketch: p5) => {
         if (run) {
             run = undefined;
         }
-        Run.newGameDialog(sketch, dialogs, (config: RunConfig) => {
-            run = new Run(sketch, Character.defaultCharacter(), config.floors, config.stages, config.enemies, config.moves)
+        Run.newGameDialog(p5Instance, dialogs, (config: RunConfig) => {
+            run = new Run(p5Instance, Character.defaultCharacter(), config.floors, config.stages, config.enemies, config.moves, config.costMultiplier)
             run.grid = new Grid(config.gridX, config.gridY);
             run.setupCanvas(canvas);
             run.grid.calculateSpacing(canvas);
+           // run.sounds = sounds;
 
             textAnimations = [];
             run.inAnimation = false
@@ -70,7 +93,7 @@ new p5((sketch: p5) => {
         })
     }
 
-    sketch.draw = () => {
+    p5Instance.draw = () => {
         //logic
         if (run && !run.initialAnimation) {
             if (!run.grid.isFull()) {
@@ -87,9 +110,10 @@ new p5((sketch: p5) => {
 
             //animations
             canvas.drawPlayfield();
-            run.drawRunInfo(canvas, () => { run.inAnimation = false })
-            run.grid.draw(canvas, sketch, !!currentDialog);
-            run.grid.drawItems(sketch);
+
+            run.drawRunInfo(canvas, () => { run ? run.inAnimation = false : undefined })
+            run.grid.draw(canvas, p5Instance, !!currentDialog);
+            run.grid.drawItems(p5Instance);
 
             if (run.winState) {
                 setTimeout(() => {
@@ -107,13 +131,14 @@ new p5((sketch: p5) => {
         });
 
         textAnimations.forEach((animation: TextAnimation) => {
-            animation.draw(sketch, textAnimations);
+            animation.draw(p5Instance, textAnimations);
         });
     }
 
-    sketch.mouseClicked = () => {
-        let lastClick: Position = new Position(sketch.mouseX, sketch.mouseY)
-        if (!currentDialog) {
+    p5Instance.mouseClicked = () => {
+        //p5Instance.userStartAudio();
+        let lastClick: Position = new Position(p5Instance.mouseX, p5Instance.mouseY)
+        if (!currentDialog && run) {
             let clickFound: boolean = false;
             run.grid.iterateXtoY((x: number, y: number) => {
                 let cell: Cell = run.grid.cells[x][y];
@@ -125,7 +150,7 @@ new p5((sketch: p5) => {
                     cell.canvasPosition.y + run.grid.sideSize
                 ]
 
-                if (checkPositionInLimit(lastClick, ...limits)) {
+                if (checkPositionInLimit(lastClick, ...limits) && run.grid.isFull()) {
                     clickFound = true
                     run.initialShuffle = false;
 
@@ -151,7 +176,9 @@ new p5((sketch: p5) => {
                     }
                 }
             }, () => clickFound);
-        } else {
+        } 
+        
+        if (currentDialog) {
             let selectedIndex: number = -1;
 
             currentDialog.options.forEach((option: DialogOption, index: number) => {
@@ -161,7 +188,7 @@ new p5((sketch: p5) => {
                         option.action();
                         if (option instanceof RewardDialogOption && option?.reward?.price) {
                             goldAnimation(option.reward.price * -1)
-                            option.disabled = true;
+                            option.reward.price = Math.floor(option.reward.price * 1.2);
                         }
                     }
                 }
@@ -332,10 +359,11 @@ new p5((sketch: p5) => {
         }
         let bonusDmg: number = 0
         if (match[0]?.shape) {
-            bonusDmg += match[0].shape.bonusDmg;
+            bonusDmg = match[0].shape.bonusDmg;
         }
 
-        let additiveScore: number = (run.character.attack + bonusDmg) * match.length * run.combo;
+        let additiveScore: number = (run.character.attack + bonusDmg) * match.length;
+        additiveScore *= run.character.hasReward('Combos multiply DMG') ? run.combo : 1;
 
         run.score += additiveScore
         scoreCounter.innerHTML = formatNumber(run.score);
@@ -372,6 +400,7 @@ new p5((sketch: p5) => {
                 if (run.findEnemy()?.number === run.enemyPerStage) {
                     bossFightAnimation();
                 }
+                sounds['bossDefeat'].play()
             }, () => {
                 run.stackCombo = false;
                 run.initialShuffle = true;
@@ -400,7 +429,7 @@ new p5((sketch: p5) => {
             20,
             overkill ? new Color(231, 76, 60) : new Color(224, 224, 224),
             4,
-            sketch.CENTER,
+            p5Instance.CENTER,
             new Position(positon.x + varianceX, positon.y + varianceY),
             new Position(0, -200),
             180
@@ -415,7 +444,7 @@ new p5((sketch: p5) => {
             20,
             shielded ? new Color(101, 206, 80) : new Color(231, 76, 60),
             4,
-            sketch.CENTER,
+            p5Instance.CENTER,
             new Position(canvas.canvasSize.x / 2, canvas.totalUiSize),
             new Position(0, 200),
             180
@@ -435,7 +464,7 @@ new p5((sketch: p5) => {
                 20,
                 new Color(244, 208, 63),
                 4,
-                sketch.CENTER,
+                p5Instance.CENTER,
                 new Position((canvas.canvasSize.x / 2) + varianceX, (canvas.totalUiSize - canvas.uiBarSize - canvas.margin) + varianceY),
                 new Position(0, 100),
                 180
@@ -448,8 +477,8 @@ new p5((sketch: p5) => {
                 20,
                 new Color(231, 76, 60),
                 4,
-                sketch.CENTER,
-                new Position(sketch.mouseX + varianceX, sketch.mouseY + varianceY),
+                p5Instance.CENTER,
+                new Position(p5Instance.mouseX + varianceX, p5Instance.mouseY + varianceY),
                 new Position(0, 100),
                 180
             );
@@ -464,8 +493,8 @@ new p5((sketch: p5) => {
             20,
             new Color(101, 206, 80),
             4,
-            sketch.CENTER,
-            new Position(sketch.mouseX, sketch.mouseY),
+            p5Instance.CENTER,
+            new Position(p5Instance.mouseX, p5Instance.mouseY),
             new Position(0, -200),
             240,
         );
@@ -478,7 +507,7 @@ new p5((sketch: p5) => {
             60,
             new Color(87, 49, 214),
             4,
-            sketch.CENTER,
+            p5Instance.CENTER,
             new Position(canvas.canvasSize.x / 2, canvas.canvasSize.y / 2),
             new Position(0, 0),
             240,
@@ -493,7 +522,7 @@ new p5((sketch: p5) => {
             40,
             new Color(224, 224, 224),
             4,
-            sketch.CENTER,
+            p5Instance.CENTER,
             new Position(canvas.canvasSize.x / 2, canvas.canvasSize.y / 2 + canvas.totalUiSize),
             new Position(0, -200),
             240
@@ -571,11 +600,18 @@ new p5((sketch: p5) => {
 
         let rewardsContent: string = '';
 
-        if (run?.character?.rewards) {
-            run.character.rewards.forEach((reward: Reward, index: number) => {
+        if (run?.character?.rewards || run?.character?.activeItem) {
+            let rewardsToShow = [...run.character.rewards];
+
+            if (run?.character?.activeItem) {
+                rewardsToShow.unshift(run.character.activeItem);
+            }
+
+            rewardsToShow.forEach((reward: Reward, index: number) => {
                 if (index % 4 === 0 || index === 0) {
                     rewardsContent += '</div><div class="reward-ui">'
                 }
+
                 rewardsContent += `
                 <div class="reward-wrap">
                 <div class="centered reward rarity-${reward.rarity}">
@@ -585,8 +621,12 @@ new p5((sketch: p5) => {
 
                 rewardsContent += `    
                 <h3>${reward.name}</h3>
-                <strong>${reward.description}</strong>
-                </div>
+                <strong>${reward.description}</strong>`
+
+                rewardsContent += reward.isActive ? '<br><input type="button" id="activeItem" value="Activate">' : '';
+
+                rewardsContent +=
+                    `</div>
                 </div>
                 <br>`
             })
@@ -594,5 +634,15 @@ new p5((sketch: p5) => {
         }
 
         rewardsContainer.innerHTML = rewardsContent;
+
+        if (run?.character?.activeItem) {
+            let activeItemButton: HTMLElement = document.getElementById('activeItem');
+            activeItemButton.onclick = () => {
+                run.character.activeItem.effect();
+                updatePlayerStatsAndRewards();
+            }
+        }
     }
-});
+};
+
+new P5(sketch);

@@ -1,7 +1,6 @@
 import { Floor } from "./Floor";
 import { Enemy } from "./Enemy";
 
-
 export class Stage {
     number: number;
     floor: Floor;

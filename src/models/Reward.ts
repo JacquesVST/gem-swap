@@ -6,37 +6,53 @@ export class Reward {
     rarity: string;
     name: string;
     description: string;
-    weight: number;
-    price: number;
     effect: () => void;
+    price: number;
+    isActive: boolean;
 
-    constructor(weight: number, rarity: string, name: string, description: string, effect: () => void, price?: number) {
-        this.weight = weight
+    constructor(rarity: string, name: string, description: string, effect: () => void, price?: number, isActive?: boolean) {
         this.rarity = rarity
         this.name = name
         this.description = description
-        this.price = price;
         this.effect = effect
+        this.price = price;
+        this.isActive = isActive;
     }
 
-    static rarityColors(): { [key: string]: Color } {
+    static rarityColors(): { [key: string]: { color: Color, chance: number } } {
         return {
-            'Common': new Color(224, 224, 224),
-            'Rare': new Color(101, 206, 80),
-            'Epic': new Color(84, 80, 206)
+            'Common': {
+                color: new Color(224, 224, 224),
+                chance: 0.89
+            },
+            'Rare': {
+                color: new Color(101, 206, 80),
+                chance: 0.99
+            },
+            'Epic': {
+                color: new Color(84, 80, 206),
+                chance: 0.01
+            },
+            'Unique': {
+                color: new Color(243, 156, 18),
+                chance: 0.01
+            },
         }
     }
 }
 
 export class RewardPools {
     static shopPool(run: Run): Reward[] {
-        return [
+        let shopPool: Reward[] = [
             (() => {
                 let price: number = 20;
+                let name: string = 'Max Instant health';
+                price = price * run.costMultiplier;
+                price = run.character.rewards.findIndex((reward: Reward) => reward.name === name) !== -1 ?
+                    Math.floor(price * 1.2) : price;
                 return new Reward(
-                    1,
                     'Common',
-                    'Max Instant health',
+                    name,
                     'Full heal',
                     (() => {
                         run.character.gold -= price;
@@ -47,10 +63,13 @@ export class RewardPools {
             })(),
             (() => {
                 let price: number = 50;
+                let name: string = 'Extra Moves';
+                price = price * run.costMultiplier;
+                price = run.character.rewards.findIndex((reward: Reward) => reward.name === name) !== -1 ?
+                    Math.floor(price * 1.2) : price;
                 return new Reward(
-                    1,
                     'Common',
-                    'Extra Moves',
+                    name,
                     '+3 moves',
                     (() => {
                         run.character.gold -= price;
@@ -61,10 +80,13 @@ export class RewardPools {
             })(),
             (() => {
                 let price: number = 100;
+                let name: string = 'Horizontal Expansion';
+                price = price * run.costMultiplier;
+                price = run.character.rewards.findIndex((reward: Reward) => reward.name === name) !== -1 ?
+                    Math.floor(price * 1.2) : price;
                 return new Reward(
-                    1,
                     'Rare',
-                    'Horizontal Expansion',
+                    name,
                     '+1 column',
                     (() => {
                         run.character.gold -= price;
@@ -77,10 +99,13 @@ export class RewardPools {
             })(),
             (() => {
                 let price: number = 100;
+                let name: string = 'Vertical Expansion';
+                price = price * run.costMultiplier;
+                price = run.character.rewards.findIndex((reward: Reward) => reward.name === name) !== -1 ?
+                    Math.floor(price * 1.2) : price;
                 return new Reward(
-                    1,
                     'Rare',
-                    'Vertical Expansion',
+                    name,
                     '+1 row',
                     (() => {
                         run.character.gold -= price;
@@ -92,11 +117,14 @@ export class RewardPools {
                 );
             })(),
             (() => {
-                let price: number = 150;
+                let price: number = 200;
+                let name: string = 'More Options';
+                price = price * run.costMultiplier;
+                price = run.character.rewards.findIndex((reward: Reward) => reward.name === name) !== -1 ?
+                    Math.floor(price * 1.2) : price;
                 return new Reward(
-                    1,
                     'Epic',
-                    'More options',
+                    name,
                     '+1 boss reward option',
                     (() => {
                         run.character.gold -= price;
@@ -106,12 +134,40 @@ export class RewardPools {
                 );
             })()
         ]
+
+        if (run.possibleShapes.length >= 4) {
+            let price: number = 200;
+            price = price * run.costMultiplier;
+            price = run.character.rewards.findIndex((reward: Reward) => reward.name.startsWith('Ban')) !== -1 ?
+                Math.floor(price * 1.2) : price;
+
+            let randomShape: number = Math.floor(Math.random() * run.possibleShapes.length);
+            let chosenShape: Shape = run.possibleShapes[randomShape];
+
+            shopPool.push(new Reward(
+                'Epic',
+                `Ban ${chosenShape.id} items`,
+                `No more ${chosenShape.id} items for the rest of the run`,
+                (() => {
+                    run.possibleShapes.splice(randomShape, 1)
+                    run.initialShuffle = false;
+                    run.stackCombo = true;
+                    run.grid.cells.flat().forEach((cell) => {
+                        if (cell?.item?.shape?.id === chosenShape.id) {
+                            cell.item = undefined
+                        }
+                    });
+                }).bind(run),
+                price
+            ));
+        }
+
+        return shopPool;
     }
 
     static defaultPool(run: Run): Reward[] {
-        return [
+        let defaultPool: Reward[] = [
             new Reward(
-                1,
                 'Common',
                 'Extra Move',
                 '+1 move',
@@ -120,7 +176,6 @@ export class RewardPools {
                 }).bind(run)
             ),
             new Reward(
-                1,
                 'Common',
                 'Max Health Gain',
                 '+5 HP Max',
@@ -130,7 +185,14 @@ export class RewardPools {
                 }).bind(run)
             ),
             new Reward(
-                1,
+                'Common',
+                'Defense Gain',
+                '+5 Defense',
+                (() => {
+                    run.character.defense += 5
+                }).bind(run)
+            ),
+            new Reward(
                 'Common',
                 'Instant Health',
                 '+10% HP',
@@ -139,7 +201,6 @@ export class RewardPools {
                 }).bind(run)
             ),
             new Reward(
-                1,
                 'Common',
                 'Damage Boost',
                 '+25 base DMG',
@@ -148,7 +209,6 @@ export class RewardPools {
                 }).bind(run)
             ),
             new Reward(
-                1,
                 'Common',
                 'Red Boost',
                 '+50 base DMG on red matches',
@@ -157,7 +217,6 @@ export class RewardPools {
                 }).bind(run)
             ),
             new Reward(
-                1,
                 'Common',
                 'Green Boost',
                 '+50 base DMG on green matches',
@@ -166,7 +225,6 @@ export class RewardPools {
                 }).bind(run)
             ),
             new Reward(
-                1,
                 'Common',
                 'Blue Boost',
                 '+50 base DMG on blue matches',
@@ -175,7 +233,6 @@ export class RewardPools {
                 }).bind(run)
             ),
             new Reward(
-                1,
                 'Common',
                 'Yellow Boost',
                 '+50 base DMG on yellow matches',
@@ -184,7 +241,6 @@ export class RewardPools {
                 }).bind(run)
             ),
             new Reward(
-                1,
                 'Common',
                 'Orange Boost',
                 '+50 base DMG on orange matches',
@@ -193,7 +249,6 @@ export class RewardPools {
                 }).bind(run)
             ),
             new Reward(
-                1,
                 'Common',
                 'Pink Boost',
                 '+50 base DMG on pink matches',
@@ -205,7 +260,6 @@ export class RewardPools {
                 let randomShape: number = Math.floor(Math.random() * run.possibleShapes.length);
                 let chosenShape: Shape = run.possibleShapes[randomShape];
                 return new Reward(
-                    1,
                     'Rare',
                     `Eliminate all ${chosenShape.id} items`,
                     `Remove current ${chosenShape.id} items from the board`,
@@ -217,11 +271,13 @@ export class RewardPools {
                                 cell.item = undefined
                             }
                         });
-                    }).bind(run)
+                        run.character.activeItem = undefined
+                    }).bind(run),
+                    undefined,
+                    true
                 )
             })(),
             new Reward(
-                1,
                 'Rare',
                 '4+ Match Regeneration',
                 'Gain 1% HP every 4+ items in a single match',
@@ -230,7 +286,6 @@ export class RewardPools {
                 }).bind(run)
             ),
             new Reward(
-                1,
                 'Rare',
                 'Move Saver',
                 '10% chance of not consuming moves',
@@ -238,7 +293,7 @@ export class RewardPools {
                     run.character.moveSaver += 0.10
                 }).bind(run)
             ),
-            new Reward(1,
+            new Reward(
                 'Rare',
                 'Shield',
                 'Block one letal hit',
@@ -248,7 +303,15 @@ export class RewardPools {
                 }).bind(run)
             ),
             new Reward(
-                1,
+                'Rare',
+                'Big Max Health Gain',
+                '+20 HP Max',
+                (() => {
+                    run.character.health += 20
+                    run.character.heal(20)
+                }).bind(run)
+            ),
+            new Reward(
                 'Epic',
                 'Big Damage Boost',
                 'x1.5 DMG',
@@ -256,48 +319,39 @@ export class RewardPools {
                     run.character.damageMultiplier *= 1.5;
                 }).bind(run)
             ),
-            (() => {
-                if (run.possibleShapes.length >= 4) {
-                    let randomShape: number = Math.floor(Math.random() * run.possibleShapes.length);
-                    let chosenShape: Shape = run.possibleShapes[randomShape];
-                    return new Reward(
-                        1,
-                        'Epic',
-                        `Ban ${chosenShape.id} items`,
-                        `No more ${chosenShape.id} items for the rest of the run`,
-                        (() => {
-                            run.possibleShapes.splice(randomShape, 1)
-                            run.initialShuffle = false;
-                            run.stackCombo = true;
-                            run.grid.cells.flat().forEach((cell) => {
-                                if (cell?.item?.shape?.id === chosenShape.id) {
-                                    cell.item = undefined
-                                }
-                            });
-                        }).bind(run)
-                    )
-                }
-                return new Reward(
-                    1,
-                    'Epic',
-                    'Consolation Prize',
-                    'You probably broke the game',
-                    (() => {
-                        console.log(':)');
-                    }).bind(run)
-                )
-            })(),
-        ]
+            new Reward(
+                'Epic',
+                '20% Sale',
+                'Shop prices discounted',
+                (() => {
+                    run.costMultiplier *= 0.8;
+                }).bind(run)
+            ),
+        ];
+
+        let uniqueRewards = [
+            new Reward(
+                'Unique',
+                'Combos multiply DMG',
+                'Final DMG multiplies combo counter',
+                (() => {}).bind(run)
+            ),
+        ];
+
+        return defaultPool.concat(uniqueRewards.filter((reward: Reward) => !run.character.hasReward(reward.name)))
     }
 }
 
 function giveColorBonusDmg(run: Run, color: string) {
     let bonus: number = 50;
-    let shape: Shape = run.possibleShapes.find((shape: Shape) => shape.id = color)
-    shape.bonusDmg += bonus;
-    run.grid.cells.flat().forEach((cell) => {
-        if (cell?.item?.shape?.id === shape.id) {
-            cell.item.shape.bonusDmg += bonus;
-        }
-    });
+    let shapeIndex: number = run.possibleShapes.findIndex((shape: Shape) => shape.id = color);
+    if (shapeIndex !== -1) {
+        run.possibleShapes[shapeIndex].bonusDmg += bonus;
+
+        run.grid.cells.flat().forEach((cell) => {
+            if (cell?.item?.shape?.id === color) {
+                cell.item.shape = run.possibleShapes[shapeIndex];
+            }
+        });
+    }
 }

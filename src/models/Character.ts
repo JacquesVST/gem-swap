@@ -3,10 +3,12 @@ import { Reward } from "./Reward";
 export class Character {
     health: number;
     attack: number;
+    defense: number;
     moves: number;
     currentHealth: number;
     
     rewards: Reward[] = [];
+    activeItem: Reward;
     hasItemThatPreventsFirstLethalDamage: boolean = false;
     hasUsedItemThatPreventsFirstLethalDamage: boolean = false;
     hpRegenFromReward: number = 0;
@@ -14,15 +16,20 @@ export class Character {
     moveSaver: number = 0;
     gold: number = 0;
 
-    constructor(health: number, attack: number, moves: number) {
+    constructor(health: number, attack: number, defense: number, moves: number) {
         this.health = health;
         this.attack = attack;
+        this.defense = defense;
         this.moves = moves;
         this.currentHealth = health;
     }
 
     static defaultCharacter() {
-        return new Character(100, 100, 0);
+        return new Character(100, 100, 0,  0);
+    }
+
+    hasReward(name: string): boolean {
+        return this.rewards.map((reward: Reward) => reward.name).includes(name);
     }
 
     heal(heal: number): void {
@@ -35,6 +42,7 @@ export class Character {
 
     takeDamage(damage: number, damageCallback: (damage: number, shielded: boolean) => void, deathCallback: () => void): void {
        let shielded = false;
+       damage -= this.defense;
         if (this.hasItemThatPreventsFirstLethalDamage && !this.hasUsedItemThatPreventsFirstLethalDamage) {
             if (damage >= this.currentHealth) {
                 damage = 0;

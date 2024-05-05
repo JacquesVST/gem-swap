@@ -1,4 +1,4 @@
-import * as p5 from "p5";
+import * as P5 from "p5";
 import { Color } from "./Color";
 import { Position } from "./Position";
 import { generateId } from "../utils/Functions";
@@ -8,7 +8,7 @@ export class TextAnimation {
     size: number;
     color: Color;
     stroke: number;
-    align: p5.LEFT | p5.CENTER | p5.RIGHT;
+    align: P5.LEFT | P5.CENTER | P5.RIGHT;
     initialPosition: Position;
     relativeEndPosition: Position;
     relativeSize: number;
@@ -20,7 +20,7 @@ export class TextAnimation {
     velocityFade: number;
     velocitySize: number;
 
-    constructor(text: string, size: number, color: Color, stroke: number, align: p5.LEFT | p5.CENTER | p5.RIGHT, initialPosition: Position, relativeEndPosition: Position, frames: number, relativeSize: number = 0) {
+    constructor(text: string, size: number, color: Color, stroke: number, align: P5.LEFT | P5.CENTER | P5.RIGHT, initialPosition: Position, relativeEndPosition: Position, frames: number, relativeSize: number = 0) {
         this.text = text;
         this.size = size;
         this.color = color;
@@ -46,7 +46,7 @@ export class TextAnimation {
         this.velocitySize = this.relativeSize / this.frames;
     }
 
-    draw(p5: p5, globalAnimations: TextAnimation[]): void {
+    draw(p5: P5, globalAnimations: TextAnimation[]): void {
         p5.fill(...this.color.value, this.fade);
         if (this.stroke > 0) {
             p5.stroke(0, 0, 0, this.fade);

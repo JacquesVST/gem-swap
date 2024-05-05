@@ -1,4 +1,4 @@
-import * as p5 from "p5";
+import * as P5 from "p5";
 import { CanvasInfo } from "./CanvasInfo";
 import { Color } from "./Color";
 import { formatNumber } from "../utils/Functions";
@@ -38,7 +38,7 @@ export class ProgressBar {
         this.callback = callback;
     }
 
-    drawBar(p5: p5, index: number, canvas: CanvasInfo): void {
+    drawBar(p5: P5, index: number, canvas: CanvasInfo): void {
         let percentageOfBar: number = (this.value + this.delta) / this.maxValue
 
         let commonMargin: number = (canvas.margin * (index + 2)) + (canvas.uiBarSize * index)

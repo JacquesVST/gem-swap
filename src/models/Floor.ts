@@ -1,7 +1,6 @@
 import { Run } from "./Run";
 import { Stage } from "./Stage";
 
-
 export class Floor {
     number: number;
     run: Run;

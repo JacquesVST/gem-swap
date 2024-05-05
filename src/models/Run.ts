@@ -1,4 +1,4 @@
-import * as p5 from "p5";
+import * as P5 from "p5";
 import { CanvasInfo } from "./CanvasInfo";
 import { Character } from "./Character";
 import { Color } from "./Color";
@@ -12,12 +12,13 @@ import { Shape } from "./Shape";
 import { Stage } from "./Stage";
 
 export class Run {
-    p5: p5;
+    p5: P5;
     character: Character;
     totalFloors: number;
     stagesPerFloor: number;
     enemyPerStage: number;
     movesPerStage: number;
+    costMultiplier: number;
 
     possibleShapes: Shape[];
     floors: Floor[];
@@ -26,6 +27,7 @@ export class Run {
     score: number = 0;
     combo: number = 0;
     damage: number = 0;
+
     currentFloorIndex: number = 0;
     defeatedEnemies: number = 0;
     rewardOptions: number = 3;
@@ -38,14 +40,16 @@ export class Run {
 
     grid: Grid;
     canvas: CanvasInfo;
+    sounds: {[key: string]: P5.SoundFile};
 
-    constructor(p5: p5, character: Character, totalFloors: number, stagesPerFloor: number, enemyPerStage: number, movesPerStage: number) {
+    constructor(p5: P5, character: Character, totalFloors: number, stagesPerFloor: number, enemyPerStage: number, movesPerStage: number, costMultiplier: number) {
         this.p5 = p5;
         this.character = character;
         this.totalFloors = totalFloors;
         this.stagesPerFloor = stagesPerFloor;
         this.enemyPerStage = enemyPerStage;
         this.movesPerStage = movesPerStage;
+        this.costMultiplier = costMultiplier;
 
         this.character.moves = movesPerStage;
         this.possibleShapes = Shape.defaultShapes();
@@ -212,16 +216,22 @@ export class Run {
     }
 
     newPercDialog(globalDialogs: Dialog[], selectCallback: () => void) {
-        let randomRewards: RewardDialogOption[] = RewardPools.defaultPool(this).sort(() => Math.random() - Math.random()).slice(0, this.rewardOptions).map(
+        let rewardList: Reward[] = this.generateRewardsBasedOnRarity(this.rewardOptions, RewardPools.defaultPool(this));
+
+        let randomRewards: RewardDialogOption[] = rewardList.map(
             (reward: Reward) => {
                 return new RewardDialogOption(
                     this.p5,
                     reward,
                     false,
-                    Reward.rarityColors()[reward.rarity],
+                    Reward.rarityColors()[reward.rarity].color,
                     () => {
-                        reward.effect();
-                        this.character.rewards.push(reward);
+                        if (reward.isActive){
+                            this.character.activeItem = reward;
+                        } else {
+                            reward.effect();
+                            this.character.rewards.push(reward);
+                        }
                         if (selectCallback) {
                             selectCallback();
                         }
@@ -235,19 +245,21 @@ export class Run {
             'Choose one from the options below',
             randomRewards,
             new Color(40, 40, 40)
-        )
+        );
 
         globalDialogs.unshift(dialog);
     }
 
     newShopDialog(globalDialogs: Dialog[], selectCallback: () => void, closeCallback?: () => void) {
-        let randomRewards: RewardDialogOption[] = RewardPools.shopPool(this).sort(() => Math.random() - Math.random()).slice(0, 3).map(
+        let rewardList: Reward[] = this.generateRewardsBasedOnRarity(2, RewardPools.shopPool(this));
+        
+        let randomRewards: RewardDialogOption[] = rewardList.map(
             (reward: Reward) => {
                 return new RewardDialogOption(
                     this.p5,
                     reward,
                     false,
-                    Reward.rarityColors()[reward.rarity],
+                    Reward.rarityColors()[reward.rarity].color,
                     () => {
                         reward.effect();
                         this.character.rewards.push(reward);
@@ -271,7 +283,38 @@ export class Run {
         globalDialogs.unshift(dialog);
     }
 
-    static newGameDialog(p5: p5, globalDialogs: Dialog[], selectCallback: (config: RunConfig) => void) {
+    generateRewardsBasedOnRarity(ammount: number, pool: Reward[]): Reward[] {
+        let rarities = [];
+
+        for (let i: number = 0; i < ammount; i++) {
+            let chance = Math.random();
+            if (chance < Reward.rarityColors()['Common'].chance) {
+                rarities.push('Common')
+            } else if (chance < Reward.rarityColors()['Rare'].chance) {
+                rarities.push('Rare')
+            } else {
+                rarities.push('Epic')
+            }
+        }
+
+        let rewardList: Reward[];
+        do {
+            rewardList = [];
+            rarities.forEach((rarity: string) => {
+                let rewardsOfRarity: Reward[] = pool.filter((reward: Reward) => {
+                    if (rarity === 'Epic') {
+                        return reward.rarity === 'Epic' || reward.rarity === 'Unique';
+                    }
+                    return reward.rarity === rarity;
+                });
+                rewardList.push(rewardsOfRarity[Math.floor(Math.random() * rewardsOfRarity.length)]);
+            })
+        } while (rewardList.map((reward: Reward) => reward.rarity).filter((rarity: string) => rarity === 'Unique').length > 1);
+
+        return rewardList;
+    }
+
+    static newGameDialog(p5: P5, globalDialogs: Dialog[], selectCallback: (config: RunConfig) => void) {
         let options: DefaultDialogOption[] = [
             new DefaultDialogOption(
                 p5,
@@ -285,6 +328,7 @@ export class Run {
                         moves: 10,
                         gridX: 12,
                         gridY: 8,
+                        costMultiplier: 1
                     }
                     selectCallback(runConfig);
                 },
@@ -304,6 +348,7 @@ export class Run {
                         moves: 10,
                         gridX: 10,
                         gridY: 8,
+                        costMultiplier: 1.5
                     }
                     selectCallback(runConfig);
                 },
@@ -323,6 +368,7 @@ export class Run {
                         moves: 10,
                         gridX: 8,
                         gridY: 6,
+                        costMultiplier: 2
                     }
                     selectCallback(runConfig);
                 },
@@ -352,4 +398,5 @@ export interface RunConfig {
     moves: number;
     gridX: number;
     gridY: number
+    costMultiplier: number;
 }

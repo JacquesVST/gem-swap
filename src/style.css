@@ -12,12 +12,14 @@ canvas {
 }
 
 #runInfo{
+  margin-top: 20px;
   visibility: hidden;
 }
 
 .show {
   visibility: visible !important
 }
+
 .game-ui {
   width: 100%;
   display: flex;
@@ -92,6 +94,10 @@ canvas {
 
 .rarity-Epic{
   background-color: rgb(84, 80, 206)
+}
+
+.rarity-Unique{
+  background-color: rgb(243, 156, 18)
 }
 
 .shielded {

@@ -1,12 +1,10 @@
-import * as p5 from "p5";
+import * as P5 from "p5";
 import { canReach, checkPositionInLimit, polygon } from "../utils/Functions";
 import { CanvasInfo } from "./CanvasInfo";
 import { Cell } from "./Cell";
 import { Item } from "./Item";
 import { Position } from "./Position";
 import { Run } from "./Run";
-import { Shape } from "./Shape";
-
 export class Grid {
     width: number;
     height: number;
@@ -66,8 +64,7 @@ export class Grid {
         this.iterateYtoX((x: number, y: number) => {
             let cell: Cell = this.getCellbyPosition(new Position(x, y));
             if (!cell.item && cell.position.y === 0) {
-                let shapes: Shape[] = Object.entries(run.possibleShapes).map(entry => entry[1] as Shape)
-                this.cells[x][y].item = Item.generateRandomItem(this.cells[x][y].position, this.sideSize, shapes);
+                this.cells[x][y].item = Item.generateRandomItem(this.cells[x][y].position, this.sideSize, run.possibleShapes);
             }
         });
     }
@@ -140,7 +137,7 @@ export class Grid {
         }
     }
 
-    draw(canvas: CanvasInfo, p5: p5, hasDialogOpen: boolean = false): void {
+    draw(canvas: CanvasInfo, p5: P5, hasDialogOpen: boolean = false): void {
         this.cells.flat().forEach((cell: Cell) => {
             p5.noStroke();
             let limits: number[] = [
@@ -167,7 +164,7 @@ export class Grid {
         });
     }
 
-    drawItems(p5: p5): void {
+    drawItems(p5: P5): void {
         this.cells.flat().map((cell: Cell) => cell.item).forEach((item: Item) => {
             if (item) {
                 let cellRef: Cell = this.getCellbyPosition(item.position);

@@ -1,4 +1,4 @@
-import * as p5 from "p5";
+import * as P5 from "p5";
 import { checkPositionInLimit, generateId } from "../utils/Functions";
 import { CanvasInfo } from "./CanvasInfo";
 import { Character } from "./Character";
@@ -7,7 +7,7 @@ import { Position } from "./Position";
 import { Reward } from "./Reward";
 
 export class Dialog {
-    p5: p5;
+    p5: P5;
     title: string;
     message: string;
     options: DialogOption[];
@@ -15,7 +15,7 @@ export class Dialog {
     keep: boolean;
     id: string;
 
-    constructor(p5: p5, title: string, message: string, options: DialogOption[], color: Color, keep?: boolean, closeCallback?: () => void) {
+    constructor(p5: P5, title: string, message: string, options: DialogOption[], color: Color, keep?: boolean, closeCallback?: () => void) {
         this.p5 = p5;
         this.title = title;
         this.message = message;
@@ -141,11 +141,20 @@ export class Dialog {
 
                 this.p5.fill(200);
                 this.p5.textSize(16)
+
                 this.p5.text(
                     option.reward.description,
                     canvas.canvasSize.x / 2,
-                    cumulativeMargin + (5 * canvas.margin),
+                    cumulativeMargin + (5* canvas.margin),
                 );
+
+                if (option.reward.isActive){
+                    this.p5.text(
+                        'Single Use',
+                        canvas.canvasSize.x / 2,
+                        cumulativeMargin + (7 * canvas.margin),
+                    );
+                }
             }
 
             if (option instanceof DefaultDialogOption) {
@@ -190,13 +199,13 @@ export class Dialog {
 
 
 export class DialogOption {
-    p5: p5;
+    p5: P5;
     disabled: boolean;
     color: Color;
     action: () => void;
     limits: number[];
 
-    constructor(p5: p5, disabled: boolean, color: Color, action: () => void) {
+    constructor(p5: P5, disabled: boolean, color: Color, action: () => void) {
         this.p5 = p5;
         this.disabled = disabled
         this.color = color;
@@ -207,7 +216,7 @@ export class DialogOption {
 export class RewardDialogOption extends DialogOption {
     reward: Reward;
 
-    constructor(p5: p5, reward: Reward, disabled: boolean, color: Color, action: () => void) {
+    constructor(p5: P5, reward: Reward, disabled: boolean, color: Color, action: () => void) {
         super(p5, disabled, color, action)
         this.reward = reward;
     }
@@ -218,7 +227,7 @@ export class DefaultDialogOption extends DialogOption {
     subtext: string;
     subsubtext: string
 
-    constructor(p5: p5, disabled: boolean, color: Color, action: () => void, text: string, subtext: string, subsubtext: string) {
+    constructor(p5: P5, disabled: boolean, color: Color, action: () => void, text: string, subtext: string, subsubtext: string) {
         super(p5, disabled, color, action)
         this.text = text;
         this.subtext = subtext

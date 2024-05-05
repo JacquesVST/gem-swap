@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "outDir": "./dist",
     "target": "es6",
     "module": "es6",
     "jsx": "preserve",
@@ -12,5 +13,5 @@
     "rootDir": "src",
     "moduleResolution": "node"
   },
-  "exclude": ["src/sketch-legacy.js", "dist"]
+  "exclude": ["src/sketch-legacy.js", "src/global.js", "dist"]
 }
