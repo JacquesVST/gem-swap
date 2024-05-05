@@ -3,6 +3,7 @@ import { CanvasInfo } from "./CanvasInfo";
 import { Character } from "./Character";
 import { Color } from "./Color";
 import { DefaultDialogOption, Dialog, RewardDialogOption } from "./Dialog";
+import { Effect } from "./Effect";
 import { Enemy } from "./Enemy";
 import { Floor } from "./Floor";
 import { Grid } from "./Grid";
@@ -20,8 +21,9 @@ export class Run {
     movesPerStage: number;
     costMultiplier: number;
 
-    possibleShapes: Shape[];
     floors: Floor[];
+    possibleShapes: Shape[];
+    possibleEffects: Effect[];
     progressBars: ProgressBar[];
 
     score: number = 0;
@@ -40,7 +42,7 @@ export class Run {
 
     grid: Grid;
     canvas: CanvasInfo;
-    sounds: {[key: string]: P5.SoundFile};
+    sounds: { [key: string]: P5.SoundFile };
 
     constructor(p5: P5, character: Character, totalFloors: number, stagesPerFloor: number, enemyPerStage: number, movesPerStage: number, costMultiplier: number) {
         this.p5 = p5;
@@ -53,6 +55,7 @@ export class Run {
 
         this.character.moves = movesPerStage;
         this.possibleShapes = Shape.defaultShapes();
+        this.possibleEffects = [];
 
         this.floors = [...Array(this.totalFloors)].map(
             (floor: Floor, index: number) => {
@@ -226,7 +229,7 @@ export class Run {
                     false,
                     Reward.rarityColors()[reward.rarity].color,
                     () => {
-                        if (reward.isActive){
+                        if (reward.isActive) {
                             this.character.activeItem = reward;
                         } else {
                             reward.effect();
@@ -252,7 +255,7 @@ export class Run {
 
     newShopDialog(globalDialogs: Dialog[], selectCallback: () => void, closeCallback?: () => void) {
         let rewardList: Reward[] = this.generateRewardsBasedOnRarity(2, RewardPools.shopPool(this));
-        
+
         let randomRewards: RewardDialogOption[] = rewardList.map(
             (reward: Reward) => {
                 return new RewardDialogOption(

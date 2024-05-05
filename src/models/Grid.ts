@@ -1,7 +1,9 @@
 import * as P5 from "p5";
-import { canReach, checkPositionInLimit, polygon } from "../utils/Functions";
+import { canReach, checkPositionInLimit, polygon, stripesWithBorderRadius } from "../utils/Functions";
 import { CanvasInfo } from "./CanvasInfo";
 import { Cell } from "./Cell";
+import { Color } from "./Color";
+import { Effect } from "./Effect";
 import { Item } from "./Item";
 import { Position } from "./Position";
 import { Run } from "./Run";
@@ -64,7 +66,7 @@ export class Grid {
         this.iterateYtoX((x: number, y: number) => {
             let cell: Cell = this.getCellbyPosition(new Position(x, y));
             if (!cell.item && cell.position.y === 0) {
-                this.cells[x][y].item = Item.generateRandomItem(this.cells[x][y].position, this.sideSize, run.possibleShapes);
+                this.cells[x][y].item = Item.generateRandomItem(this.cells[x][y].position, this.sideSize, run);
             }
         });
     }
@@ -161,20 +163,33 @@ export class Grid {
                 cell.canvasPosition.y + this.sideSize,
             ];
 
-            let isSelectedCell: boolean = this.selectedCellPos ? cell.position.checksum === this.selectedCellPos.checksum : false;
-            if ((!hasDialogOpen && checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...limits)) || isSelectedCell) {
-                p5.fill(175, 122, 197);
-            } else {
-                p5.fill(136, 78, 160);
-            }
+            let highlight: boolean = (!hasDialogOpen && checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...limits)) || (this.selectedCellPos ? cell.position.checksum === this.selectedCellPos.checksum : false);
 
-            p5.rect(
-                cell.canvasPosition.x,
-                cell.canvasPosition.y,
-                this.sideSize,
-                this.sideSize,
-                canvas.radius
-            );
+            if (cell?.item?.effect) {
+                if (['Vertical AOE', 'Horizontal AOE'].includes(cell.item.effect.id)) {
+                    stripesWithBorderRadius(
+                        cell.canvasPosition,
+                        new Position(this.sideSize, this.sideSize),
+                        canvas.radius,
+                        6,
+                        cell.item.effect.id === 'Horizontal AOE',
+                        new Color(136, 78, 160),
+                        new Color(175, 122, 197),
+                        highlight ? 200 : 255,
+                        p5
+                    )
+                }
+            } else {
+                p5.fill(136, 78, 160, highlight ? 200 : 255)
+                p5.rect(
+                    cell.canvasPosition.x,
+                    cell.canvasPosition.y,
+                    this.sideSize,
+                    this.sideSize,
+                    canvas.radius
+                );
+
+            }
         });
     }
 
@@ -218,6 +233,20 @@ export class Grid {
         }
 
         return undefined;
+    }
+
+    removeItem(item: Item, callback?: () => void): void {
+        let effect: Effect = item.effect;
+        let removedItem: Item = { ...item } as Item;
+        this.getCellbyPosition(item.position).item = undefined;
+
+        if (effect) {
+            effect.effect(removedItem);
+        }
+
+        if (callback) {
+            callback();
+        }
     }
 
 }

@@ -1,6 +1,6 @@
 import './global.js';
 import 'p5/lib/addons/p5.sound';
-import * as P5 from 'p5';
+import * as p5 from 'p5';
 import { CanvasInfo } from "./models/CanvasInfo";
 import { Cell } from "./models/Cell";
 import { Character } from "./models/Character";
@@ -14,7 +14,6 @@ import { Reward } from "./models/Reward";
 import { Run, RunConfig } from "./models/Run";
 import { TextAnimation } from "./models/TextAnimation";
 import { checkPositionInLimit, formatNumber } from "./utils/Functions";
-import * as p5 from 'p5';
 
 let resetButton: HTMLElement = document.getElementById('resetBtn');
 let scoreCounter: HTMLElement = document.getElementById('scoreCounter');
@@ -27,7 +26,7 @@ let runInfo: HTMLElement = document.getElementById('runInfo');
 let statsContainer: HTMLElement = document.getElementById('statsContainer');
 let rewardsContainer: HTMLElement = document.getElementById('rewardsContainer');
 
-const sketch = (p5Instance: P5) => {
+const sketch = (p5Instance: p5) => {
     let bestScore: number = 0;
     let bestCombo: number = 0;
     let bestDamage: number = 0;
@@ -38,11 +37,11 @@ const sketch = (p5Instance: P5) => {
     let textAnimations: TextAnimation[] = [];
     let dialogs: Dialog[] = [];
 
-    let sounds: {[key: string]: p5.SoundFile};
+    let sounds: { [key: string]: p5.SoundFile };
 
-    p5Instance.preload = () =>  {
+    p5Instance.preload = () => {
         p5Instance.soundFormats('mp3')
-        
+
         sounds = {
             bossDefeat: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/boss-defeat.mp3'),
             defeat: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/defeat.mp3'),
@@ -52,15 +51,15 @@ const sketch = (p5Instance: P5) => {
             move: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/move.mp3'),
             newFloor: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/new-floor.mp3'),
             noMove: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/no-move.mp3'),
-            select:p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/generic.mp3')
+            select: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/generic.mp3')
         }
-        
+
     }
 
     p5Instance.setup = () => {
         canvas = new CanvasInfo(p5Instance, 16, 4, 4, 20, 5);
         p5Instance.textFont('Open Sans')
-        
+
         resetButton.onclick = () => {
             setupGame();
         }
@@ -77,7 +76,7 @@ const sketch = (p5Instance: P5) => {
             run.grid = new Grid(config.gridX, config.gridY);
             run.setupCanvas(canvas);
             run.grid.calculateSpacing(canvas);
-           // run.sounds = sounds;
+            // run.sounds = sounds;
 
             textAnimations = [];
             run.inAnimation = false
@@ -153,7 +152,7 @@ const sketch = (p5Instance: P5) => {
                     clickFound = true
                     run.initialShuffle = false;
 
-                    
+
                     if (!run.grid.selectedCellPos) {
                         sounds['select'].play();
                         run.grid.selectedCellPos = cell.position
@@ -177,8 +176,8 @@ const sketch = (p5Instance: P5) => {
                     }
                 }
             }, () => clickFound);
-        } 
-        
+        }
+
         if (currentDialog) {
             let selectedIndex: number = -1;
 
@@ -238,12 +237,12 @@ const sketch = (p5Instance: P5) => {
             sounds['match'].play();
             run.inAnimation = true;
             item.animationEndCallback = (() => {
-                run.grid.getCellbyPosition(item.position).item = undefined;
+                run.grid.removeItem(item)
                 run.inAnimation = false
             }).bind(this);
             item.setupNewAnimation(run.stackCombo ? 10 : 3, new Position(0, 0), 255);
         } else {
-            run.grid.getCellbyPosition(item.position).item = undefined;
+            run.grid.removeItem(item)
         }
 
     }
@@ -665,4 +664,4 @@ const sketch = (p5Instance: P5) => {
     }
 };
 
-new P5(sketch);
+new p5(sketch);

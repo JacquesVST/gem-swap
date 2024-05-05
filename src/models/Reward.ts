@@ -1,4 +1,7 @@
+import { Cell } from "./Cell";
 import { Color } from "./Color";
+import { Effect } from "./Effect";
+import { Item } from "./Item";
 import { Run } from "./Run";
 import { Shape } from "./Shape";
 
@@ -167,6 +170,52 @@ export class RewardPools {
 
     static defaultPool(run: Run): Reward[] {
         let defaultPool: Reward[] = [
+            (() => {
+                let name: string = 'Vertical AOE';
+                return new Reward(
+                    'Common',
+                    name,
+                    '+5% chance of column clearing items',
+                    (() => {
+                        let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
+
+                        if (effectIndex === -1) {
+                            run.possibleEffects.push(new Effect(name, (item: Item) => {
+                                run.grid.cells.flat().filter((cell: Cell) => cell.position.x === item.position.x && cell.position.checksum !== item.position.checksum).forEach((cell: Cell) => {
+                                    if (cell.item) {
+                                        run.grid.removeItem(cell.item);
+                                    }
+                                });
+                            }, 0.05))
+                        } else {
+                            run.possibleEffects[effectIndex].chance += 0.05
+                        }
+                    }).bind(run)
+                )
+            })(),
+            (() => {
+                let name: string = 'Horizontal AOE';
+                return new Reward(
+                    'Common',
+                    name,
+                    '+5% chance of row clearing items',
+                    (() => {
+                        let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
+
+                        if (effectIndex === -1) {
+                            run.possibleEffects.push(new Effect(name, (item: Item) => {
+                                run.grid.cells.flat().filter((cell: Cell) => cell.position.y === item.position.y && cell.position.checksum !== item.position.checksum).forEach((cell: Cell) => {
+                                    if (cell.item) {
+                                        run.grid.removeItem(cell.item);
+                                    }
+                                });
+                            }, 0.05))
+                        } else {
+                            run.possibleEffects[effectIndex].chance += 0.05
+                        }
+                    }).bind(run)
+                )
+            })(),
             new Reward(
                 'Common',
                 'Extra Move',
@@ -334,7 +383,7 @@ export class RewardPools {
                 'Unique',
                 'Combos multiply DMG',
                 'Final DMG multiplies combo counter',
-                (() => {}).bind(run)
+                (() => { }).bind(run)
             ),
         ];
 
