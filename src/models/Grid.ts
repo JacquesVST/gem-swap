@@ -37,10 +37,10 @@ export class Grid {
     }
 
     calculateSpacing(canvas: CanvasInfo): void {
-       this.verticalCenterPadding = 0;
-       this.verticalCenterPadding = 0;
-       this.sideSize = 0;
-       
+        this.verticalCenterPadding = 0;
+        this.verticalCenterPadding = 0;
+        this.sideSize = 0;
+
         do {
             this.sideSize++;
             this.horizontalCenterPadding = canvas.playfield.x - (this.width * this.sideSize) - (this.width * canvas.padding) - canvas.padding;
@@ -97,13 +97,19 @@ export class Grid {
         }
     }
 
-    validateSwap(position1: Position, position2: Position, swapCompleteCallback: () => void, humanSwap: boolean = false): () => void {
+    validateSwap(position1: Position, position2: Position, swapCompleteCallback: () => void, humanSwap: boolean = false, invalid: () => void, valid: () => void): () => void {
 
         if (position1.checksum === position2.checksum) {
+            if (invalid && humanSwap) {
+                invalid();
+            }
             return undefined;
         }
 
         if (humanSwap && !canReach(position1, position2)) {
+            if (invalid && humanSwap) {
+                invalid();
+            }
             return undefined;
         }
 
@@ -112,8 +118,16 @@ export class Grid {
 
         if (humanSwap) {
             if (item1 && item2 && item1.shape.sides === item2.shape.sides) {
+                if (invalid) {
+                    invalid();
+                }
                 return undefined;
             }
+        }
+
+
+        if (valid && humanSwap) {
+            valid();
         }
 
         return this.swap.bind(this, position1, position2, item1, item2, swapCompleteCallback);
@@ -209,10 +223,10 @@ export class Grid {
 }
 
 
-export interface AnimateSwapData { 
-    item1: Item; 
-    item2: Item; 
-    cell1: Cell; 
+export interface AnimateSwapData {
+    item1: Item;
+    item2: Item;
+    cell1: Cell;
     cell2: Cell;
     frames: number;
 }

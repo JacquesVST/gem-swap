@@ -27,8 +27,6 @@ let runInfo: HTMLElement = document.getElementById('runInfo');
 let statsContainer: HTMLElement = document.getElementById('statsContainer');
 let rewardsContainer: HTMLElement = document.getElementById('rewardsContainer');
 
-let audioContext = new AudioContext();
-
 const sketch = (p5Instance: P5) => {
     let bestScore: number = 0;
     let bestCombo: number = 0;
@@ -46,14 +44,15 @@ const sketch = (p5Instance: P5) => {
         p5Instance.soundFormats('mp3')
         
         sounds = {
-            bossDefeat: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/boss-defeat.mp3'),
-            defeat: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/defeat.mp3'),
-            enemyDefeat: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/enemy-defeat.mp3'),
-            item: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/item.mp3'),
-            match: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/match.mp3'),
-            move: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/move.mp3'),
-            noMove: p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/no-move.mp3'),
-            select:p5Instance.loadSound('https://raw.githubusercontent.com/jacquesvst/gem-swap/main/src/assets/select.mp3')
+            bossDefeat: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/boss-defeat.mp3'),
+            defeat: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/defeat.mp3'),
+            enemyDefeat: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/enemy-defeat.mp3'),
+            item: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/item.mp3'),
+            match: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/match.mp3'),
+            move: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/move.mp3'),
+            newFloor: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/new-floor.mp3'),
+            noMove: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/no-move.mp3'),
+            select:p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/generic.mp3')
         }
         
     }
@@ -154,7 +153,9 @@ const sketch = (p5Instance: P5) => {
                     clickFound = true
                     run.initialShuffle = false;
 
+                    
                     if (!run.grid.selectedCellPos) {
+                        sounds['select'].play();
                         run.grid.selectedCellPos = cell.position
                         run.stackCombo = false;
                         updateCombo([], true);
@@ -205,7 +206,11 @@ const sketch = (p5Instance: P5) => {
     }
 
     function swap(position1: Position, position2: Position, callback: () => void, humanSwap: boolean = false, animate: boolean = true): void {
-        let swapFunc: () => void = run.grid.validateSwap(position1, position2, callback, humanSwap);
+        let swapFunc: () => void = run.grid.validateSwap(position1, position2, callback, humanSwap, (() => {
+            sounds['noMove'].play();
+        }).bind(this), (() => {
+            sounds['move'].play();
+        }).bind(this));
         if (swapFunc) {
             if (animate) {
                 animateSwap(run.grid.getAnimateSwapData(position1, position2, humanSwap), swapFunc);
@@ -230,6 +235,7 @@ const sketch = (p5Instance: P5) => {
 
     function removeItem(item: Item, animate: boolean = true) {
         if (animate) {
+            sounds['match'].play();
             run.inAnimation = true;
             item.animationEndCallback = (() => {
                 run.grid.getCellbyPosition(item.position).item = undefined;
@@ -346,6 +352,7 @@ const sketch = (p5Instance: P5) => {
             damagePlayerAnimation(Math.floor(damage), shielded)
         }).bind(this), (() => {
             let finalScore: number = run.score;
+            sounds['defeat'].play();
             alert('YOU LOST!\nwith a score of: ' + formatNumber(finalScore));
             setupGame();
         }).bind(this))
@@ -400,21 +407,29 @@ const sketch = (p5Instance: P5) => {
                 if (run.findEnemy()?.number === run.enemyPerStage) {
                     bossFightAnimation();
                 }
-                sounds['bossDefeat'].play()
+                sounds['enemyDefeat'].play()
             }, () => {
                 run.stackCombo = false;
                 run.initialShuffle = true;
                 run.character.moves = run.movesPerStage;
                 if (!run.winState) {
-                    run.newPercDialog(dialogs, updatePlayerStatsAndRewards.bind(this))
+                    run.newPercDialog(dialogs, (() => {
+                        updatePlayerStatsAndRewards();
+                        sounds['item'].play();
+                    }).bind(this))
                 }
+                sounds['bossDefeat'].play()
             }, () => {
                 newFloorAnimation()
                 if (!run.winState) {
-                    run.newShopDialog(dialogs, updatePlayerStatsAndRewards.bind(this), (() => {
+                    run.newShopDialog(dialogs, (() => {
+                        updatePlayerStatsAndRewards()
+                        sounds['item'].play();
+                    }).bind(this), (() => {
                         currentDialog = undefined
                         dialogs.pop();
                     }).bind(this))
+                    sounds['newFloor'].play()
                 }
             });
         damageAnimation(damage, overkill, position);
@@ -582,11 +597,15 @@ const sketch = (p5Instance: P5) => {
             statsContent += '</div>';
 
             statsContent += '<div class="stat">'
-            statsContent += `<strong>Damage Multiplier:</strong>&nbsp;<span>x${run.character.damageMultiplier}</span>`
+            statsContent += `<strong>Multiplier:</strong>&nbsp;<span>x${run.character.damageMultiplier}</span>`
             statsContent += '</div>';
 
             statsContent += '<div class="stat">'
             statsContent += `<strong>Moves:</strong>&nbsp;<span style="${run.character.moves > 5 ? 'color: white' : 'color: red'}">${run.character.moves}</span><span>&nbsp;/&nbsp;${run.movesPerStage}</span>`
+            statsContent += '</div>';
+
+            statsContent += '<div class="stat">'
+            statsContent += `<strong>Defense:</strong>&nbsp;<span>${run.character.defense}</span>`
             statsContent += '</div>';
 
             statsContent += '<div class="stat">'
@@ -639,6 +658,7 @@ const sketch = (p5Instance: P5) => {
             let activeItemButton: HTMLElement = document.getElementById('activeItem');
             activeItemButton.onclick = () => {
                 run.character.activeItem.effect();
+                sounds['item'].play();
                 updatePlayerStatsAndRewards();
             }
         }
