@@ -70,10 +70,6 @@ export class Run {
         return this.defeatedEnemies === this.totalFloors * this.stagesPerFloor * this.enemyPerStage;
     }
 
-    setupCanvas(canvas: CanvasInfo) {
-        this.canvas = canvas;
-    }
-
     findFloor(): Floor {
         return this.floors[this.currentFloorIndex];
     }
@@ -102,31 +98,43 @@ export class Run {
                 totalEnemies,
                 this.defeatedEnemies,
                 'Run Progress',
-                new Color(224, 224, 224)
+                new Color(224, 224, 224),
+                true
             ),
             new ProgressBar(
                 this.totalFloors,
                 floor.number,
                 'Floor',
-                new Color(244, 208, 63)
+                new Color(244, 208, 63),
+                true
             ),
             new ProgressBar(
                 this.stagesPerFloor,
                 stage.number,
                 'Stage',
-                new Color(46, 134, 193)
+                new Color(46, 134, 193),
+                true
             ),
             new ProgressBar(
                 enemy.health,
                 enemy.currentHealth,
                 enemy.name + ' Health (' + enemy.number + '/' + this.enemyPerStage + ')',
-                enemy.isBoss ? new Color(87, 49, 214) : new Color(86, 101, 115)
+                enemy.isBoss ? new Color(87, 49, 214) : new Color(86, 101, 115),
+                true
             ),
             new ProgressBar(
                 this.character.health,
                 this.character.currentHealth,
                 'Your Health',
                 new Color(231, 76, 60),
+                false
+            ),
+            new ProgressBar(
+                this.character.moves,
+                this.movesPerStage,
+                'Your Moves',
+                new Color(46, 204, 113),
+                false
             )
         ]
     }
@@ -148,32 +156,44 @@ export class Run {
                 totalEnemies,
                 this.defeatedEnemies,
                 'Run Progress',
-                new Color(224, 224, 224)
+                new Color(224, 224, 224),
+                true
             ),
             new ProgressBar(
                 this.totalFloors,
                 floor.number,
                 'Floor',
-                new Color(244, 208, 63)
+                new Color(244, 208, 63),
+                true
             ),
             new ProgressBar(
                 this.stagesPerFloor,
                 stage.number,
                 'Stage',
-                new Color(46, 134, 193)
+                new Color(46, 134, 193),
+                true
             ),
             new ProgressBar(
                 enemy.health,
                 enemy.currentHealth,
                 enemy.name + ' Health (' + enemy.number + '/' + this.enemyPerStage + ')',
-                enemy.isBoss ? new Color(87, 49, 214) : new Color(86, 101, 115)
+                enemy.isBoss ? new Color(87, 49, 214) : new Color(86, 101, 115),
+                true
             ),
             new ProgressBar(
                 this.character.health,
                 this.character.currentHealth,
                 'Your Health',
                 new Color(231, 76, 60),
+                false
             ),
+            new ProgressBar(
+                this.movesPerStage,
+                this.character.moves,
+                'Your Moves',
+                this.character.moves <= 3 ? new Color(231, 76, 60) : new Color(46, 204, 113),
+                false
+            )
         ];
 
         this.progressBars.forEach((element: ProgressBar, index: number) => {
@@ -185,7 +205,7 @@ export class Run {
                 this.progressBars[index].animate(difference, callback)
             }
 
-            element.drawBar(this.p5, index, canvas);
+            element.drawBar(this.p5, index, this);
         });
     }
 

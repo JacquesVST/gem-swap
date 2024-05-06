@@ -62,7 +62,7 @@ canvas {
 }
 
 .stat {
-  width: calc(100% / 5);
+  width: calc(100% / 4);
   padding: 16px;
 }
 

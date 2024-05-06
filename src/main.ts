@@ -57,7 +57,7 @@ const sketch = (p5Instance: p5) => {
     }
 
     p5Instance.setup = () => {
-        canvas = new CanvasInfo(p5Instance, 16, 4, 4, 20, 5);
+        canvas = new CanvasInfo(p5Instance, 16, 4, 4, 20, 4, 2);
         p5Instance.textFont('Open Sans')
 
         resetButton.onclick = () => {
@@ -74,7 +74,7 @@ const sketch = (p5Instance: p5) => {
         Run.newGameDialog(p5Instance, dialogs, (config: RunConfig) => {
             run = new Run(p5Instance, Character.defaultCharacter(), config.floors, config.stages, config.enemies, config.moves, config.costMultiplier)
             run.grid = new Grid(config.gridX, config.gridY);
-            run.setupCanvas(canvas);
+            run.canvas = canvas;
             run.grid.calculateSpacing(canvas);
             // run.sounds = sounds;
 
@@ -99,7 +99,7 @@ const sketch = (p5Instance: p5) => {
                 run.grid.generateItems(run);
             } else {
                 if (!run.inAnimation && !currentDialog) {
-                    removeMatches(findMatches(run.grid), true);
+                    removeMatches(findMatches(), true);
                 }
                 if (run.character.moves === 0) {
                     reload()
@@ -258,7 +258,7 @@ const sketch = (p5Instance: p5) => {
                     applyGravity(run.grid, false);
                     run.grid.generateItems(run);
                 } else {
-                    removeMatches(findMatches(run.grid), false);
+                    removeMatches(findMatches(), false);
                 }
                 count++
                 if (count === duration) {
@@ -294,10 +294,11 @@ const sketch = (p5Instance: p5) => {
         });
     }
 
-    function findMatches(grid: Grid): Item[][] {
+    function findMatches(): Item[][] {
         let matches: Item[][] = [];
-        grid.iterateYtoX((x: number, y: number) => {
-            let cell = grid.getCellbyPosition(new Position(x, y));
+
+        run.grid.iterateYtoX((x: number, y: number) => {
+            let cell = run.grid.getCellbyPosition(new Position(x, y));
 
             if (cell.item) {
                 let item: Item = cell.item
@@ -306,8 +307,8 @@ const sketch = (p5Instance: p5) => {
                 // horizontal match
                 let sameShape: boolean = true
                 let increment: number = 1;
-                while (sameShape && (increment + x) < grid.width) {
-                    let nextItem: Item = grid.getNeighbourCell(cell, increment, 0).item
+                while (sameShape && (increment + x) < run.grid.width) {
+                    let nextItem: Item = run.grid.getNeighbourCell(cell, increment, 0).item
                     sameShape = nextItem && item.shape.sides === nextItem.shape.sides;
                     if (sameShape) {
                         horizontalMatch.push(nextItem);
@@ -319,8 +320,8 @@ const sketch = (p5Instance: p5) => {
                 sameShape = true
                 increment = 1;
                 let verticalMatch: Item[] = [item]
-                while (sameShape && increment + y < grid.height) {
-                    let nextItem: Item = grid.getNeighbourCell(cell, 0, increment).item
+                while (sameShape && increment + y < run.grid.height) {
+                    let nextItem: Item = run.grid.getNeighbourCell(cell, 0, increment).item
                     sameShape = nextItem && item.shape.sides === nextItem.shape.sides;
                     if (sameShape) {
                         verticalMatch.push(nextItem);
@@ -335,7 +336,32 @@ const sketch = (p5Instance: p5) => {
                 }
             }
         });
-        return matches
+
+        return run.initialAnimation ? matches : sanitizeMatches(matches);
+    }
+
+    function sanitizeMatches(matches: Item[][]): Item[][] {
+        if (matches.length === 1) {
+            return matches;
+        }
+
+        do {
+            for (let i = 0; i < matches.length - 1; i++) {
+                let match1: Item[] = matches[i];
+                let match2: Item[] = matches[i + 1];
+
+                if (mergeMatches(match1, match2).length !== match1.concat(match2).length) {
+                    matches.splice(i, 2)
+                    matches.push(mergeMatches(match1, match2));
+                }
+            }
+        } while (!matches.flat().map((item: Item) => item.id).every((value: string, index: number, array: string[]) => array.indexOf(value) === array.lastIndexOf(value)))
+
+        return matches;
+    }
+
+    function mergeMatches(match1: Item[], match2: Item[]): Item[] {
+        return Array.from(new Set(match1.concat(match2)));
     }
 
     function applyGravity(grid: Grid, animate: boolean = true): void {
@@ -350,10 +376,10 @@ const sketch = (p5Instance: p5) => {
         run.character.moves = run.movesPerStage;
         let damage: number = run.findEnemy().attack;
         run.character.takeDamage(damage, ((damage: number, shielded: boolean) => {
+            sounds['defeat'].play();
             damagePlayerAnimation(Math.floor(damage), shielded)
         }).bind(this), (() => {
             let finalScore: number = run.score;
-            sounds['defeat'].play();
             alert('YOU LOST!\nwith a score of: ' + formatNumber(finalScore));
             setupGame();
         }).bind(this))
@@ -461,7 +487,7 @@ const sketch = (p5Instance: p5) => {
             shielded ? new Color(101, 206, 80) : new Color(231, 76, 60),
             4,
             p5Instance.CENTER,
-            new Position(canvas.canvasSize.x / 2, canvas.totalUiSize),
+            new Position(canvas.canvasSize.x / 2, canvas.canvasSize.y - canvas.bottomUiSize),
             new Position(0, 200),
             180
         );
@@ -481,7 +507,7 @@ const sketch = (p5Instance: p5) => {
                 new Color(244, 208, 63),
                 4,
                 p5Instance.CENTER,
-                new Position((canvas.canvasSize.x / 2) + varianceX, (canvas.totalUiSize - canvas.uiBarSize - canvas.margin) + varianceY),
+                new Position((canvas.canvasSize.x / 2) + varianceX, (canvas.topUiSize - canvas.uiBarSize - canvas.margin) + varianceY),
                 new Position(0, 100),
                 180
             );
@@ -539,7 +565,7 @@ const sketch = (p5Instance: p5) => {
             new Color(224, 224, 224),
             4,
             p5Instance.CENTER,
-            new Position(canvas.canvasSize.x / 2, canvas.canvasSize.y / 2 + canvas.totalUiSize),
+            new Position(canvas.canvasSize.x / 2, canvas.canvasSize.y / 2 + canvas.topUiSize),
             new Position(0, -200),
             240
         );
@@ -599,10 +625,6 @@ const sketch = (p5Instance: p5) => {
 
             statsContent += '<div class="stat">'
             statsContent += `<strong>Multiplier:</strong>&nbsp;<span>x${run.character.damageMultiplier}</span>`
-            statsContent += '</div>';
-
-            statsContent += '<div class="stat">'
-            statsContent += `<strong>Moves:</strong>&nbsp;<span style="${run.character.moves > 5 ? 'color: white' : 'color: red'}">${run.character.moves}</span><span>&nbsp;/&nbsp;${run.movesPerStage}</span>`
             statsContent += '</div>';
 
             statsContent += '<div class="stat">'

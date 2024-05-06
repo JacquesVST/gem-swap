@@ -6,28 +6,31 @@ export class CanvasInfo {
     padding: number;
     radius: number;
     uiBarSize: number;
-    totalUiSize: number;
+    topUiSize: number;
+    bottomUiSize: number;
     playfieldBackground: number;
     canvasSize: Position;
     playfield: Position;
     p5: P5
 
-    constructor(p5: P5, margin: number, padding: number, radius: number, uiBarSize: number, uiBarCount: number) {
+    constructor(p5: P5, margin: number, padding: number, radius: number, uiBarSize: number, topUiBarCount: number, bottomUiBarCount: number) {
         this.margin = margin;
         this.padding = padding;
         this.radius = radius;
         this.uiBarSize = uiBarSize;
         this.p5 = p5
-        this.totalUiSize = 0;
+        this.topUiSize = 0;
+        this.bottomUiSize = 0;
 
         this.playfieldBackground = 20;
-        this.calculateTotalUiSize(uiBarCount);
+        this.calculateTopUiSize(topUiBarCount);
+        this.calculateBottomUiSize(bottomUiBarCount);
         this.calculateCanvasAndPlayfield();
     }
 
     calculateCanvasAndPlayfield(): void {
         let screenWidth: number = document.body.clientWidth;
-        let screenHeight: number = ((screenWidth / 16) * 9) + this.totalUiSize;
+        let screenHeight: number = ((screenWidth / 16) * 9) + this.topUiSize + this.bottomUiSize;
 
         let maxHeight: number = window.innerHeight - 360;
         if (screenHeight > maxHeight) {
@@ -39,8 +42,12 @@ export class CanvasInfo {
         this.p5.createCanvas(this.canvasSize.x, this.canvasSize.y);
     }
 
-    calculateTotalUiSize(uiBarCount: number): void {
-        this.totalUiSize = ((uiBarCount + 1) * this.margin) + (uiBarCount * this.uiBarSize);
+    calculateTopUiSize(topUiBarCount: number): void {
+        this.topUiSize = ((topUiBarCount + 1) * this.margin) + (topUiBarCount * this.uiBarSize);
+    }
+
+    calculateBottomUiSize(bottomUiBarCount: number): void {
+        this.bottomUiSize = ((bottomUiBarCount + 1) * this.margin) + (bottomUiBarCount * this.uiBarSize);
     }
 
     drawPlayfield(): void {

@@ -174,7 +174,7 @@ export class RewardPools {
                 return new Reward(
                     'Common',
                     name,
-                    '+5% chance of column clearing items',
+                    '+2% chance of column clearing items',
                     (() => {
                         let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
 
@@ -185,9 +185,9 @@ export class RewardPools {
                                         run.grid.removeItem(cell.item);
                                     }
                                 });
-                            }, 0.05))
+                            }, 0.02))
                         } else {
-                            run.possibleEffects[effectIndex].chance += 0.05
+                            run.possibleEffects[effectIndex].chance += 0.02
                         }
                     }).bind(run)
                 )
@@ -197,7 +197,7 @@ export class RewardPools {
                 return new Reward(
                     'Common',
                     name,
-                    '+5% chance of row clearing items',
+                    '+2% chance of row clearing items',
                     (() => {
                         let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
 
@@ -208,9 +208,9 @@ export class RewardPools {
                                         run.grid.removeItem(cell.item);
                                     }
                                 });
-                            }, 0.05))
+                            }, 0.02))
                         } else {
-                            run.possibleEffects[effectIndex].chance += 0.05
+                            run.possibleEffects[effectIndex].chance += 0.02
                         }
                     }).bind(run)
                 )
@@ -221,6 +221,7 @@ export class RewardPools {
                 '+1 move',
                 (() => {
                     run.movesPerStage += 1;
+                    run.character.moves += 1;
                 }).bind(run)
             ),
             new Reward(
@@ -399,7 +400,7 @@ function giveColorBonusDmg(run: Run, color: string) {
 
         run.grid.cells.flat().forEach((cell) => {
             if (cell?.item?.shape?.id === color) {
-                cell.item.shape = run.possibleShapes[shapeIndex];
+                cell.item.shape.bonusDmg = run.possibleShapes[shapeIndex].bonusDmg;
             }
         });
     }

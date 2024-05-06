@@ -7,6 +7,7 @@ import { Effect } from "./Effect";
 import { Item } from "./Item";
 import { Position } from "./Position";
 import { Run } from "./Run";
+
 export class Grid {
     width: number;
     height: number;
@@ -15,6 +16,7 @@ export class Grid {
     verticalCenterPadding: number;
     selectedCellPos: Position;
     cells: Cell[][];
+    totalHeight: number;
 
     constructor(width: number, height: number) {
         this.width = width;
@@ -46,16 +48,18 @@ export class Grid {
         do {
             this.sideSize++;
             this.horizontalCenterPadding = canvas.playfield.x - (this.width * this.sideSize) - (this.width * canvas.padding) - canvas.padding;
-            this.verticalCenterPadding = canvas.playfield.y - canvas.totalUiSize - (this.height * this.sideSize) - (this.height * canvas.padding) - canvas.padding;
+            this.verticalCenterPadding = canvas.playfield.y - canvas.topUiSize - canvas.bottomUiSize - (this.height * this.sideSize) - (this.height * canvas.padding) - canvas.padding;
         } while (this.horizontalCenterPadding - this.width >= 0 && this.verticalCenterPadding - this.height >= 0);
 
         this.iterateXtoY((x: number, y: number) => {
 
             let currentXMargin = (this.horizontalCenterPadding / 2) + (x * this.sideSize) + (x * canvas.padding) + canvas.padding + canvas.margin;
-            let currentYMargin = canvas.totalUiSize + (this.verticalCenterPadding / 2) + (y * this.sideSize) + (y * canvas.padding) + canvas.padding + canvas.margin;
+            let currentYMargin = canvas.topUiSize + (this.verticalCenterPadding / 2) + (y * this.sideSize) + (y * canvas.padding) + canvas.padding + canvas.margin;
 
             this.cells[x][y].canvasPosition = new Position(currentXMargin, currentYMargin);
         });
+        
+        this.totalHeight = this.verticalCenterPadding + (this.height * (this.sideSize + canvas.padding)) + canvas.padding;
     }
 
     isFull(): boolean {

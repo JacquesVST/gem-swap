@@ -2,12 +2,14 @@ import * as P5 from "p5";
 import { CanvasInfo } from "./CanvasInfo";
 import { Color } from "./Color";
 import { formatNumber } from "../utils/Functions";
+import { Run } from "./Run";
 
 export class ProgressBar {
     maxValue: number;
     value: number;
     title: string;
     color: Color;
+    top: boolean;
 
     frames: number = 0;
     velocity: number = 0;
@@ -17,11 +19,12 @@ export class ProgressBar {
     fade: number = 255;
     callback: () => void;
 
-    constructor(maxValue: number, value: number, title: string, color: Color) {
+    constructor(maxValue: number, value: number, title: string, color: Color, top: boolean) {
         this.maxValue = maxValue;
         this.value = value;
         this.title = title;
         this.color = color;
+        this.top = top;
     }
 
     animate(difference: number, callback: () => void) {
@@ -38,14 +41,21 @@ export class ProgressBar {
         this.callback = callback;
     }
 
-    drawBar(p5: P5, index: number, canvas: CanvasInfo): void {
+    drawBar(p5: P5, index: number, run: Run): void {
+        let canvas: CanvasInfo = run.canvas
         let percentageOfBar: number = (this.value + this.delta) / this.maxValue
 
-        let commonMargin: number = (canvas.margin * (index + 2)) + (canvas.uiBarSize * index)
+        let commonMargin: number;
+        if (this.top) {
+            commonMargin = (canvas.margin * (index + 2)) + (canvas.uiBarSize * index) + canvas.margin / 2
+        } else {
+            let bottomIndex: number = run.progressBars.length - 1 - index;
+            commonMargin = (canvas.margin * (bottomIndex + 2)) + (canvas.uiBarSize * bottomIndex) + run.grid.totalHeight + canvas.topUiSize + canvas.margin / 2
+        }
         let maxBarSize: number = (canvas.playfield.x - (2 * canvas.padding))
 
         let finalElementSize: number = (maxBarSize * percentageOfBar);
-        finalElementSize = finalElementSize > maxBarSize ? maxBarSize : finalElementSize,
+        finalElementSize = finalElementSize > maxBarSize ? maxBarSize : finalElementSize;
 
         p5.fill(percentageOfBar ? [...this.color.value, this.fade] : [20, 20, 20, this.fade], );
         p5.noStroke()
