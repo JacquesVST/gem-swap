@@ -144,25 +144,24 @@ export class RewardPools {
             price = run.character.rewards.findIndex((reward: Reward) => reward.name.startsWith('Ban')) !== -1 ?
                 Math.floor(price * 1.2) : price;
 
-            let randomShape: number = Math.floor(Math.random() * run.possibleShapes.length);
-            let chosenShape: Shape = run.possibleShapes[randomShape];
-
-            shopPool.push(new Reward(
-                'Epic',
-                `Ban ${chosenShape.id} items`,
-                `No more ${chosenShape.id} items for the rest of the run`,
-                (() => {
-                    run.possibleShapes.splice(randomShape, 1)
-                    run.initialShuffle = false;
-                    run.stackCombo = true;
-                    run.grid.cells.flat().forEach((cell) => {
-                        if (cell?.item?.shape?.id === chosenShape.id) {
-                            cell.item = undefined
-                        }
-                    });
-                }).bind(run),
-                price
-            ));
+            run.possibleShapes.forEach((shape: Shape) => {
+                shopPool.push(new Reward(
+                    'Epic',
+                    `Ban ${shape.id} items`,
+                    `No more ${shape.id} items for the rest of the run`,
+                    (() => {
+                        run.possibleShapes = run.possibleShapes.filter((runShape: Shape) => runShape.id === shape.id);
+                        run.initialShuffle = false;
+                        run.stackCombo = true;
+                        run.grid.cells.flat().forEach((cell) => {
+                            if (cell?.item?.shape?.id === shape.id) {
+                                cell.item = undefined
+                            }
+                        });
+                    }).bind(run),
+                    price
+                ));
+            });
         }
 
         return shopPool;
@@ -305,27 +304,6 @@ export class RewardPools {
                     giveColorBonusDmg(run, 'pink');
                 }).bind(run)
             ),
-            (() => {
-                let randomShape: number = Math.floor(Math.random() * run.possibleShapes.length);
-                let chosenShape: Shape = run.possibleShapes[randomShape];
-                return new Reward(
-                    'Rare',
-                    `Eliminate all ${chosenShape.id} items`,
-                    `Remove current ${chosenShape.id} items from the board`,
-                    (() => {
-                        run.initialShuffle = false;
-                        run.stackCombo = true;
-                        run.grid.cells.flat().forEach((cell) => {
-                            if (cell?.item?.shape?.id === chosenShape.id) {
-                                cell.item = undefined
-                            }
-                        });
-                        run.character.activeItem = undefined
-                    }).bind(run),
-                    undefined,
-                    true
-                )
-            })(),
             new Reward(
                 'Rare',
                 '4+ Match Regeneration',
@@ -377,6 +355,28 @@ export class RewardPools {
                 }).bind(run)
             ),
         ];
+
+
+        run.possibleShapes.forEach((shape: Shape) => {
+            defaultPool.push(new Reward(
+                'Rare',
+                `Eliminate all ${shape.id} items`,
+                `Remove current ${shape.id} items from the board`,
+                (() => {
+                    run.initialShuffle = false;
+                    run.stackCombo = true;
+                    run.grid.cells.flat().forEach((cell) => {
+                        if (cell?.item?.shape?.id === shape.id) {
+                            cell.item = undefined
+                        }
+                    });
+                    run.character.activeItem = undefined
+                }).bind(run),
+                undefined,
+                true
+            ));
+        })
+
 
         let uniqueRewards = [
             new Reward(

@@ -109,11 +109,13 @@ const sketch = (p5Instance: p5) => {
             //animations
             canvas.drawPlayfield();
 
-            run.drawRunInfo(canvas, () => { run ? run.inAnimation = false : undefined })
-            run.grid.draw(canvas, p5Instance, !!currentDialog);
-            run.grid.drawItems(p5Instance);
+            if (run) {
+                run.drawRunInfo(canvas, () => { run ? run.inAnimation = false : undefined })
+                run.grid.draw(canvas, p5Instance, !!currentDialog);
+                run.grid.drawItems(p5Instance);
+            }
 
-            if (run.winState) {
+            if (run?.winState) {
                 setTimeout(() => {
                     let finalScore: number = run.score;
                     dialogs = [];

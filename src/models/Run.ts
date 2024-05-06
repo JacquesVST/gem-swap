@@ -286,33 +286,51 @@ export class Run {
         globalDialogs.unshift(dialog);
     }
 
-    generateRewardsBasedOnRarity(ammount: number, pool: Reward[]): Reward[] {
-        let rarities = [];
+    generateRewardsBasedOnRarity(amount: number, pool: Reward[]): Reward[] {
+        let rewardsOfRarity: Reward[][] = [];
+        let counts = {
+            'Epic': 0,
+            'Rare': 0,
+            'Common': 0
+        }
 
-        for (let i: number = 0; i < ammount; i++) {
+        for (let i: number = 0; i < amount; i++) {
             let chance = Math.random();
             if (chance < Reward.rarityColors()['Common'].chance) {
-                rarities.push('Common')
+                counts['Epic']++;
+                rewardsOfRarity.push(pool.filter((reward: Reward) => reward.rarity === 'Epic'));
             } else if (chance < Reward.rarityColors()['Rare'].chance) {
-                rarities.push('Rare')
+                counts['Rare']++;
+                rewardsOfRarity.push(pool.filter((reward: Reward) => reward.rarity === 'Rare'));
             } else {
-                rarities.push('Epic')
+                counts['Epic']++;
+                rewardsOfRarity.push(pool.filter((reward: Reward) => reward.rarity === 'Epic' || reward.rarity === 'Unique'));
             }
         }
 
-        let rewardList: Reward[];
-        do {
-            rewardList = [];
-            rarities.forEach((rarity: string) => {
-                let rewardsOfRarity: Reward[] = pool.filter((reward: Reward) => {
-                    if (rarity === 'Epic') {
-                        return reward.rarity === 'Epic' || reward.rarity === 'Unique';
+        let rewardList: Reward[] = [];
+        rewardsOfRarity.forEach((rewards: Reward[]) => {
+            let initialLength: number = rewardList.length;
+            do {
+                if (rewards[0].rarity === 'Epic' && rewardList.map(mapRarity).includes('Unique')) {
+                    rewards = rewards.filter((reward: Reward) => reward.rarity !== 'Unique');
+                }
+
+                let random: number = Math.floor(Math.random() * rewards.length);
+
+                if (!rewardList.map(mapName).includes(rewards[random].name)) {
+                    rewardList.push(rewards[random]);
+                } else {
+                    let rarityCheck = rewards[0].rarity;
+                    if (rarityCheck === 'Unique') {
+                        rarityCheck = 'Epic';
                     }
-                    return reward.rarity === rarity;
-                });
-                rewardList.push(rewardsOfRarity[Math.floor(Math.random() * rewardsOfRarity.length)]);
-            })
-        } while (rewardList.map((reward: Reward) => reward.rarity).filter((rarity: string) => rarity === 'Unique').length > 1);
+                    if (counts[rarityCheck] >= rewards.length) {
+                        rewardList.push(rewards[random]);
+                    }
+                }
+            } while (rewardList.length === initialLength);
+        });
 
         return rewardList;
     }
@@ -402,4 +420,12 @@ export interface RunConfig {
     gridX: number;
     gridY: number
     costMultiplier: number;
+}
+
+function mapRarity(reward: Reward): string {
+    return reward.rarity;
+}
+
+function mapName(reward: Reward): string {
+    return reward.name
 }
