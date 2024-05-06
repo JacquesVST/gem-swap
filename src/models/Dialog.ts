@@ -72,10 +72,10 @@ export class Dialog {
 
         let optionWidth: number = dialogWidth - (canvas.margin * 2);
         (dialogHeigth * 0.80) - ((this.options.length + 1) * canvas.margin)
-        let optionHeight: number = ((dialogHeigth * 0.8) - ((this.options.length + 1) * canvas.margin)) / this.options.length;
+        let optionHeight: number = ((dialogHeigth * 0.85) - ((this.options.length + 1) * canvas.margin)) / this.options.length;
 
         this.options.forEach((option: DialogOption, index: number) => {
-            let cumulativeMargin: number = (index * (optionHeight + canvas.margin)) + (dialogHeigth * 0.2) + canvas.margin;
+            let cumulativeMargin: number = (index * (optionHeight + canvas.margin)) + (dialogHeigth * 0.15) + canvas.margin;
 
             let limits: number[] = [
                 marginX + canvas.margin,

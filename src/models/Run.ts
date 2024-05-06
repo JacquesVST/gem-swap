@@ -297,8 +297,8 @@ export class Run {
         for (let i: number = 0; i < amount; i++) {
             let chance = Math.random();
             if (chance < Reward.rarityColors()['Common'].chance) {
-                counts['Epic']++;
-                rewardsOfRarity.push(pool.filter((reward: Reward) => reward.rarity === 'Epic'));
+                counts['Common']++;
+                rewardsOfRarity.push(pool.filter((reward: Reward) => reward.rarity === 'Common'));
             } else if (chance < Reward.rarityColors()['Rare'].chance) {
                 counts['Rare']++;
                 rewardsOfRarity.push(pool.filter((reward: Reward) => reward.rarity === 'Rare'));

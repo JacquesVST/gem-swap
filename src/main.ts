@@ -200,9 +200,9 @@ const sketch = (p5Instance: p5) => {
                 if (currentDialog && !currentDialog.keep) {
                     currentDialog = undefined
                     dialogs.pop()
+                    updatePlayerStatsAndRewards();
                 }
             }
-            updatePlayerStatsAndRewards();
         }
     }
 

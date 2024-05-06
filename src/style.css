@@ -5,13 +5,26 @@ body {
   background-color: black;
   color: white;
   font-family: "Open Sans", sans-serif;
+  display: flex;
+  justify-content: center;
+}
+
+.wrapper {
+  width: 100vw;
+  height: 100vh;
+}
+
+@media screen and (min-width: 1440px) {
+  .wrapper {
+    width: 1440px
+  }
 }
 
 canvas {
   display: block;
 }
 
-#runInfo{
+#runInfo {
   margin-top: 20px;
   visibility: hidden;
 }
@@ -37,8 +50,9 @@ canvas {
 
 .grid-form {
   width: 100%;
-  bottom: 0px;position:fixed; 
-  background-color: rgb(20,20,20);
+  bottom: 0px;
+  position: fixed;
+  background-color: rgb(20, 20, 20);
 }
 
 .stats-ui {
@@ -59,7 +73,7 @@ canvas {
   justify-content: center;
 }
 
-.reward-wrap{
+.reward-wrap {
   width: 25%;
 }
 
@@ -67,7 +81,7 @@ canvas {
   margin-left: 4px;
   margin-right: 4px;
   margin-bottom: 8px;
-  border: 1px solid rgb(220,220,220);
+  border: 1px solid rgb(220, 220, 220);
   color: #000;
   padding: 8px;
   display: block;
@@ -88,15 +102,15 @@ canvas {
   background-color: rgb(224, 224, 224);
 }
 
-.rarity-Rare{
+.rarity-Rare {
   background-color: rgb(101, 206, 80)
 }
 
-.rarity-Epic{
+.rarity-Epic {
   background-color: rgb(84, 80, 206)
 }
 
-.rarity-Unique{
+.rarity-Unique {
   background-color: rgb(243, 156, 18)
 }
 
