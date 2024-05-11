@@ -8,7 +8,6 @@ export class AnimatableObject {
     velocityFade: number = 0;
     additiveFade: number = 0;
     relativeFade: number = 0;
-
     animationEndCallback: () => void = undefined;
 
     setupNewAnimation(frames: number, relativeEndPosition: Position = new Position(0, 0), relativeFade: number = 0): void {

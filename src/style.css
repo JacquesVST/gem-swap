@@ -61,11 +61,20 @@ canvas {
   justify-content: center;
 }
 
-.stat {
+.stat-4 {
   width: calc(100% / 4);
   padding: 16px;
 }
 
+.stat-3 {
+  width: calc(100% / 3);
+  padding: 16px;
+}
+
+.stat-2 {
+  width: calc(100% / 2);
+  padding: 16px;
+}
 
 .reward-ui {
   width: 100%;

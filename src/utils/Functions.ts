@@ -1,6 +1,7 @@
 import * as P5 from "p5";
 import { Color } from "../models/Color";
 import { Position } from "../models/Position";
+import { BestNumbers } from "../models/Run";
 
 export function generateId(): string {
     return "id" + Math.random().toString(16).slice(2)
@@ -94,4 +95,29 @@ export function checkPositionInLimit(position: Position, ...coords: number[]): b
 
 export function formatNumber(number: number): string {
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+export function hasConsecutive(array: string[], amount: number): boolean {
+    let last: any;
+    let count: number = 0;
+    for (let index: number = 0; index < array.length; index++) {
+        if (array[index] != last) {
+            last = array[index];
+            count = 0;
+        }
+        count++;
+        if (amount <= count) {
+            return true;
+        }
+    }
+    return false;
+}
+
+export function getBestNumbers(): BestNumbers {
+    let bests: BestNumbers = JSON.parse(localStorage.getItem('bests'))
+    return bests ? bests : { bestCombo: 0, bestDamage: 0, bestScore: 0 }
+}
+
+export function setBestNumbers(numbers: BestNumbers): void {
+    return localStorage.setItem('bests', JSON.stringify(numbers));
 }

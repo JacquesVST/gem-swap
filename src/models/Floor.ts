@@ -1,20 +1,25 @@
-import { Run } from "./Run";
-import { Stage } from "./Stage";
+import { Map } from "./Map";
+import { EnemyStage } from "./Stage";
 
 export class Floor {
     number: number;
-    run: Run;
-    currentStageIndex: number;
-    stages: Stage[];
+    map: Map;
 
-    constructor(number: number, run: Run) {
+    stages: EnemyStage[];
+    currentStageIndex: number = 0;
+
+
+    constructor(number: number, map: Map) {
         this.number = number;
-        this.run = run;
-        this.currentStageIndex = 0;
+        this.map = map;
 
-        this.stages = [...Array(this.run.stagesPerFloor)].map(
-            (stage: Stage, index: number) => {
-                return new Stage(index + 1, { ...this });
+        this.stages = this.setupStages();
+    }
+
+    setupStages(): EnemyStage[] {
+        return [...Array(this.map.stageCount)].map(
+            (_: EnemyStage, index: number) => {
+                return new EnemyStage(index + 1, { ...this });
             }
         );
     }

@@ -6,13 +6,14 @@ export class Character {
     defense: number;
     moves: number;
     currentHealth: number;
-    
+
     rewards: Reward[] = [];
     activeItem: Reward;
     hasItemThatPreventsFirstLethalDamage: boolean = false;
     hasUsedItemThatPreventsFirstLethalDamage: boolean = false;
     hpRegenFromReward: number = 0;
     damageMultiplier: number = 1;
+    criticalMultiplier: number = 2;
     moveSaver: number = 0;
     gold: number = 0;
 
@@ -25,7 +26,7 @@ export class Character {
     }
 
     static defaultCharacter() {
-        return new Character(100, 100, 0,  0);
+        return new Character(100, 100, 0, 0);
     }
 
     hasReward(name: string): boolean {
@@ -40,9 +41,13 @@ export class Character {
         this.currentHealth += heal;
     }
 
-    takeDamage(damage: number, damageCallback: (damage: number, shielded: boolean) => void, deathCallback: () => void): void {
-       let shielded = false;
-       damage -= this.defense;
+    simulateDamage(damage: number = 0): DamageData {
+        if (!damage) {
+            damage = 0;
+        }
+        let shielded = false;
+        damage = (damage - this.defense < 0) ? 0 : (damage - this.defense);
+
         if (this.hasItemThatPreventsFirstLethalDamage && !this.hasUsedItemThatPreventsFirstLethalDamage) {
             if (damage >= this.currentHealth) {
                 damage = 0;
@@ -55,17 +60,38 @@ export class Character {
                 damage = this.currentHealth
             }
         }
-        
-        this.currentHealth -= damage;
-        if (this.currentHealth - 1 <= 0) {
+
+        return { damage, shielded };
+    }
+
+    takeDamage(damage: DamageData, damageCallback: (damage: number, shielded: boolean) => void, deathCallback: () => void): void {
+
+        this.currentHealth -= damage.damage;
+        if (this.currentHealth <= 0) {
             if (deathCallback) {
                 deathCallback();
             }
         }
         if (damageCallback) {
-            damageCallback(damage, shielded);
+            damageCallback(damage.damage, damage.shielded);
+        }
+    }
+
+    updateMoves(newMoves: number, callback?: () => void, reloadCallback?: () => void) {
+
+        this.moves = newMoves;
+
+        if (callback){
+            callback();
+        }
+
+        if (this.moves === 0 && reloadCallback) {
+            reloadCallback();
         }
     }
 }
 
-
+export interface DamageData {
+    damage: number;
+    shielded: boolean;
+}

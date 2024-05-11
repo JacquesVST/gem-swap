@@ -11,6 +11,7 @@ export class Item extends AnimatableObject {
     sideSize: number;
     id: string;
     effect: Effect;
+    critical: boolean = false;
 
     constructor(shape: Shape, position: Position, sideSize: number) {
         super()

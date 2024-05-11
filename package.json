@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "description": "Simple p5 game",
     "scripts": {
-        "start": "parcel src/index.html --open",
+        "start": "parcel src/index.html",
         "prebuild-dev": "shx rm -rf dist/*",
         "build-dev": "parcel build ./src/index.html --no-optimize --public-url ./",
         "prebuild": "shx rm -rf dist/*",
@@ -16,9 +16,11 @@
         "p5": "1.9.2"
     },
     "devDependencies": {
+        "assert": "^2.1.0",
         "install": "^0.13.0",
         "npm": "^10.5.2",
         "parcel": "^2.12.0",
+        "process": "^0.11.10",
         "shx": "^0.3.2"
     }
 }

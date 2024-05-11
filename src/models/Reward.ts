@@ -13,33 +13,36 @@ export class Reward {
     price: number;
     isActive: boolean;
 
-    constructor(rarity: string, name: string, description: string, effect: () => void, price?: number, isActive?: boolean) {
+    unique: boolean;
+
+    constructor(rarity: string, name: string, description: string, effect: () => void, price?: number, isActive?: boolean, unique?: boolean) {
         this.rarity = rarity
         this.name = name
         this.description = description
         this.effect = effect
         this.price = price;
         this.isActive = isActive;
+        this.unique = unique
     }
 
     static rarityColors(): { [key: string]: { color: Color, chance: number } } {
         return {
             'Common': {
                 color: new Color(224, 224, 224),
-                chance: 0.89
+                chance: 0.75
             },
             'Rare': {
                 color: new Color(101, 206, 80),
-                chance: 0.99
+                chance: 0.95
             },
             'Epic': {
                 color: new Color(84, 80, 206),
-                chance: 0.01
+                chance: 1
             },
             'Unique': {
                 color: new Color(243, 156, 18),
-                chance: 0.01
-            },
+                chance: 0
+            }
         }
     }
 }
@@ -76,7 +79,7 @@ export class RewardPools {
                     '+3 moves',
                     (() => {
                         run.character.gold -= price;
-                        run.movesPerStage += 3;
+                        run.maxMoves += 3;
                     }).bind(run),
                     price,
                 );
@@ -94,8 +97,7 @@ export class RewardPools {
                     (() => {
                         run.character.gold -= price;
                         run.grid.width++;
-                        run.grid.generateEmptyCells();
-                        run.grid.calculateSpacing(run.canvas);
+                        run.grid.renew(run)
                     }).bind(run),
                     price,
                 );
@@ -113,8 +115,7 @@ export class RewardPools {
                     (() => {
                         run.character.gold -= price;
                         run.grid.height++;
-                        run.grid.generateEmptyCells();
-                        run.grid.calculateSpacing(run.canvas);
+                        run.grid.renew(run)
                     }).bind(run),
                     price,
                 );
@@ -151,13 +152,10 @@ export class RewardPools {
                     `No more ${shape.id} items for the rest of the run`,
                     (() => {
                         run.possibleShapes = run.possibleShapes.filter((runShape: Shape) => runShape.id === shape.id);
-                        run.initialShuffle = false;
                         run.stackCombo = true;
-                        run.grid.cells.flat().forEach((cell) => {
-                            if (cell?.item?.shape?.id === shape.id) {
-                                cell.item = undefined
-                            }
-                        });
+                        gridMassItemRemoval(run, (cell: Cell) => cell?.item?.shape?.id === shape.id);
+
+                        run.grid.generateItemsApplyGravityLoop(false, run)
                     }).bind(run),
                     price
                 ));
@@ -180,11 +178,7 @@ export class RewardPools {
 
                         if (effectIndex === -1) {
                             run.possibleEffects.push(new Effect(name, (item: Item) => {
-                                run.grid.cells.flat().filter((cell: Cell) => cell.position.x === item.position.x && cell.position.checksum !== item.position.checksum).forEach((cell: Cell) => {
-                                    if (cell.item) {
-                                        run.grid.removeItem(cell.item);
-                                    }
-                                });
+                                gridMassItemRemoval(run, (cell: Cell) => cell.position.x === item.position.x && cell.position.checksum !== item.position.checksum);
                             }, 0.02))
                         } else {
                             run.possibleEffects[effectIndex].chance += 0.02
@@ -203,11 +197,7 @@ export class RewardPools {
 
                         if (effectIndex === -1) {
                             run.possibleEffects.push(new Effect(name, (item: Item) => {
-                                run.grid.cells.flat().filter((cell: Cell) => cell.position.y === item.position.y && cell.position.checksum !== item.position.checksum).forEach((cell: Cell) => {
-                                    if (cell.item) {
-                                        run.grid.removeItem(cell.item);
-                                    }
-                                });
+                                gridMassItemRemoval(run, (cell: Cell) => cell.position.y === item.position.y && cell.position.checksum !== item.position.checksum);
                             }, 0.02))
                         } else {
                             run.possibleEffects[effectIndex].chance += 0.02
@@ -220,8 +210,24 @@ export class RewardPools {
                 'Extra Move',
                 '+1 move',
                 (() => {
-                    run.movesPerStage += 1;
+                    run.maxMoves += 1;
                     run.character.moves += 1;
+                }).bind(run)
+            ),
+            new Reward(
+                'Common',
+                'Extra Critical',
+                '+1 critical on grid',
+                (() => {
+                    run.grid.critical += 1;
+                }).bind(run)
+            ),
+            new Reward(
+                'Common',
+                'Critical Multiplier',
+                '+1 critical multiplier',
+                (() => {
+                    run.character.criticalMultiplier += 1;
                 }).bind(run)
             ),
             new Reward(
@@ -341,6 +347,15 @@ export class RewardPools {
             ),
             new Reward(
                 'Epic',
+                'Critical Boost',
+                '+2 criticals on grid and multiplier',
+                (() => {
+                    run.character.criticalMultiplier += 2;
+                    run.grid.critical += 2
+                }).bind(run)
+            ),
+            new Reward(
+                'Epic',
                 'Big Damage Boost',
                 'x1.5 DMG',
                 (() => {
@@ -357,21 +372,16 @@ export class RewardPools {
             ),
         ];
 
-
         run.possibleShapes.forEach((shape: Shape) => {
             defaultPool.push(new Reward(
                 'Rare',
                 `Eliminate all ${shape.id} items`,
                 `Remove current ${shape.id} items from the board`,
                 (() => {
-                    run.initialShuffle = false;
                     run.stackCombo = true;
-                    run.grid.cells.flat().forEach((cell) => {
-                        if (cell?.item?.shape?.id === shape.id) {
-                            cell.item = undefined
-                        }
+                    gridMassItemRemoval(run, (cell: Cell) => cell?.item?.shape?.id === shape.id, () => {
+                        run.character.activeItem = undefined
                     });
-                    run.character.activeItem = undefined
                 }).bind(run),
                 undefined,
                 true
@@ -381,10 +391,22 @@ export class RewardPools {
 
         let uniqueRewards = [
             new Reward(
-                'Unique',
+                'Epic',
                 'Combos multiply DMG',
                 'Final DMG multiplies combo counter',
-                (() => { }).bind(run)
+                (() => { }).bind(run),
+                undefined,
+                undefined,
+                true
+            ),
+            new Reward(
+                'Rare',
+                'Valuable combo',
+                'Get 1 gold every combo over 1',
+                (() => { }).bind(run),
+                undefined,
+                undefined,
+                true
             ),
         ];
 
@@ -392,7 +414,20 @@ export class RewardPools {
     }
 }
 
-function giveColorBonusDmg(run: Run, color: string) {
+function gridMassItemRemoval(run: Run, filter: (cell: Cell) => boolean, callback?: () => void): void {
+    if (callback) {
+        callback();
+    }
+
+    let itemsToRemove: Item[] = run.grid.cells.flat().filter(filter).map((cell: Cell) => cell.item).filter((item: Item) => item);
+
+    run.grid.bootstrapStabilize([itemsToRemove], run, (matches: Item[][]) => {
+        run.processMacthList(matches)
+    });
+
+}
+
+function giveColorBonusDmg(run: Run, color: string): void {
     let bonus: number = 50;
     let shapeIndex: number = run.possibleShapes.findIndex((shape: Shape) => shape.id = color);
     if (shapeIndex !== -1) {
