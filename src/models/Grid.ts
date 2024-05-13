@@ -4,6 +4,7 @@ import { CanvasInfo } from "./CanvasInfo";
 import { Cell } from "./Cell";
 import { Color } from "./Color";
 import { Effect } from "./Effect";
+import { BossEnemy } from "./Enemy";
 import { Item } from "./Item";
 import { Position } from "./Position";
 import { Run } from "./Run";
@@ -21,6 +22,7 @@ export class Grid {
     isUnstable: boolean = false
 
     critical: number = 1;
+    bossCritical: number = 0;
 
     constructor(width: number, height: number, canvas: CanvasInfo) {
         this.width = width;
@@ -38,9 +40,11 @@ export class Grid {
         return [...this.cells.flat()].every((cell: Cell) => cell.item);
     }
 
-    applyCriticalInBoard(): void {
-        let criticalsLeft = this.critical > this.width * this.height ? this.width * this.height : this.critical;
-        let chosenCriticals: Position[] = []
+    applyCriticalInBoard(isBoss?: boolean): void {
+        let totalCriticals: number = isBoss ? this.critical + this.bossCritical : this.critical;
+        let criticalsLeft: number = totalCriticals > this.width * this.height ? this.width * this.height : totalCriticals;
+        let chosenCriticals: Position[] = [];
+
         do {
 
             let randomPosition: Position = new Position(Math.floor(Math.random() * this.width), Math.floor(Math.random() * this.height))
@@ -57,7 +61,7 @@ export class Grid {
         this.iterateXtoY((x: number, y: number) => {
             let item: Item = this.getItemByPosition(new Position(x, y));
 
-            if (chosenCriticalsCheck.includes(item.position.checksum)) {
+            if (chosenCriticalsCheck.includes(item?.position?.checksum)) {
                 item.critical = true
             } else {
                 item.critical = false;
@@ -68,7 +72,9 @@ export class Grid {
     renew(run: Run) {
         this.generateEmptyCells();
         this.calculateSpacing(run.canvas);
-        this.init(run);
+        this.init(run, () => {
+            this.applyCriticalInBoard();
+        });
     }
 
     generateEmptyCells(): void {
@@ -110,26 +116,31 @@ export class Grid {
 
     bootstrapStabilize(initialMatches: Item[][], run: Run, matchesCallback?: (matches: Item[][]) => void, moveCallback?: () => void) {
         this.isUnstable = true
+        if (initialMatches) {
+            run.consecutiveCombo++;
+        }
         this.stabilizeAfterMove(initialMatches, run, matchesCallback, moveCallback);
     }
 
     stabilizeAfterMove(initialMatches: Item[][], run: Run, matchesCallback?: (matches: Item[][]) => void, moveCallback?: () => void): void {
         let matchesToRemove: Item[][] = initialMatches;
-        if (matchesToRemove.length === 0 && moveCallback) {
+        if (matchesToRemove.length === 0) {
+            run.consecutiveCombo = run.combo === 0 ? 0 : run.consecutiveCombo++;
             this.isUnstable = false
-            moveCallback();
+            if (moveCallback) {
+                moveCallback();
+            }
         }
 
         matchesToRemove.forEach((matchToRemove: Item[], matchIndex: number) => {
             matchToRemove.forEach((itemToRemove: Item, itemIndex: number) => {
                 this.animateRemove(itemToRemove, run, () => {
-                    this.removeItem(itemToRemove.position, () => {
+                    this.removeItem(itemToRemove?.position, () => {
                         run.inAnimation = false
                         if (itemIndex === matchToRemove.length - 1) {
                             this.generateItemsApplyGravityLoop(true, run, () => {
                                 this.stabilizeAfterMove(this.findMatches(true), run, matchesCallback, moveCallback)
                             })
-
                             if (matchIndex === matchesToRemove.length - 1 && matchesCallback) {
                                 matchesCallback(matchesToRemove);
                             }
@@ -160,6 +171,14 @@ export class Grid {
                         }
                     })
                 })
+            })
+        })
+    }
+
+    reapplyPositionsToItems(): void {
+        this.cells.forEach((cells: Cell[]) => {
+            cells.forEach((cell: Cell) => {
+                cell.item?.renewPosition(cell.position);
             })
         })
     }
@@ -206,33 +225,52 @@ export class Grid {
                 }
             }
         });
-        console.log([...matches])
 
         return validate ? this.sanitizeMatches(matches) : matches;
     }
 
     sanitizeMatches(matches: Item[][]): Item[][] {
-        if (matches.length === 1) {
+        if (matches.length <= 1) {
             return matches;
         }
 
-        do {
+        while (matches.reduce(this.mergeMatches).length !== matches.reduce(this.concatMatches).length) {
+
+            rootLoop:
             for (let i = 0; i < matches.length - 1; i++) {
                 let match1: Item[] = matches[i];
-                let match2: Item[] = matches[i + 1];
 
-                if (this.mergeMatches(match1, match2).length !== match1.concat(match2).length) {
-                    matches.splice(i, 2)
-                    matches.push(this.mergeMatches(match1, match2));
+                for (let j = i + 1; j < matches.length; j++) {
+                    let match2: Item[] = matches[j];
+
+                    if (this.mergeMatches(match1, match2).length !== match1.concat(match2).length) {
+                        matches = matches.filter((match: Item[]) => {
+                            let check: string = this.getMatchChecksum(match);
+                            let m1: string = this.getMatchChecksum(match1);
+                            let m2: string = this.getMatchChecksum(match2);
+                            return check !== m1 && check !== m2;
+                        })
+                        matches.push(this.mergeMatches(match1, match2));
+
+                        break rootLoop;
+                    }
                 }
             }
-        } while (!matches.flat().map((item: Item) => item.id).every((value: string, index: number, array: string[]) => array.indexOf(value) === array.lastIndexOf(value)))
+        }
 
         return matches;
     }
 
     mergeMatches(match1: Item[], match2: Item[]): Item[] {
         return Array.from(new Set(match1.concat(match2)));
+    }
+
+    concatMatches(match1: Item[], match2: Item[]): Item[] {
+        return match1.concat(match2);
+    }
+
+    getMatchChecksum(match: Item[]): string {
+        return match.map((item: Item) => item.position.checksum).join('-');
     }
 
     animateRemove(item: Item, run: Run, callback?: () => void) {
@@ -250,7 +288,7 @@ export class Grid {
 
     removeItem(position: Position, callback?: () => void): void {
         let item = this.getItemByPosition(position);
-        let effect: Effect = item.effect;
+        let effect: Effect = item?.effect;
         let removedItem: Item = { ...item } as Item;
         this.setCellItem(position, undefined)
 
@@ -368,13 +406,13 @@ export class Grid {
             }
         }
 
-        let item1: Item | undefined = this.getItemByPosition(position1)?.renewPosition(position2);
-        let item2: Item | undefined = this.getItemByPosition(position2)?.renewPosition(position1);
+        let item1: Item | undefined = this.getItemByPosition(position1)
+        let item2: Item | undefined = this.getItemByPosition(position2)
 
         if (item1 && item2 && item1.shape.id === item2.shape.id) {
             if (invalid) {
                 invalid();
-                return;
+                return false;
             }
         }
 
@@ -388,8 +426,8 @@ export class Grid {
     getAnimateSwapData(position1: Position, position2: Position): AnimateSwapData {
         let cell1: Cell = this.getCellbyPosition(position1)
         let cell2: Cell = this.getCellbyPosition(position2)
-        let item1: Item | undefined = this.getItemByPosition(position1);
-        let item2: Item | undefined = this.getItemByPosition(position2);
+        let item1: Item | undefined = this.getItemByPosition(position1)?.renewPosition(position2);
+        let item2: Item | undefined = this.getItemByPosition(position2)?.renewPosition(position1);
         return { item1, item2, cell1, cell2, frames: 10 }
     }
 
@@ -481,7 +519,7 @@ export class Grid {
             let critical: boolean = this.getItemByPosition(cell.position)?.critical;
 
             let color1: Color = critical ? new Color(203, 67, 53) : new Color(136, 78, 160);
-            let color2: Color = critical ? new Color( 236, 112, 99) : new Color(175, 122, 197);
+            let color2: Color = critical ? new Color(236, 112, 99) : new Color(175, 122, 197);
 
             let highlight: boolean = (!hasDialogOpen && checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...limits)) || (this.selectedCellPos ? cell.position.checksum === this.selectedCellPos.checksum : false);
 
@@ -531,7 +569,9 @@ export class Grid {
 
                 if (item.critical) {
                     p5.textAlign(p5.CENTER, p5.CENTER)
-                    p5.text
+                    p5.noStroke();
+                    p5.fill(0);
+                    p5.textSize(25)
                     p5.text(
                         '!',
                         cellRef.canvasPosition.x + (this.sideSize / 2) + item.relativeEndPosition.x,
@@ -560,6 +600,7 @@ export class Grid {
 
     getItemByPosition(position: Position): Item | undefined {
         if (
+            position &&
             position.x >= 0 &&
             position.x < this.width &&
             position.y >= 0 &&
@@ -582,7 +623,7 @@ export class Grid {
     }
 
     mouseClickedGrid(position: Position, run: Run): void {
-        if (this.isFull) {
+        if (!this.isUnstable) {
             let clickFound: boolean = false;
             run.grid.iterateXtoY((x: number, y: number) => {
                 let cell: Cell = run.grid.cells[x][y];
@@ -639,43 +680,17 @@ export class Grid {
                     this.bootstrapStabilize(this.findMatches(true), run, (matches: Item[][]) => {
                         run.processMacthList(matches)
                     }, () => {
-                        this.applyCriticalInBoard();
+                        setTimeout(() => {
+                            this.reapplyPositionsToItems();
+                            this.applyCriticalInBoard(run?.findEnemy() instanceof BossEnemy);
+                        }, 0)
                         run.updatePlayerMoves();
                     })
                 })
             })
         }
     }
-    /*
-    clearBoard(run: Run): void {
-        let iterations: number = 50;
-        let intervalWithCallback = (duration: number, callback: () => void) => {
-            let count: number = 0;
-            let interval = setInterval(() => {
-                if (!this.isFull) {
-                    this.applyGravity((pos1: Position, pos2: Position) => {
-                        this.validateSwap(pos1, pos2, undefined, false, undefined, undefined)();
-                    });
-                    this.generateItems(run);
-                } else {
-                    let matches: Item[][] = run.grid.findMatches()
-                    if (matches.length) {
-                        run.grid.removeMatches(matches, run, false);
-                    }
-                }
-                count++
-                if (count === duration) {
-                    clearInterval(interval)
-                    callback();
-                }
-            }, 1);
-        }
 
-        intervalWithCallback(iterations, () => {
-            
-        })
-    }
-*/
 }
 
 export interface AnimateSwapData {

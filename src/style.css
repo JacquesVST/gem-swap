@@ -48,13 +48,6 @@ canvas {
   text-align: center;
 }
 
-.grid-form {
-  width: 100%;
-  bottom: 0px;
-  position: fixed;
-  background-color: rgb(20, 20, 20);
-}
-
 .stats-ui {
   width: 100%;
   display: flex;
@@ -119,8 +112,10 @@ canvas {
   background-color: rgb(84, 80, 206)
 }
 
-.rarity-Unique {
-  background-color: rgb(243, 156, 18)
+.unique {
+  font-style: italic;
+  float: right;
+  color: rgb(243, 156, 18);
 }
 
 .shielded {

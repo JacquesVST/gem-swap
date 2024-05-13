@@ -38,37 +38,50 @@ export class Reward {
             'Epic': {
                 color: new Color(84, 80, 206),
                 chance: 1
-            },
-            'Unique': {
-                color: new Color(243, 156, 18),
-                chance: 0
             }
         }
     }
 }
 
 export class RewardPools {
+    static fullHealthShopItem(run: Run): Reward {
+        let price: number = 20;
+        let name: string = 'Max Instant health';
+        price = price * run.costMultiplier;
+        price = run.character.rewards.findIndex((reward: Reward) => reward.name === name) !== -1 ?
+            Math.floor(price * 1.2) : price;
+        return new Reward(
+            'Common',
+            name,
+            'Full heal',
+            (() => {
+                run.character.gold -= price;
+                run.character.heal(run.character.health);
+            }).bind(run),
+            price,
+        );
+    }
+
     static shopPool(run: Run): Reward[] {
         let shopPool: Reward[] = [
             (() => {
-                let price: number = 20;
-                let name: string = 'Max Instant health';
+                let price: number = 30;
+                let name: string = 'Where it matters';
                 price = price * run.costMultiplier;
                 price = run.character.rewards.findIndex((reward: Reward) => reward.name === name) !== -1 ?
                     Math.floor(price * 1.2) : price;
                 return new Reward(
                     'Common',
                     name,
-                    'Full heal',
+                    '+1 Critical piece on a boss fight',
                     (() => {
-                        run.character.gold -= price;
-                        run.character.heal(run.character.health);
+                        run.grid.bossCritical += 1;
                     }).bind(run),
                     price,
                 );
             })(),
             (() => {
-                let price: number = 50;
+                let price: number = 30;
                 let name: string = 'Extra Moves';
                 price = price * run.costMultiplier;
                 price = run.character.rewards.findIndex((reward: Reward) => reward.name === name) !== -1 ?
@@ -85,7 +98,7 @@ export class RewardPools {
                 );
             })(),
             (() => {
-                let price: number = 100;
+                let price: number = 75;
                 let name: string = 'Horizontal Expansion';
                 price = price * run.costMultiplier;
                 price = run.character.rewards.findIndex((reward: Reward) => reward.name === name) !== -1 ?
@@ -103,7 +116,7 @@ export class RewardPools {
                 );
             })(),
             (() => {
-                let price: number = 100;
+                let price: number = 75;
                 let name: string = 'Vertical Expansion';
                 price = price * run.costMultiplier;
                 price = run.character.rewards.findIndex((reward: Reward) => reward.name === name) !== -1 ?
@@ -121,7 +134,7 @@ export class RewardPools {
                 );
             })(),
             (() => {
-                let price: number = 200;
+                let price: number = 100;
                 let name: string = 'More Options';
                 price = price * run.costMultiplier;
                 price = run.character.rewards.findIndex((reward: Reward) => reward.name === name) !== -1 ?
@@ -140,7 +153,7 @@ export class RewardPools {
         ]
 
         if (run.possibleShapes.length >= 4) {
-            let price: number = 200;
+            let price: number = 150;
             price = price * run.costMultiplier;
             price = run.character.rewards.findIndex((reward: Reward) => reward.name.startsWith('Ban')) !== -1 ?
                 Math.floor(price * 1.2) : price;
@@ -172,16 +185,16 @@ export class RewardPools {
                 return new Reward(
                     'Common',
                     name,
-                    '+2% chance of column clearing items',
+                    '+3% chance of column clearing items',
                     (() => {
                         let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
 
                         if (effectIndex === -1) {
                             run.possibleEffects.push(new Effect(name, (item: Item) => {
                                 gridMassItemRemoval(run, (cell: Cell) => cell.position.x === item.position.x && cell.position.checksum !== item.position.checksum);
-                            }, 0.02))
+                            }, 0.03))
                         } else {
-                            run.possibleEffects[effectIndex].chance += 0.02
+                            run.possibleEffects[effectIndex].chance += 0.03
                         }
                     }).bind(run)
                 )
@@ -191,16 +204,16 @@ export class RewardPools {
                 return new Reward(
                     'Common',
                     name,
-                    '+2% chance of row clearing items',
+                    '+3% chance of row clearing items',
                     (() => {
                         let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
 
                         if (effectIndex === -1) {
                             run.possibleEffects.push(new Effect(name, (item: Item) => {
                                 gridMassItemRemoval(run, (cell: Cell) => cell.position.y === item.position.y && cell.position.checksum !== item.position.checksum);
-                            }, 0.02))
+                            }, 0.03))
                         } else {
-                            run.possibleEffects[effectIndex].chance += 0.02
+                            run.possibleEffects[effectIndex].chance += 0.03
                         }
                     }).bind(run)
                 )
@@ -347,7 +360,7 @@ export class RewardPools {
             ),
             new Reward(
                 'Epic',
-                'Critical Boost',
+                'Big Critical Boost',
                 '+2 criticals on grid and multiplier',
                 (() => {
                     run.character.criticalMultiplier += 2;
@@ -388,7 +401,6 @@ export class RewardPools {
             ));
         })
 
-
         let uniqueRewards = [
             new Reward(
                 'Epic',
@@ -403,6 +415,15 @@ export class RewardPools {
                 'Rare',
                 'Valuable combo',
                 'Get 1 gold every combo over 1',
+                (() => { }).bind(run),
+                undefined,
+                undefined,
+                true
+            ),
+            new Reward(
+                'Rare',
+                'Hit Streak',
+                'Consecutive matches from moves counts one bonus piece',
                 (() => { }).bind(run),
                 undefined,
                 undefined,

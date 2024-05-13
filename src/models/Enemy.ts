@@ -1,5 +1,4 @@
 import { Color } from "./Color";
-import { Run } from "./Run";
 import { Stage } from "./Stage";
 
 export interface EnemyActions {
@@ -78,6 +77,38 @@ export class CommonEnemy extends Enemy implements EnemyActions {
         this.currentHealth = this.health;
     }
 
+}
+
+export class MiniBossEnemy extends Enemy implements EnemyActions {
+
+    constructor(number: number, stage: Stage) {
+        super(number, stage);
+
+        this.name = 'Mini Boss';
+        this.color = new Color(235, 152, 78);
+        this.hasDrop = Math.random() > 0.75;
+
+        this.calculateStats(stage);
+    }
+
+    calculateStats(stage: Stage): void {
+        let stageIndex = stage.number - 1;
+        let floorIndex = stage.floor.number - 1;
+
+        let miniBossMultiplier = 1.25 * (floorIndex + 1);
+        this.gold = Math.floor(Math.random() * (25 - 11) + 10);
+
+        let maxHealth: number = 1500 * miniBossMultiplier * (1 + (floorIndex / 2));
+        let minHealth: number = 500 * miniBossMultiplier * (1 + (floorIndex / 2));
+
+        let enemyBaseAttack: number = 15 * (1 + (miniBossMultiplier / 3));
+        let enemyBaseHealth: number = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth);
+
+        this.attack = enemyBaseAttack * (1 + (floorIndex / 2)) * (1 + (stageIndex / 2));
+        this.health = enemyBaseHealth * (1 + (floorIndex / 10)) * (1 + (stageIndex / 100));
+
+        this.currentHealth = this.health;
+    }
 
 }
 

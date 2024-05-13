@@ -1,5 +1,6 @@
 import * as P5 from "p5";
 import { checkPositionInLimit, generateId } from "../utils/Functions";
+import { AnimationStatus } from "./AnimatableObject";
 import { CanvasInfo } from "./CanvasInfo";
 import { Color } from "./Color";
 import { Position } from "./Position";
@@ -14,9 +15,15 @@ export class Dialog {
     options: DialogOption[];
     color: Color;
     keep: boolean;
+    skip: boolean;
     id: string;
 
-    constructor(p5: P5, canvas: CanvasInfo, title: string, message: string, options: DialogOption[], color: Color, keep?: boolean, closeCallback?: () => void) {
+    animationStatus: AnimationStatus = AnimationStatus.NOT_STARTED;
+    frames: number = 0;
+    velocityFade: number = 0;
+    relativeFade: number = 0;
+
+    constructor(p5: P5, canvas: CanvasInfo, title: string, message: string, options: DialogOption[], color: Color, keep?: boolean, skip?: boolean, closeCallback?: () => void) {
         this.p5 = p5;
         this.canvas = canvas;
         this.title = title;
@@ -24,6 +31,7 @@ export class Dialog {
         this.options = options;
         this.color = color;
         this.keep = keep;
+        this.skip = skip
         this.id = generateId();
 
         if (this.keep) {
@@ -35,15 +43,29 @@ export class Dialog {
                 }, 'Close', '', ''
             ));
         }
+
+        if (this.skip) {
+            this.options.push(new DefaultDialogOption(
+                this.canvas.p5, false, new Color(86, 101, 115), () => {
+                    if (closeCallback) {
+                        closeCallback();
+                    }
+                }, 'Skip', '', ''
+            ));
+        }
     }
 
     draw(run?: Run): void {
+        if (this.animationStatus === AnimationStatus.NOT_STARTED) {
+            this.setupAnimation();
+        }
+
         let dialogWidth: number = this.canvas.playfield.x / 2;
         let dialogHeigth: number = this.canvas.playfield.y - (this.canvas.margin * 2);
         let marginX: number = (this.canvas.canvasSize.x / 2) - (dialogWidth / 2)
 
         this.p5.noStroke();
-        this.p5.fill(this.color.value);
+        this.p5.fill([...this.color.value, 255 + this.relativeFade]);
         this.p5.rect(
             marginX,
             this.canvas.margin * 2,
@@ -54,8 +76,8 @@ export class Dialog {
 
         this.p5.textAlign(this.p5.CENTER)
 
-        this.p5.fill(255);
-        this.p5.stroke(0);
+        this.p5.fill(255, 255, 255, 255 + this.relativeFade);
+        this.p5.stroke(0, 0, 0, 255 + this.relativeFade);
         this.p5.strokeWeight(4);
         this.p5.textSize(20)
         this.p5.text(
@@ -64,7 +86,7 @@ export class Dialog {
             this.canvas.margin * 4,
         );
 
-        this.p5.fill(200);
+        this.p5.fill(200, 200, 200, 255 + this.relativeFade);
         this.p5.textSize(16)
         this.p5.text(
             this.message,
@@ -93,7 +115,7 @@ export class Dialog {
             let isMouseOver: boolean = checkPositionInLimit(new Position(this.p5.mouseX, this.p5.mouseY), ...limits)
 
             this.p5.noStroke();
-            this.p5.fill(...(option.disabled ? new Color(86, 101, 115).value : option.color.value), isMouseOver ? 255 : 200);
+            this.p5.fill(...(option.disabled ? new Color(86, 101, 115).value : option.color.value), (isMouseOver ? 255 : 200) + this.relativeFade);
             this.p5.rect(
                 marginX + this.canvas.margin,
                 cumulativeMargin,
@@ -104,8 +126,8 @@ export class Dialog {
 
             if (option instanceof RewardDialogOption) {
                 this.p5.textAlign(this.p5.LEFT)
-                this.p5.fill(option.color.value);
-                this.p5.stroke(0);
+                this.p5.fill([...option.color.value, 255 + this.relativeFade]);
+                this.p5.stroke(0, 0, 0, 255 + this.relativeFade);
                 this.p5.strokeWeight(4);
                 this.p5.textSize(16)
                 this.p5.text(
@@ -118,8 +140,8 @@ export class Dialog {
                     let canAfford: boolean = run?.character.gold >= option.reward.price;
 
                     this.p5.textAlign(this.p5.RIGHT)
-                    this.p5.fill((canAfford ? new Color(244, 208, 63) : new Color(231, 76, 60)).value);
-                    this.p5.stroke(0);
+                    this.p5.fill([...(canAfford ? new Color(244, 208, 63) : new Color(231, 76, 60)).value, 255 + this.relativeFade]);
+                    this.p5.stroke(0, 0, 0, 255 + this.relativeFade);
                     this.p5.strokeWeight(4);
                     this.p5.textSize(16)
                     this.p5.text(
@@ -131,10 +153,23 @@ export class Dialog {
                     option.disabled = !canAfford;
                 }
 
+                if (option.reward.unique) {
+                    this.p5.textAlign(this.p5.LEFT)
+                    this.p5.fill([...new Color(243, 156, 18).value, 255 + this.relativeFade]);
+                    this.p5.stroke(0, 0, 0, 255 + this.relativeFade);
+                    this.p5.strokeWeight(4);
+                    this.p5.textSize(16)
+                    this.p5.text(
+                        'Unique',
+                        (this.canvas.canvasSize.x / 2) - (optionWidth / 2) + this.canvas.padding,
+                        cumulativeMargin + (this.canvas.margin * 3) + (this.canvas.padding / 2),
+                    );
+                }
+
                 this.p5.textAlign(this.p5.CENTER)
 
-                this.p5.fill(255);
-                this.p5.stroke(0);
+                this.p5.fill(255 + this.relativeFade);
+                this.p5.stroke(0, 0, 0, 255 + this.relativeFade);
                 this.p5.strokeWeight(4);
                 this.p5.textSize(20)
                 this.p5.text(
@@ -143,7 +178,7 @@ export class Dialog {
                     cumulativeMargin + (3 * this.canvas.margin),
                 );
 
-                this.p5.fill(200);
+                this.p5.fill(200 + this.relativeFade);
                 this.p5.textSize(16)
 
                 this.p5.text(
@@ -171,8 +206,8 @@ export class Dialog {
                     positonY = cumulativeMargin + optionHeight / 2
                 }
 
-                this.p5.fill(255);
-                this.p5.stroke(0);
+                this.p5.fill(255 + this.relativeFade);
+                this.p5.stroke(0, 0, 0, 255 + this.relativeFade);
                 this.p5.strokeWeight(4);
                 this.p5.textSize(20)
                 this.p5.text(
@@ -181,7 +216,7 @@ export class Dialog {
                     positonY,
                 );
 
-                this.p5.fill(200);
+                this.p5.fill(200, 200, 200, 255 + this.relativeFade);
                 this.p5.textSize(16)
                 this.p5.text(
                     option.subtext,
@@ -189,7 +224,7 @@ export class Dialog {
                     cumulativeMargin + (4 * this.canvas.margin),
                 );
 
-                this.p5.fill(200);
+                this.p5.fill(200, 200, 200, 255 + this.relativeFade);
                 this.p5.textSize(16)
                 this.p5.text(
                     option.subsubtext,
@@ -198,6 +233,30 @@ export class Dialog {
                 );
             }
         });
+
+        if (this.animationStatus === AnimationStatus.IN_PROGRESS) {
+            this.updateAnimationDeltas()
+        }
+    }
+
+    setupAnimation(): void {
+        this.animationStatus = AnimationStatus.IN_PROGRESS;
+        this.frames = 15;
+        this.relativeFade = -255;
+        this.velocityFade = this.relativeFade / this.frames;
+    }
+
+    updateAnimationDeltas(): void {
+        if (this.frames) {
+            this.relativeFade -= this.velocityFade;
+
+            this.frames--;
+            if (this.frames === 0) {
+                this.relativeFade = 0;
+                this.velocityFade = 0;
+                this.animationStatus = AnimationStatus.FINISHED;
+            }
+        }
     }
 }
 
@@ -289,5 +348,28 @@ export class DialogController {
                 run?.updatePlayerStatsAndRewards();
             }
         }
+    }
+
+    rewardListToDialogOption(rewards: Reward[], run: Run, callback?: () => void): DialogOption[] {
+        return rewards.map(
+            (reward: Reward) => {
+                return new RewardDialogOption(
+                    run.p5,
+                    reward,
+                    false,
+                    Reward.rarityColors()[reward.rarity].color,
+                    () => {
+                        if (reward.isActive) {
+                            run.character.activeItem = reward;
+                        } else {
+                            reward.effect();
+                            run.character.rewards.push(reward);
+                        }
+                        if (callback) {
+                            callback();
+                        }
+                    }
+                )
+            });
     }
 }

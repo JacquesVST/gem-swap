@@ -39,7 +39,7 @@ export class AnimatableObject {
         }
     }
 
-    resetAnimationDeltas() {
+    resetAnimationDeltas(): void {
         this.relativeEndPosition = new Position(0, 0);
         this.frames = 0
         this.relativeFade = 0
@@ -51,4 +51,10 @@ export class AnimatableObject {
         }
         this.animationEndCallback = undefined;
     }
+}
+
+export enum AnimationStatus {
+    NOT_STARTED,
+    IN_PROGRESS,
+    FINISHED
 }

@@ -12,6 +12,7 @@ export class Map {
 
     winState: boolean;
     floors: Floor[];
+    branchingFloors: Floor[]
     currentFloorIndex: number;
 
     constructor(floorCount: number, stageCount: number, enemyCount: number, scale: number, run: Run) {
@@ -23,11 +24,22 @@ export class Map {
 
         this.currentFloorIndex = 0;
         this.floors = this.setupFloors();
+        this.branchingFloors = this.setupBranchingFloors();
         this.winState = false
     }
 
     get totalEnemies(): number {
         return this.floorCount * this.stageCount * this.enemyCount;
+    }
+
+    setupBranchingFloors(): Floor[] {
+        return [...Array(this.floorCount)].map(
+            (_: Floor, index: number) => {
+                let floor: Floor = new Floor(index + 1, { ...this });
+                floor.setupBranches(this.stageCount, this.enemyCount);
+                return floor
+            }
+        );
     }
 
     setupFloors(): Floor[] {
