@@ -36,17 +36,17 @@ export class Floor {
         for (let i: number = 0; i < finalStageCount; i++) {
             if (i === 0) {
                 let firstStage: Stage = new EnemyStage(i + 1, { ...this });
-                firstStage.setupBranchedStage(enemyCount, true, false);
+                //firstStage.setupBranchedStage(enemyCount, true, false);
                 stageTree.push([firstStage]);
             } else if (i === finalStageCount - 1) {
                 let finalStage: Stage = new EnemyStage(i + 1, { ...this });
-                finalStage.setupBranchedStage(enemyCount, false, true);
+                //finalStage.setupBranchedStage(enemyCount, false, true);
                 stageTree.push([finalStage]);
             } else {
                 let stages: Stage[] = [];
                 for (let j: number = 0; j < branchCount; j++) {
                     let stage: Stage = new EnemyStage(i + 1, { ...this });
-                    stage.setupBranchedStage(enemyCount, false, false);
+                    //stage.setupBranchedStage(enemyCount, false, false);
                     stages.push(stage);
                 }
                 stageTree.push(stages)
