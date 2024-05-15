@@ -1,20 +1,13 @@
 import { BossEnemy, CommonEnemy, Enemy } from "./Enemy";
 import { Floor } from "./Floor";
 
-export interface StageActions {
-    setupBranchedStage(enemyCount: number, isFirst: boolean, isLast: boolean): void;
-}
 
-export class Stage implements StageActions {
+export class Stage {
     number: number;
     floor: Floor;
     constructor(number: number, floor: Floor) {
         this.number = number;
         this.floor = floor;
-    }
-
-    setupBranchedStage(enemyCount: number, isFirst: boolean, isLast: boolean): void {
-        throw new Error("Method not implemented.");
     }
 }
 
@@ -38,10 +31,6 @@ export class EnemyStage extends Stage {
         );
     }
 
-    setupBranchedStage(enemyCount: number, isFirst: boolean, isLast: boolean): void {
-        throw new Error("Method not implemented.");
-    }
-
 }
 
 export class MiniBossStage extends Stage {
@@ -55,11 +44,6 @@ export class MiniBossStage extends Stage {
         this.currentEnemyIndex = 0;
 
     }
-
-    setupBranchedStage(enemyCount: number, isFirst: boolean, isLast: boolean): void {
-        throw new Error("Method not implemented.");
-    }
-
 }
 
 export class BossStage extends Stage {
@@ -74,9 +58,6 @@ export class BossStage extends Stage {
 
     }
 
-    setupBranchedStage(enemyCount: number, isFirst: boolean, isLast: boolean): void {
-        throw new Error("Method not implemented.");
-    }
 
 }
 
