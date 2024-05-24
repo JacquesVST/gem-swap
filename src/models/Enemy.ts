@@ -1,13 +1,15 @@
 import { Color } from "./Color";
-import { Stage } from "./Stage";
+import { EventEmitter } from "./EventEmitter";
+import { EnemyStage, Stage } from "./Stage";
 
 export interface EnemyActions {
     calculateStats(stage: Stage): void;
 }
 
-export class Enemy {
+export class Enemy extends EventEmitter {
     number: number;
-    stage: Stage;
+    stage: EnemyStage;
+    isLast: boolean;
 
     name: string;
     color: Color;
@@ -18,9 +20,11 @@ export class Enemy {
 
     hasDrop: boolean;
 
-    constructor(number: number, stage: Stage) {
+    constructor(number: number, stage: EnemyStage, isLast: boolean) {
+        super();
         this.number = number;
         this.stage = stage;
+        this.isLast = isLast;
     }
 
     simulateDamage(damage: number): number {
@@ -30,27 +34,25 @@ export class Enemy {
         return damage > this.currentHealth ? this.currentHealth : damage;
     }
 
-    damage(damage: number, damageCallback?: (enemy: Enemy) => void, deathCallback?: () => void): void {
+    damage(damage: number): void {
         if (damage > this.currentHealth) {
             damage = this.currentHealth;
         }
 
         this.currentHealth -= damage;
 
-        if (damageCallback) {
-            damageCallback(this);
-        }
-
-        if (this.currentHealth === 0 && deathCallback) {
-            deathCallback();
+        if (this.currentHealth > 0) {
+            this.emit('EnemyDamaged', this);
+        } else {
+            this.emit('EnemyDied', this);
         }
     }
 }
 
 export class CommonEnemy extends Enemy implements EnemyActions {
 
-    constructor(number: number, stage: Stage) {
-        super(number, stage);
+    constructor(number: number, stage: EnemyStage, isLast: boolean) {
+        super(number, stage, isLast);
 
         this.name = 'Enemy';
         this.color = new Color(86, 101, 115);
@@ -81,12 +83,12 @@ export class CommonEnemy extends Enemy implements EnemyActions {
 
 export class MiniBossEnemy extends Enemy implements EnemyActions {
 
-    constructor(number: number, stage: Stage) {
-        super(number, stage);
+    constructor(number: number, stage: EnemyStage, isLast: boolean) {
+        super(number, stage, isLast);
 
         this.name = 'Mini Boss';
         this.color = new Color(235, 152, 78);
-        this.hasDrop = Math.random() > 0.75;
+        this.hasDrop = Math.random() > 0.50;
 
         this.calculateStats(stage);
     }
@@ -95,13 +97,13 @@ export class MiniBossEnemy extends Enemy implements EnemyActions {
         let stageIndex = stage.number - 1;
         let floorIndex = stage.floor.number - 1;
 
-        let miniBossMultiplier = 1.25 * (floorIndex + 1);
+        let miniBossMultiplier = 1.5 * (floorIndex + 1);
         this.gold = Math.floor(Math.random() * (25 - 11) + 10);
 
         let maxHealth: number = 1500 * miniBossMultiplier * (1 + (floorIndex / 2));
-        let minHealth: number = 500 * miniBossMultiplier * (1 + (floorIndex / 2));
+        let minHealth: number = 1000 * miniBossMultiplier * (1 + (floorIndex / 2));
 
-        let enemyBaseAttack: number = 15 * (1 + (miniBossMultiplier / 3));
+        let enemyBaseAttack: number = 15 * (1 + (miniBossMultiplier / 2));
         let enemyBaseHealth: number = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth);
 
         this.attack = enemyBaseAttack * (1 + (floorIndex / 2)) * (1 + (stageIndex / 2));
@@ -114,8 +116,8 @@ export class MiniBossEnemy extends Enemy implements EnemyActions {
 
 export class BossEnemy extends Enemy implements EnemyActions {
 
-    constructor(number: number, stage: Stage) {
-        super(number, stage);
+    constructor(number: number, stage: EnemyStage, isLast: boolean) {
+        super(number, stage, isLast);
 
         this.name = 'Boss';
         this.color = new Color(87, 49, 214);
@@ -130,10 +132,10 @@ export class BossEnemy extends Enemy implements EnemyActions {
         let bossMultiplier = 2 * (floorIndex + 1);
         this.gold = Math.floor(Math.random() * (25 - 11) + 10);
 
-        let maxHealth: number = 1500 * bossMultiplier * (1 + (floorIndex / 2));
-        let minHealth: number = 500 * bossMultiplier * (1 + (floorIndex / 2));
+        let maxHealth: number = 2000 * bossMultiplier * (1 + (floorIndex / 2));
+        let minHealth: number = 1000 * bossMultiplier * (1 + (floorIndex / 2));
 
-        let enemyBaseAttack: number = 10 * (1 + (bossMultiplier / 3));
+        let enemyBaseAttack: number = 12 * (1 + (bossMultiplier / 3));
         let enemyBaseHealth: number = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth);
 
         this.attack = enemyBaseAttack * (1 + (floorIndex / 2)) * (1 + (stageIndex / 2));

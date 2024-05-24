@@ -89,6 +89,21 @@ export function polygon(x: number, y: number, radius: number, npoints: number, p
     p5.endShape(p5.CLOSE);
 }
 
+export function dottedLine(position1: Position, position2: Position, size: number, gap: number, p5: P5): number {
+    let distance: number = p5.dist(position1.x, position1.y, position2.x, position2.y);
+    let dots: number = Math.floor(distance / gap);
+
+    let xIncrement: number = (position2.x - position1.x) / dots;
+    let yIncrement: number = (position2.y - position1.y) / dots;
+
+    for (let i: number = 0; i <= dots; i++) {
+        p5.ellipse(position1.x + (i * xIncrement), position1.y + (i * yIncrement), p5.map(i, 0, dots, size / 4, size));
+    }
+
+    return dots;
+}
+
+
 export function checkPositionInLimit(position: Position, ...coords: number[]): boolean {
     return position.x > coords[0] && position.x < coords[1] && position.y > coords[2] && position.y < coords[3];
 }
@@ -120,4 +135,9 @@ export function getBestNumbers(): BestNumbers {
 
 export function setBestNumbers(numbers: BestNumbers): void {
     return localStorage.setItem('bests', JSON.stringify(numbers));
+}
+
+export function randomBetween(max: number, min: number): number {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+
 }

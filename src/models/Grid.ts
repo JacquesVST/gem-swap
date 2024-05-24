@@ -3,51 +3,126 @@ import { canReach, checkPositionInLimit, hasConsecutive, polygon, stripesWithBor
 import { CanvasInfo } from "./CanvasInfo";
 import { Cell } from "./Cell";
 import { Color } from "./Color";
-import { Effect } from "./Effect";
-import { BossEnemy } from "./Enemy";
-import { Item } from "./Item";
+import { EffectParams } from "./Effect";
+import { EventEmitter } from "./EventEmitter";
+import { Piece } from "./Piece";
+import { FallPieceAnimationParams, RemovePieceAnimationData, RemovePieceAnimationParams, SwapPieceAnimationParams } from "./PieceAnimation";
 import { Position } from "./Position";
 import { Run } from "./Run";
+import { Stage } from "./Stage";
 
-export class Grid {
+export class Grid extends EventEmitter {
     width: number;
     height: number;
+    canvas: CanvasInfo;
     cells: Cell[][];
-    totalHeight: number;
-    selectedCellPos: Position;
+    selectedCellPosition: Position;
+    runSnapshot: Run;
+    stage: Stage;
 
     verticalCenterPadding: number = 0;
     horizontalCenterPadding: number = 0;
     sideSize: number = 0;
-    isUnstable: boolean = false
+    isUnstable: boolean = false;
 
-    critical: number = 1;
-    bossCritical: number = 0;
-
-    constructor(width: number, height: number, canvas: CanvasInfo) {
+    constructor(width: number, height: number, stage: Stage) {
+        super();
         this.width = width;
         this.height = height;
+        this.stage = stage;
+        this.canvas = CanvasInfo.getInstance();
 
         this.generateEmptyCells();
-        this.calculateSpacing(canvas);
-    }
-
-    get isEmpty(): boolean {
-        return [...this.cells.flat()].every(cell => cell.item === undefined);
+        this.calculateSpacing();
     }
 
     get isFull(): boolean {
-        return [...this.cells.flat()].every((cell: Cell) => cell.item);
+        return [...this.cells.flat()].every((cell: Cell) => cell.piece);
     }
 
-    applyCriticalInBoard(isBoss?: boolean): void {
-        let totalCriticals: number = isBoss ? this.critical + this.bossCritical : this.critical;
-        let criticalsLeft: number = totalCriticals > this.width * this.height ? this.width * this.height : totalCriticals;
+    stabilizeGrid(useCase: string, allowMatches: boolean): void {
+        this.generatePieces(allowMatches);
+        let positionsToApplyGravity: Position[] = this.findToApplyGravity();
+
+        if (positionsToApplyGravity.length === 0) {
+            this.emit('GridStabilized:' + useCase);
+        }
+
+        positionsToApplyGravity.forEach((position: Position, index: number) => {
+            let piece: Piece = this.getPieceByPosition(position);
+            let newPosition: Position = this.getNextAvailablePosition(position);
+            let relativeEndPosition = this.getCellbyPosition(newPosition).canvasPosition.difference(this.getCellbyPosition(position).canvasPosition);
+
+            let distance: number = (newPosition.y - position.y) * 0.3;
+
+            let params: FallPieceAnimationParams = new FallPieceAnimationParams(useCase,
+                {
+                    callNextAction: index === positionsToApplyGravity.length - 1,
+                    position,
+                    newPosition,
+                    allowMatches: allowMatches,
+                }
+            );
+
+            piece.renewPosition(newPosition);
+            piece.setupFallAnimation(10 * distance, relativeEndPosition, params);
+        });
+    }
+
+    findToApplyGravity(): Position[] {
+        let positions: Position[] = [];
+        let canBringRowDown = false;
+
+        for (let y = this.height - 1; y >= 0; y--) {
+            for (let x = 0; x < this.width; x++) {
+                if (y < this.height - 1 && this.cells[x][y].piece && !this.cells[x][y + 1].piece) {
+                    positions.push(this.cells[x][y].position);
+                    canBringRowDown = true;
+                }
+            }
+            if (canBringRowDown) {
+                break;
+            }
+        }
+
+        return positions;
+    }
+
+    getNextAvailablePosition(position: Position): Position {
+        let newPosition: Position = position;
+        for (let y: number = position.y + 1; y < this.height; y++) {
+            newPosition = newPosition.addY(1)
+            let cell: Cell = this.getCellbyPosition(newPosition);
+            if (cell?.piece) {
+                newPosition = newPosition.addY(-1);
+                break;
+            }
+        }
+        return newPosition;
+    }
+
+    animatePullPieceDown(position: Position, newPosition: Position, eventParams: FallPieceAnimationParams): void {
+        let piece: Piece = this.getPieceByPosition(position);
+        let relativeEndPosition = this.getCellbyPosition(newPosition).canvasPosition.difference(this.getCellbyPosition(position).canvasPosition);
+
+        let distance = (newPosition.y - position.y) * 0.3;
+
+        setTimeout(() => {
+            piece.renewPosition(newPosition);
+            piece.setupFallAnimation(10 * distance, relativeEndPosition, eventParams);
+        }, 1 * 15);
+    }
+
+    applyCriticalInGrid(amount: number): void {
+        if (!this.isFull) {
+            return;
+        }
+
+        let criticalsLeft: number = amount > this.width * this.height ? this.width * this.height : amount;
         let chosenCriticals: Position[] = [];
 
         do {
-
-            let randomPosition: Position = new Position(Math.floor(Math.random() * this.width), Math.floor(Math.random() * this.height))
+            let randomPosition: Position = new Position(Math.floor(Math.random() * this.width), Math.floor(Math.random() * this.height));
 
             if (!chosenCriticals.map((position: Position) => position.checksum).includes(randomPosition.checksum)) {
                 chosenCriticals.push(randomPosition);
@@ -58,23 +133,24 @@ export class Grid {
 
         let chosenCriticalsCheck: String[] = chosenCriticals.map((position: Position) => position.checksum);
 
-        this.iterateXtoY((x: number, y: number) => {
-            let item: Item = this.getItemByPosition(new Position(x, y));
+        this.iterateXtoY((position: Position) => {
+            let piece: Piece = this.getPieceByPosition(position);
 
-            if (chosenCriticalsCheck.includes(item?.position?.checksum)) {
-                item.critical = true
+            if (chosenCriticalsCheck.includes(piece?.position?.checksum)) {
+                piece.critical = true;
             } else {
-                item.critical = false;
+                piece.critical = false;
             }
         });
+
+        this.isUnstable = false;
     }
 
-    renew(run: Run) {
+    init(run: Run): void {
         this.generateEmptyCells();
-        this.calculateSpacing(run.canvas);
-        this.init(run, () => {
-            this.applyCriticalInBoard();
-        });
+        this.calculateSpacing();
+        this.setRunSnapshot(run);
+        this.stabilizeGrid('Init', false);
     }
 
     generateEmptyCells(): void {
@@ -88,148 +164,94 @@ export class Grid {
         );
     }
 
-    calculateSpacing(canvas: CanvasInfo): void {
+    calculateSpacing(): void {
         this.verticalCenterPadding = 0;
         this.verticalCenterPadding = 0;
         this.sideSize = 0;
 
         do {
             this.sideSize++;
-            this.horizontalCenterPadding = canvas.playfield.x - (this.width * this.sideSize) - (this.width * canvas.padding) - canvas.padding;
-            this.verticalCenterPadding = canvas.playfield.y - canvas.topUiSize - canvas.bottomUiSize - (this.height * this.sideSize) - (this.height * canvas.padding) - canvas.padding;
+            this.horizontalCenterPadding = this.canvas.playfield.x - (this.width * this.sideSize) - (this.width * this.canvas.padding) - this.canvas.padding;
+            this.verticalCenterPadding = this.canvas.playfield.y - this.canvas.topUiSize - this.canvas.bottomUiSize - (this.height * this.sideSize) - (this.height * this.canvas.padding) - this.canvas.padding;
         } while (this.horizontalCenterPadding - this.width >= 0 && this.verticalCenterPadding - this.height >= 0);
 
-        this.iterateXtoY((x: number, y: number) => {
+        this.iterateXtoY((position: Position) => {
 
-            let currentXMargin = (this.horizontalCenterPadding / 2) + (x * this.sideSize) + (x * canvas.padding) + canvas.padding + canvas.margin;
-            let currentYMargin = canvas.topUiSize + (this.verticalCenterPadding / 2) + (y * this.sideSize) + (y * canvas.padding) + canvas.padding + canvas.margin;
+            let currentXMargin = (this.horizontalCenterPadding / 2) + (position.x * this.sideSize) + (position.x * this.canvas.padding) + this.canvas.padding + this.canvas.margin;
+            let currentYMargin = this.canvas.topUiSize + (this.verticalCenterPadding / 2) + (position.y * this.sideSize) + (position.y * this.canvas.padding) + this.canvas.padding + this.canvas.margin;
 
-            this.cells[x][y].canvasPosition = new Position(currentXMargin, currentYMargin);
+            this.getCellbyPosition(position).canvasPosition = new Position(currentXMargin, currentYMargin);
         });
 
-        this.totalHeight = this.verticalCenterPadding + (this.height * (this.sideSize + canvas.padding)) + canvas.padding;
+        this.canvas.cellSideSize = this.sideSize;
+        this.canvas.totalGridHeight = this.verticalCenterPadding + (this.height * (this.sideSize + this.canvas.padding)) + this.canvas.padding;
     }
 
-    init(run: Run, callback?: () => void): void {
-        this.generateItemsApplyGravityLoop(false, run, callback);
+    setRunSnapshot(run: Run): void {
+        this.runSnapshot = {
+            possibleEffects: run.possibleEffects,
+            possibleShapes: run.possibleShapes
+        } as Run;
     }
 
-    bootstrapStabilize(initialMatches: Item[][], run: Run, matchesCallback?: (matches: Item[][]) => void, moveCallback?: () => void) {
-        this.isUnstable = true
-        if (initialMatches) {
-            run.consecutiveCombo++;
-        }
-        this.stabilizeAfterMove(initialMatches, run, matchesCallback, moveCallback);
-    }
-
-    stabilizeAfterMove(initialMatches: Item[][], run: Run, matchesCallback?: (matches: Item[][]) => void, moveCallback?: () => void): void {
-        let matchesToRemove: Item[][] = initialMatches;
-        if (matchesToRemove.length === 0) {
-            run.consecutiveCombo = run.combo === 0 ? 0 : run.consecutiveCombo++;
-            this.isUnstable = false
-            if (moveCallback) {
-                moveCallback();
-            }
-        }
-
-        matchesToRemove.forEach((matchToRemove: Item[], matchIndex: number) => {
-            matchToRemove.forEach((itemToRemove: Item, itemIndex: number) => {
-                this.animateRemove(itemToRemove, run, () => {
-                    this.removeItem(itemToRemove?.position, () => {
-                        run.inAnimation = false
-                        if (itemIndex === matchToRemove.length - 1) {
-                            this.generateItemsApplyGravityLoop(true, run, () => {
-                                this.stabilizeAfterMove(this.findMatches(true), run, matchesCallback, moveCallback)
-                            })
-                            if (matchIndex === matchesToRemove.length - 1 && matchesCallback) {
-                                matchesCallback(matchesToRemove);
-                            }
-                        }
-                    });
-                })
-            })
-        });
-
-    }
-
-    generateItemsApplyGravityLoop(allowMatches: boolean, run: Run, callback?: () => void): void {
-        this.generateItems(run, allowMatches, () => {
-            let positionsToApplyGravity: Position[] = this.findToApplyGravity();
-            if (positionsToApplyGravity.length === 0 && callback) {
-                callback();
-            }
-            positionsToApplyGravity.forEach((position: Position, index: number, array: Position[]) => {
-                run.inAnimation = true
-                let newPosition: Position = this.getNextAvailablePosition(position);
-                this.animatePullItemDown(position, newPosition, () => {
-                    this.pullItemDown(position, newPosition, () => {
-                        if (index === array.length - 1) {
-                            run.inAnimation = false
-                            setTimeout(() => {
-                                this.generateItemsApplyGravityLoop(allowMatches, run, callback)
-                            }, 0);
-                        }
-                    })
-                })
+    reapplyPositionsToPieces(): void {
+        this.cells.forEach((cells: Cell[], x: number) => {
+            cells.forEach((cell: Cell, y: number) => {
+                cell.position = new Position(x, y);
+                cell.piece?.renewPosition(cell.position);
+                this.calculateSpacing();
             })
         })
     }
 
-    reapplyPositionsToItems(): void {
-        this.cells.forEach((cells: Cell[]) => {
-            cells.forEach((cell: Cell) => {
-                cell.item?.renewPosition(cell.position);
-            })
-        })
-    }
+    findMatches(useCase: string, validate?: boolean): void {
+        let matches: Piece[][] = [];
 
-    findMatches(validate?: boolean): Item[][] {
-        let matches: Item[][] = [];
+        this.iterateYtoX((position: Position) => {
+            let cell = this.getCellbyPosition(position);
 
-        this.iterateYtoX((x: number, y: number) => {
-            let cell = this.getCellbyPosition(new Position(x, y));
-
-            if (cell.item) {
-                let item: Item = cell.item
-                let horizontalMatch: Item[] = [item]
+            if (cell.piece) {
+                let piece: Piece = cell.piece;
+                let horizontalMatch: Piece[] = [piece];
 
                 // horizontal match
-                let sameShape: boolean = true
+                let sameShape: boolean = true;
                 let increment: number = 1;
-                while (sameShape && (increment + x) < this.width) {
-                    let nextItem: Item = this.getNeighbourCell(cell, increment, 0).item
-                    sameShape = nextItem && item.shape.sides === nextItem.shape.sides;
+                while (sameShape && (increment + position.x) < this.width) {
+                    let nextPiece: Piece = this.getNeighbourCell(cell, increment, 0).piece;
+                    sameShape = nextPiece && piece.shape.id === nextPiece.shape.id;
                     if (sameShape) {
-                        horizontalMatch.push(nextItem);
+                        horizontalMatch.push(nextPiece);
                         increment++;
                     }
                 }
 
                 // vertical match
-                sameShape = true
+                sameShape = true;
                 increment = 1;
-                let verticalMatch: Item[] = [item]
-                while (sameShape && increment + y < this.height) {
-                    let nextItem: Item = this.getNeighbourCell(cell, 0, increment).item
-                    sameShape = nextItem && item.shape.sides === nextItem.shape.sides;
+                let verticalMatch: Piece[] = [piece];
+                while (sameShape && increment + position.y < this.height) {
+                    let nextPiece: Piece = this.getNeighbourCell(cell, 0, increment).piece;
+                    sameShape = nextPiece && piece.shape.id === nextPiece.shape.id;
                     if (sameShape) {
-                        verticalMatch.push(nextItem);
+                        verticalMatch.push(nextPiece);
                         increment++;
                     }
                 }
 
-                let omniMatch: Item[] = [...(horizontalMatch.length > 2 ? horizontalMatch : []), ...(verticalMatch.length > 2 ? verticalMatch : [])]
+                let omniMatch: Piece[] = [...(horizontalMatch.length > 2 ? horizontalMatch : []), ...(verticalMatch.length > 2 ? verticalMatch : [])];
 
                 if (omniMatch.length) {
-                    matches.push(omniMatch)
+                    matches.push(omniMatch);
                 }
             }
         });
 
-        return validate ? this.sanitizeMatches(matches) : matches;
+        matches = validate ? this.sanitizeMatches(matches) : matches;
+        this.emit('MatchesFound:' + useCase, matches);
     }
 
-    sanitizeMatches(matches: Item[][]): Item[][] {
+    sanitizeMatches(matches: Piece[][]): Piece[][] {
         if (matches.length <= 1) {
             return matches;
         }
@@ -237,14 +259,14 @@ export class Grid {
         while (matches.reduce(this.mergeMatches).length !== matches.reduce(this.concatMatches).length) {
 
             rootLoop:
-            for (let i = 0; i < matches.length - 1; i++) {
-                let match1: Item[] = matches[i];
+            for (let i: number = 0; i < matches.length - 1; i++) {
+                let match1: Piece[] = matches[i];
 
-                for (let j = i + 1; j < matches.length; j++) {
-                    let match2: Item[] = matches[j];
+                for (let j: number = i + 1; j < matches.length; j++) {
+                    let match2: Piece[] = matches[j];
 
                     if (this.mergeMatches(match1, match2).length !== match1.concat(match2).length) {
-                        matches = matches.filter((match: Item[]) => {
+                        matches = matches.filter((match: Piece[]) => {
                             let check: string = this.getMatchChecksum(match);
                             let m1: string = this.getMatchChecksum(match1);
                             let m2: string = this.getMatchChecksum(match2);
@@ -258,91 +280,37 @@ export class Grid {
             }
         }
 
+        matches.forEach((match: Piece[]) => {
+            match = match.sort((piece: Piece) => !!piece.effect ? -1 : 1);
+        })
+
         return matches;
     }
 
-    mergeMatches(match1: Item[], match2: Item[]): Item[] {
+    mergeMatches(match1: Piece[], match2: Piece[]): Piece[] {
         return Array.from(new Set(match1.concat(match2)));
     }
 
-    concatMatches(match1: Item[], match2: Item[]): Item[] {
+    concatMatches(match1: Piece[], match2: Piece[]): Piece[] {
         return match1.concat(match2);
     }
 
-    getMatchChecksum(match: Item[]): string {
-        return match.map((item: Item) => item.position.checksum).join('-');
+    getMatchChecksum(match: Piece[]): string {
+        return match.map((piece: Piece) => piece.position.checksum).join('-');
     }
 
-    animateRemove(item: Item, run: Run, callback?: () => void) {
-        if (item) {
-            run.sounds['match'].play();
-            run.inAnimation = true;
-            item.animationEndCallback = callback
-            item.setupNewAnimation(10, new Position(0, 0), 255);
-        } else {
-            if (callback) {
-                callback()
-            }
-        }
-    }
-
-    removeItem(position: Position, callback?: () => void): void {
-        let item = this.getItemByPosition(position);
-        let effect: Effect = item?.effect;
-        let removedItem: Item = { ...item } as Item;
-        this.setCellItem(position, undefined)
-
-        if (effect) {
-            effect.effect(removedItem);
-        }
-
-        if (callback) {
-            callback();
-        }
-    }
-
-    findToApplyGravity(): Position[] {
-        let positions: Position[] = [];
-        let canBringRowDown = false
-
-        for (let y = this.height - 1; y >= 0; y--) {
-            for (let x = 0; x < this.width; x++) {
-                if (y < this.height - 1 && this.cells[x][y].item && !this.cells[x][y + 1].item) {
-                    positions.push(this.cells[x][y].position);
-                    canBringRowDown = true;
-                }
-            }
-            if (canBringRowDown) {
-                break
-            }
-        }
-
-        return positions;
-    }
-
-    getNextAvailablePosition(position: Position): Position {
-        let newPosition: Position = position
-        for (let y: number = position.y + 1; y < this.height; y++) {
-            newPosition = newPosition.addY(1)
-            let cell: Cell = this.getCellbyPosition(newPosition)
-            if (cell?.item) {
-                newPosition = newPosition.addY(-1)
-                break
-            }
-        }
-        return newPosition;
-    }
-
-    generateItems(run: Run, allowMatches: boolean = true, callback?: () => void): void {
+    generatePieces(allowMatches: boolean = true): boolean {
+        let generated: boolean = false;
         if (allowMatches) {
             for (let x = 0; x < this.width; x++) {
                 let position: Position = new Position(x, 0)
-                if (this.getItemByPosition(position) === undefined) {
-                    this.setCellItem(position, Item.generateRandomItem(position, this.sideSize, run));
+                if (this.getPieceByPosition(position) === undefined) {
+                    generated = true;
+                    this.setCellPiece(position, Piece.generateRandomPiece(position, this.sideSize, this.runSnapshot));
                 }
             }
         } else {
-            let row: Item[];
+            let row: Piece[];
             let isHorizontalValid: boolean;
 
             do {
@@ -350,135 +318,219 @@ export class Grid {
                 row = [];
 
                 for (let x = 0; x < this.width; x++) {
-                    let position: Position = new Position(x, 0)
-                    if (this.getItemByPosition(position) === undefined) {
+                    let position: Position = new Position(x, 0);
+                    if (this.getPieceByPosition(position) === undefined) {
 
-                        let generatedItem: Item;
+                        let generatedPiece: Piece;
                         let isVerticalValid: boolean;
 
                         do {
                             isVerticalValid = true;
-                            generatedItem = Item.generateRandomItem(this.cells[x][0].position, this.sideSize, run);
+                            generatedPiece = Piece.generateRandomPiece(this.cells[x][0].position, this.sideSize, this.runSnapshot);
 
-                            let lowerMostPosition: Position = this.getNextAvailablePosition(generatedItem.position);
+                            let lowerMostPosition: Position = this.getNextAvailablePosition(generatedPiece.position);
                             let nextCell: Cell = this.getCellbyPosition(lowerMostPosition.addY(1));
-                            if (nextCell?.item?.shape?.id === generatedItem.shape.id) {
+                            if (nextCell?.piece?.shape?.id === generatedPiece.shape.id) {
                                 nextCell = this.getCellbyPosition(nextCell.position.addY(1));
-                                if (nextCell?.item?.shape?.id === generatedItem.shape.id) {
-                                    isVerticalValid = false
+                                if (nextCell?.piece?.shape?.id === generatedPiece.shape.id) {
+                                    isVerticalValid = false;
                                 }
                             }
 
                         } while (!isVerticalValid);
 
-                        row.push(generatedItem);
+                        row.push(generatedPiece);
                     }
                 }
 
-                let rowShapeIds: string[] = row.map((item: Item) => item.shape.id);
-                isHorizontalValid = !hasConsecutive(rowShapeIds, 3)
+                let rowShapeIds: string[] = row.map((piece: Piece) => piece.shape.id);
+                isHorizontalValid = !hasConsecutive(rowShapeIds, 3);
 
             } while (!isHorizontalValid);
 
-            row.forEach((item: Item) => {
-                this.setCellItem(item.position, item);
+            row.forEach((piece: Piece) => {
+                generated = true;
+                this.setCellPiece(piece.position, piece);
             })
 
         }
 
-        if (callback) {
-            callback();
-        }
+        return generated;
     }
 
-    validateSwap(position1: Position, position2: Position, invalid: () => void, valid: () => void): boolean {
+    validateSwap(position1: Position, position2: Position): boolean {
         if (position1.checksum === position2.checksum) {
-            if (invalid) {
-                invalid();
-                return false;
-            }
+            return false;
         }
 
         if (!canReach(position1, position2)) {
-            if (invalid) {
-                invalid();
-                return false;
-            }
+            return false;
         }
 
-        let item1: Item | undefined = this.getItemByPosition(position1)
-        let item2: Item | undefined = this.getItemByPosition(position2)
+        let piece1: Piece | undefined = this.getPieceByPosition(position1);
+        let piece2: Piece | undefined = this.getPieceByPosition(position2);
 
-        if (item1 && item2 && item1.shape.id === item2.shape.id) {
-            if (invalid) {
-                invalid();
-                return false;
-            }
-        }
-
-        if (valid) {
-            valid();
+        if (!piece1 || !piece2) {
+            return false;
         }
 
         return true;
     }
 
-    getAnimateSwapData(position1: Position, position2: Position): AnimateSwapData {
-        let cell1: Cell = this.getCellbyPosition(position1)
-        let cell2: Cell = this.getCellbyPosition(position2)
-        let item1: Item | undefined = this.getItemByPosition(position1)?.renewPosition(position2);
-        let item2: Item | undefined = this.getItemByPosition(position2)?.renewPosition(position1);
-        return { item1, item2, cell1, cell2, frames: 10 }
+    getSwapDataFromPositions(position1: Position, position2: Position): SwapData {
+        let cell1: Cell = this.getCellbyPosition(position1);
+        let cell2: Cell = this.getCellbyPosition(position2);
+        let piece1: Piece | undefined = this.getPieceByPosition(position1)?.renewPosition(position2);
+        let piece2: Piece | undefined = this.getPieceByPosition(position2)?.renewPosition(position1);
+        return { piece1, piece2, cell1, cell2 };
     }
 
-    animateSwap(animateSwapData: AnimateSwapData, run: Run, callback: () => void): void {
-        run.inAnimation = true
-        let { item1, item2, cell1, cell2, frames } = animateSwapData;
+    swap(swapData: SwapData): void {
+        this.setCellPiece(swapData.cell1.position, swapData.piece2);
+        this.setCellPiece(swapData.cell2.position, swapData.piece1);
 
-        if (item1) {
-            item1.animationEndCallback = () => setTimeout(callback, 0);
-            item1.setupNewAnimation(frames, cell2.canvasPosition.difference(cell1.canvasPosition))
-        }
+        this.emit('SwapDone');
 
-        if (item2) {
-            item2.setupNewAnimation(frames, cell2.canvasPosition.minus(cell1.canvasPosition))
-        }
-
+        this.reapplyPositionsToPieces();
+        setTimeout(() => {
+            this.findMatches('Swap', true);
+        }, 0)
     }
 
-    swap(swapData: SwapData, callback: () => void): void {
+    pullPieceDown(params: FallPieceAnimationParams): void {
+        this.setCellPiece(params.data.newPosition, this.getPieceByPosition(params.data.position).renewPosition(params.data.newPosition));
+        this.setCellPiece(params.data.position, undefined);
 
-        this.setCellItem(swapData.position1, swapData.item2);
-        this.setCellItem(swapData.position2, swapData.item1);
 
-        if (callback) {
-            callback();
+        if (params.data.callNextAction) {
+            this.stabilizeGrid(params.useCase, params.data.allowMatches);
         }
     }
 
-    animatePullItemDown(position: Position, newPosition: Position, callback: () => void): void {
-        let item: Item = this.getItemByPosition(position).renewPosition(newPosition);
-        let relativeEndPosition = this.getCellbyPosition(newPosition).canvasPosition.difference(this.getCellbyPosition(position).canvasPosition);
-
-        let distance = (newPosition.y - position.y) * 0.3
-
-        item.animationEndCallback = callback;
-        item.setupNewAnimation(10 * distance, relativeEndPosition);
+    animateRemove(piece: Piece, params: RemovePieceAnimationParams): void {
+        piece.setupRemoveAnimation(10, 255, params);
     }
 
-    pullItemDown(position: Position, newPosition: Position, callback: () => void): void {
+    removePiece(useCase: string, data: RemovePieceAnimationData): void {
+        this.setCellPiece(data.position, undefined);
 
-        let item: Item = this.getItemByPosition(position);
-
-        this.setCellItem(newPosition, item);
-        this.setCellItem(position, undefined);
-
-        if (callback) {
-            callback();
+        if (data.callNextAction) {
+            this.emit('MatchesRemoved:' + useCase, data.matches, this.id);
         }
     }
 
-    iterateXtoY(callback: (x: number, y: number) => void, breakX?: (x: number) => boolean, breakY?: (x: number, y: number) => boolean): void {
+    removeMatches(matches: Piece[][], useCase: string): void {
+        if (matches.length) {
+            let firstEffectMatch: Piece[] = this.findEffectMatchInMatches(matches);
+            if (firstEffectMatch) {
+                let firstEffectPiece: Piece = this.findEffectPieceInMatch(firstEffectMatch);
+                this.resolveEffects(firstEffectPiece, firstEffectMatch, matches);
+                return;
+            }
+        }
+
+        matches.forEach((matchToRemove: Piece[], matchIndex: number) => {
+            matchToRemove.forEach((pieceToRemove: Piece, pieceIndex: number) => {
+                let params: RemovePieceAnimationParams = new RemovePieceAnimationParams(useCase, {
+                    callNextAction: pieceIndex === matchToRemove.length - 1 && matchIndex === matches.length - 1,
+                    position: pieceToRemove.position,
+                    matches: matches
+                });
+                this.animateRemove(pieceToRemove, params);
+            })
+        });
+    }
+
+    findEffectMatchInMatches(matches: Piece[][]): Piece[] {
+        return matches.find((match: Piece[]) => match.some((piece: Piece) => piece?.effect));
+    }
+
+    findEffectPieceInMatch(match: Piece[]): Piece {
+        return match.find((piece: Piece) => piece?.effect);
+    }
+
+    resolveEffects(piece: Piece, match: Piece[], matches: Piece[][]): void {
+        piece.effect.effect(new EffectParams(piece, match, matches));
+    }
+
+    eliminateShape(id: string): void {
+        let match: Piece[] = [];
+        this.iterateXtoY((position: Position) => {
+            let piece: Piece = this.getPieceByPosition(position);
+            if (piece?.shape?.id === id) {
+                match.push(piece);
+            }
+        });
+        this.removeMatches([match], 'Loop');
+    }
+
+    clearRow(params: EffectParams): void {
+        let matchIndex: number = params.matches.findIndex((match: Piece[]) => this.getMatchChecksum(match) === this.getMatchChecksum(params.match));
+
+        let newMatches: Piece[][] = params.matches;
+        let newMatch: Piece[] = [];
+        this.iterateXtoY((position: Position) => {
+            if (position.y === params.piece.position.y) {
+                newMatch.push(this.getPieceByPosition(position));
+            }
+        })
+
+        newMatch = this.mergeMatches(newMatch, params.match);
+
+        newMatch.forEach((piece: Piece) => {
+            if (piece.position.checksum === params.piece.position.checksum) {
+                piece.effect = undefined;
+            }
+        });
+
+        newMatches[matchIndex] = newMatch;
+
+        this.removeMatches(this.sanitizeMatches(newMatches), 'Loop');
+    }
+
+    clearColumn(params: EffectParams): void {
+        let matchIndex: number = params.matches.findIndex((match: Piece[]) => this.getMatchChecksum(match) === this.getMatchChecksum(params.match));
+
+        let newMatches: Piece[][] = params.matches;
+        let newMatch: Piece[] = [];
+        this.iterateXtoY((position: Position) => {
+            if (position.x === params.piece.position.x) {
+                newMatch.push(this.getPieceByPosition(position));
+            }
+        })
+
+        newMatch = this.mergeMatches(newMatch, params.match);
+
+        newMatch.forEach((piece: Piece) => {
+            if (piece.position.checksum === params.piece.position.checksum) {
+                piece.effect = undefined;
+            }
+        });
+
+        newMatches[matchIndex] = newMatch;
+
+        this.removeMatches(this.sanitizeMatches(newMatches), 'Loop');
+    }
+
+    clearGrid(useCase: string): void {
+        this.emit('ClearingGrid:' + useCase);
+        this.iterateXtoY((position: Position) => {
+            let numericPosition: number = (position.x + 1) * (position.y + 1);
+            setTimeout(() => {
+                let params: RemovePieceAnimationParams = new RemovePieceAnimationParams(
+                    useCase,
+                    {
+                        callNextAction: position.x === this.width - 1 && position.y === this.height - 1,
+                        position: position,
+                        matches: []
+                    },
+                );
+                this.animateRemove(this.getPieceByPosition(position), params);
+            }, numericPosition * 15);
+        });
+    }
+
+    iterateXtoY(callback: (position: Position) => void, breakX?: (x: number) => boolean, breakY?: (x: number, y: number) => boolean): void {
         for (let x = 0; x < this.width; x++) {
             if (breakX && breakX(x)) {
                 break;
@@ -487,12 +539,12 @@ export class Grid {
                 if (breakY && breakY(x, y)) {
                     break;
                 }
-                callback(x, y);
+                callback(new Position(x, y));
             }
         }
     }
 
-    iterateYtoX(callback: (x: number, y: number) => void, breakY?: (y: number) => boolean, breakX?: (x: number, y: number) => boolean): void {
+    iterateYtoX(callback: (position: Position) => void, breakY?: (y: number) => boolean, breakX?: (x: number, y: number) => boolean): void {
         for (let y = 0; y < this.height; y++) {
             if (breakY && breakY(y)) {
                 break;
@@ -501,12 +553,13 @@ export class Grid {
                 if (breakX && breakX(x, y)) {
                     break;
                 }
-                callback(x, y);
+                callback(new Position(x, y));
             }
         }
     }
 
-    draw(canvas: CanvasInfo, p5: P5, hasDialogOpen: boolean = false): void {
+    draw(hasDialogOpen: boolean = false): void {
+        let p5: P5 = this.canvas.p5;
         this.cells.flat().forEach((cell: Cell) => {
             p5.noStroke();
             let limits: number[] = [
@@ -516,67 +569,68 @@ export class Grid {
                 cell.canvasPosition.y + this.sideSize,
             ];
 
-            let critical: boolean = this.getItemByPosition(cell.position)?.critical;
+            let critical: boolean = this.getPieceByPosition(cell.position)?.critical;
 
             let color1: Color = critical ? new Color(203, 67, 53) : new Color(136, 78, 160);
             let color2: Color = critical ? new Color(236, 112, 99) : new Color(175, 122, 197);
 
-            let highlight: boolean = (!hasDialogOpen && checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...limits)) || (this.selectedCellPos ? cell.position.checksum === this.selectedCellPos.checksum : false);
+            let highlight: boolean = (!hasDialogOpen && checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...limits)) || (this.selectedCellPosition ? cell.position.checksum === this.selectedCellPosition.checksum : false);
 
-            if (cell?.item?.effect) {
-                if (['Vertical AOE', 'Horizontal AOE'].includes(cell.item.effect.id)) {
+            if (cell?.piece?.effect) {
+                if (['Vertical AOE', 'Horizontal AOE'].includes(cell.piece.effect.id)) {
                     stripesWithBorderRadius(
                         cell.canvasPosition,
                         new Position(this.sideSize, this.sideSize),
-                        canvas.radius,
+                        this.canvas.radius,
                         6,
-                        cell.item.effect.id === 'Horizontal AOE',
+                        cell.piece.effect.id === 'Horizontal AOE',
                         color1,
                         color2,
                         highlight ? 200 : 255,
                         p5
-                    )
+                    );
                 }
             } else {
-                p5.fill([...color1.value, highlight ? 200 : 255])
+                p5.fill([...color1.value, highlight ? 200 : 255]);
                 p5.rect(
                     cell.canvasPosition.x,
                     cell.canvasPosition.y,
                     this.sideSize,
                     this.sideSize,
-                    canvas.radius
+                    this.canvas.radius
                 );
 
             }
         });
     }
 
-    drawItems(p5: P5): void {
-        this.cells.flat().map((cell: Cell) => cell.item).forEach((item: Item) => {
-            if (item) {
-                let cellRef: Cell = this.getCellbyPosition(item.position);
+    drawPieces(): void {
+        let p5: P5 = this.canvas.p5;
+        this.cells.flat().map((cell: Cell) => cell.piece).forEach((piece: Piece) => {
+            if (piece) {
+                let cellRef: Cell = this.getCellbyPosition(piece.position);
                 p5.strokeWeight(2);
-                p5.stroke(0, 0, 0, 255 - item.additiveFade);
-                p5.fill(item.shape.color.r, item.shape.color.g, item.shape.color.b, 255 - item.additiveFade);
+                p5.stroke(0, 0, 0, 255 - piece.additiveFade);
+                p5.fill(piece.shape.color.r, piece.shape.color.g, piece.shape.color.b, 255 - piece.additiveFade);
                 polygon(
-                    cellRef.canvasPosition.x + (this.sideSize / 2) + item.relativeEndPosition.x,
-                    cellRef.canvasPosition.y + (this.sideSize / 2) + item.relativeEndPosition.y,
-                    item.sideSize,
-                    item.shape.sides,
+                    cellRef.canvasPosition.x + (this.sideSize / 2) + piece.relativeEndPosition.x,
+                    cellRef.canvasPosition.y + (this.sideSize / 2) + piece.relativeEndPosition.y,
+                    piece.sideSize,
+                    piece.shape.sides,
                     p5
                 );
-                item.updatePosition();
+                piece.updatePosition();
 
-                if (item.critical) {
-                    p5.textAlign(p5.CENTER, p5.CENTER)
+                if (piece.critical) {
+                    p5.textAlign(p5.CENTER, p5.CENTER);
                     p5.noStroke();
                     p5.fill(0);
-                    p5.textSize(25)
+                    p5.textSize(25);
                     p5.text(
                         '!',
-                        cellRef.canvasPosition.x + (this.sideSize / 2) + item.relativeEndPosition.x,
-                        cellRef.canvasPosition.y + (this.sideSize / 2) + item.relativeEndPosition.y,
-                    )
+                        cellRef.canvasPosition.x + (this.sideSize / 2) + piece.relativeEndPosition.x,
+                        cellRef.canvasPosition.y + (this.sideSize / 2) + piece.relativeEndPosition.y,
+                    );
                 }
             }
         });
@@ -591,14 +645,14 @@ export class Grid {
         ) {
             return this.cells[position.x][position.y];
         }
-        return undefined
+        return undefined;
     }
 
-    setCellItem(position: Position, item: Item | undefined): void {
-        this.cells[position.x][position.y].item = item;
+    setCellPiece(position: Position, piece: Piece | undefined): void {
+        this.cells[position.x][position.y].piece = piece;
     }
 
-    getItemByPosition(position: Position): Item | undefined {
+    getPieceByPosition(position: Position): Piece | undefined {
         if (
             position &&
             position.x >= 0 &&
@@ -606,9 +660,9 @@ export class Grid {
             position.y >= 0 &&
             position.y < this.height
         ) {
-            return this.cells[position.x][position.y].item;
+            return this.cells[position.x][position.y].piece;
         }
-        return undefined
+        return undefined;
     }
 
     getNeighbourCell(cell: Cell, xOffset: number = 0, yOffset: number = 0): Cell {
@@ -622,88 +676,28 @@ export class Grid {
         return undefined;
     }
 
-    mouseClickedGrid(position: Position, run: Run): void {
-        if (!this.isUnstable) {
-            let clickFound: boolean = false;
-            run.grid.iterateXtoY((x: number, y: number) => {
-                let cell: Cell = run.grid.cells[x][y];
+    playerSwap(position1: Position, position2: Position): void {
+        let validatedSwap: boolean = this.validateSwap(position1, position2);
+        this.emit('SwapValidated', validatedSwap);
 
-                let limits: number[] = [
-                    cell.canvasPosition.x,
-                    cell.canvasPosition.x + run.grid.sideSize,
-                    cell.canvasPosition.y,
-                    cell.canvasPosition.y + run.grid.sideSize
-                ]
+        if (validatedSwap) {
+            let swapData: SwapData = this.getSwapDataFromPositions(position1, position2);
 
-                if (checkPositionInLimit(position, ...limits)) {
-                    clickFound = true
+            if (swapData.piece1) {
+                swapData.piece1.setupSwapAnimation(10, swapData.cell2.canvasPosition.difference(swapData.cell1.canvasPosition), new SwapPieceAnimationParams({ callNextAction: true, swapData }));
+            }
 
-                    if (!run.grid.selectedCellPos) {
-                        run.stackCombo = false
-                        run.sounds['select'].play();
-                        run.grid.selectedCellPos = cell.position
-
-                        run.updateCombo([]);
-                        run.updateDamage(0);
-                    } else {
-                        run.stackCombo = true
-                        this.playerSwap(run, cell.position, run.grid.selectedCellPos);
-                        run.grid.selectedCellPos = undefined
-                        position = new Position(0, 0)
-                    }
-                }
-            }, () => clickFound);
-        } else {
-            run.sounds['noMove'].play();
+            if (swapData.piece2) {
+                swapData.piece2.setupSwapAnimation(10, swapData.cell2.canvasPosition.minus(swapData.cell1.canvasPosition), new SwapPieceAnimationParams({ callNextAction: false }));
+            }
         }
     }
 
-    playerSwap(run: Run, position1: Position, position2: Position): void {
-        let swapValid: boolean = this.validateSwap(position1, position2, () => {
-            run.sounds['noMove'].play();
-        }, () => {
-            run.sounds['move'].play();
-        });
-
-        if (swapValid) {
-            let animateSwapData: AnimateSwapData = this.getAnimateSwapData(position1, position2);
-            this.animateSwap(animateSwapData, run, () => {
-                let swapData: SwapData = {
-                    item1: animateSwapData.item1,
-                    item2: animateSwapData.item2,
-                    position1,
-                    position2
-                };
-
-                this.swap(swapData, () => {
-                    run.inAnimation = false
-                    this.bootstrapStabilize(this.findMatches(true), run, (matches: Item[][]) => {
-                        run.processMacthList(matches)
-                    }, () => {
-                        setTimeout(() => {
-                            this.reapplyPositionsToItems();
-                            this.applyCriticalInBoard(run?.findEnemy() instanceof BossEnemy);
-                        }, 0)
-                        run.updatePlayerMoves();
-                    })
-                })
-            })
-        }
-    }
-
-}
-
-export interface AnimateSwapData {
-    item1: Item;
-    item2: Item;
-    cell1: Cell;
-    cell2: Cell;
-    frames: number;
 }
 
 export interface SwapData {
-    item1: Item;
-    item2: Item;
-    position1: Position;
-    position2: Position;
+    piece1: Piece;
+    piece2: Piece;
+    cell1: Cell;
+    cell2: Cell;
 }

@@ -1,92 +1,336 @@
+import { checkPositionInLimit } from "../utils/Functions";
+import { Cell } from "./Cell";
+import { DialogOption, NavigationDialogOption } from "./Dialog";
+import { EffectParams } from "./Effect";
 import { BossEnemy, Enemy } from "./Enemy";
+import { ConfigureListeners, EventEmitter } from "./EventEmitter";
 import { Floor } from "./Floor";
-import { Run } from "./Run";
+import { Grid } from "./Grid";
+import { Piece } from "./Piece";
+import { FallPieceAnimationParams, RemovePieceAnimationParams, SwapPieceAnimationParams } from "./PieceAnimation";
+import { Position } from "./Position";
+import { Run, RunConfig } from "./Run";
 import { EnemyStage } from "./Stage";
 
-export class Map {
+export class Map extends EventEmitter implements ConfigureListeners {
     floorCount: number;
     stageCount: number;
     enemyCount: number;
+    gridX: number;
+    gridY: number;
     scale: number;
     run: Run;
 
     winState: boolean;
     floors: Floor[];
-    branchingFloors: Floor[]
     currentFloorIndex: number;
 
-    constructor(floorCount: number, stageCount: number, enemyCount: number, scale: number, run: Run) {
-        this.floorCount = floorCount;
-        this.stageCount = stageCount;
-        this.enemyCount = enemyCount;
-        this.scale = scale
-        this.run = run
+    constructor(config: RunConfig, scale: number, run: Run) {
+        super()
+        this.floorCount = config.floors;
+        this.stageCount = config.stages;
+        this.enemyCount = config.enemies;
+        this.gridX = config.gridX;
+        this.gridY = config.gridY;
+        this.scale = scale;
+        this.run = run;
 
         this.currentFloorIndex = 0;
         this.floors = this.setupFloors();
-        this.branchingFloors = this.setupBranchingFloors();
-        this.winState = false
+
+        this.configureListeners();
     }
 
-    get totalEnemies(): number {
-        return this.floorCount * this.stageCount * this.enemyCount;
-    }
+    configureListeners(): void {
 
-    setupBranchingFloors(): Floor[] {
-        return [...Array(this.floorCount)].map(
-            (_: Floor, index: number) => {
-                let floor: Floor = new Floor(index + 1, { ...this });
-                floor.setupBranches(this.stageCount, this.enemyCount);
-                return floor
+        // Enemy damaged events
+        this.on('CommonEnemy:EnemyDamaged', (enemy: Enemy) => {
+            this.emit('EnemyDamaged', enemy);
+        });
+
+        this.on('MiniBossEnemy:EnemyDamaged', (enemy: Enemy) => {
+            this.emit('EnemyDamaged', enemy);
+        });
+
+        this.on('BossEnemy:EnemyDamaged', (enemy: Enemy) => {
+            this.emit('EnemyDamaged', enemy);
+        });
+
+        // Enemy died events
+        this.on('CommonEnemy:EnemyDied', (enemy: Enemy) => {
+            this.emit('EnemyDied', enemy);
+        });
+
+        this.on('MiniBossEnemy:EnemyDied', (enemy: Enemy) => {
+            this.emit('EnemyDied', enemy);
+        });
+
+        this.on('BossEnemy:EnemyDied', (enemy: Enemy) => {
+            this.emit('EnemyDied', enemy);
+        });
+
+        // Other events
+        this.on('ProgressBar:ProgressBarUpdated:DamageEnemy', (data: any) => {
+            this.enemy.damage(data);
+        });
+
+        this.on('Run:Next', () => {
+            this.next();
+        });
+
+        this.on('Run:AllowNextStage', () => {
+            this.nextStage();
+        });
+
+        this.on('Run:AllowNextFloor', () => {
+            this.nextFloor();
+        });
+
+        this.on('DialogController:OptionSelected', (option: DialogOption) => {
+            if (option instanceof NavigationDialogOption) {
+                this.setStageBranch(option.index);
+                this.stage.setupGrid(this.gridX, this.gridY);
+                this.emit('ResumeRun');
             }
-        );
+        });
+
+        // Grid events
+
+        this.on('Run:InitGrid', (run: Run) => {
+            this.grid.init(run);
+        });
+
+        this.on('Run:ApplyCritical', (amount: number) => {
+            this.grid.applyCriticalInGrid(amount);
+        });
+
+        this.on('Piece:FallAnimationEnded:Init', (params: FallPieceAnimationParams) => {
+            this.grid.pullPieceDown(params);
+        });
+
+        // Click usecase
+
+        this.on('EventEmitter:MouseClicked', (click: Position, run?: Run) => {
+            if (!run || run.hasDialogOpen) {
+                return;
+            }
+
+            if (!this.grid.isFull || this.grid.isUnstable) {
+                this.grid.emit('SwapValidated', false);
+                return;
+            }
+
+            this.grid.setRunSnapshot(run);
+            let clickFound: boolean;
+            this.grid.iterateXtoY((position: Position) => {
+                let cell: Cell = this.grid.getCellbyPosition(position);
+
+                let limits: number[] = [
+                    cell.canvasPosition.x,
+                    cell.canvasPosition.x + this.grid.sideSize,
+                    cell.canvasPosition.y,
+                    cell.canvasPosition.y + this.grid.sideSize
+                ];
+
+                if (checkPositionInLimit(click, ...limits)) {
+                    clickFound = true;
+                    if (!this.grid.selectedCellPosition) {
+                        this.grid.emit('FirstClickFound', position);
+                        this.grid.selectedCellPosition = position;
+                    } else {
+                        this.grid.emit('SecondClickFound', position);
+                        this.grid.playerSwap(position, this.grid.selectedCellPosition.addX(0));
+                        this.grid.selectedCellPosition = undefined;
+                    }
+                }
+            }, () => clickFound, () => clickFound);
+            if (!clickFound) {
+                this.grid.selectedCellPosition = undefined;
+            }
+        });
+
+        this.on('Piece:SwapAnimationEnded', (params: SwapPieceAnimationParams) => {
+            if (params.data.callNextAction) {
+                this.grid.swap(params.data.swapData);
+            }
+        });
+
+
+        this.on('Grid:MatchesFound:Swap', (matches: Piece[][]) => {
+            if (matches?.length) {
+                this.grid.isUnstable = true;
+                this.grid.removeMatches(matches, 'Loop');
+            } else {
+                this.grid.emit('MoveDone');
+            }
+        });
+
+        this.on('Grid:MatchesFound:Loop', (matches: Piece[][]) => {
+            if (matches?.length) {
+                this.grid.removeMatches(matches, 'Loop');
+            } else {
+                this.grid.emit('MoveDone');
+            }
+        });
+
+        this.on('Piece:RemoveAnimationEnded:Loop', (params: RemovePieceAnimationParams) => {
+            this.grid.removePiece('Loop', params.data);
+        });
+
+        this.on('Map:EnemyDamaged', () => {
+            this.grid.stabilizeGrid('Loop', true);
+        });
+
+        this.on('Piece:FallAnimationEnded:Loop', (params: FallPieceAnimationParams) => {
+            this.grid.pullPieceDown(params);
+        });
+
+        this.on('Grid:GridStabilized:Loop', () => {
+            this.grid.findMatches('Loop', true);
+        });
+
+        // Stage methods
+
+        this.on('Map:EnemyDied', () => {
+            this.grid.stabilizeGrid('Death', true);
+        });
+
+        this.on('Character:PlayerDied', () => {
+            this.grid.clearGrid('GridCleared:PlayerDied');
+        });
+
+        this.on('Piece:FallAnimationEnded:Death', (params: FallPieceAnimationParams) => {
+            this.grid.pullPieceDown(params);
+        });
+
+        this.on('Piece:RemoveAnimationEnded:GridCleared:NextStage', (params: RemovePieceAnimationParams) => {
+            this.grid.removePiece('GridCleared:NextStage', params.data);
+        });
+
+        this.on('Piece:RemoveAnimationEnded:GridCleared:NextFloor', (params: RemovePieceAnimationParams) => {
+            this.grid.removePiece('GridCleared:NextFloor', params.data);
+        });
+
+        this.on('Piece:RemoveAnimationEnded:GridCleared:MapEnded', (params: RemovePieceAnimationParams) => {
+            this.grid.removePiece('GridCleared:MapEnded', params.data);
+        });
+
+        this.on('Piece:RemoveAnimationEnded:GridCleared:PlayerDied', (params: RemovePieceAnimationParams) => {
+            this.grid.removePiece('GridCleared:PlayerDied', params.data);
+        });
+
+        // Items
+
+        this.on('Run:BanShape', (id: string, run: Run) => {
+            this.grid.setRunSnapshot(run);
+            this.grid.eliminateShape(id);
+        });
+
+        this.on('Run:Item:EliminateShape', (id: string) => {
+            if (this.grid.isFull) {
+                this.grid.eliminateShape(id);
+            }
+        });
+
+        this.on('Run:Item:ClearRow', (params: EffectParams) => {
+            this.grid.clearRow(params);
+        });
+
+        this.on('Run:Item:ClearColumn', (params: EffectParams) => {
+            this.grid.clearColumn(params);
+        });
+    }
+
+
+    get isBoss(): boolean {
+        return this.enemy instanceof BossEnemy;
+    }
+
+    get floor(): Floor {
+        return this.floors[this.currentFloorIndex];
+    }
+
+    get stage(): EnemyStage {
+        let floor: Floor = this.floor;
+        if (floor) {
+            return floor.stages[floor.currentStageIndex][floor.currentStageBranch];
+        }
+        return undefined;
+    }
+
+    get grid(): Grid {
+        let stage: EnemyStage = this.stage;
+        if (stage) {
+            return stage.grid;
+        }
+        return undefined;
+    }
+
+    get enemy(): Enemy {
+        let stage: EnemyStage = this.stage;
+        if (stage) {
+            return stage.enemies[stage.currentEnemyIndex];
+        }
+        return undefined;
+    }
+
+    findNextEnemy(): Enemy {
+        let stage: EnemyStage = this.stage;
+        if (stage && stage.currentEnemyIndex < stage.enemies.length - 1) {
+            return stage.enemies[stage.currentEnemyIndex + 1];
+        };
+        return undefined;
     }
 
     setupFloors(): Floor[] {
-        return [...Array(this.floorCount)].map(
+        let floors: Floor[] = [...Array(this.floorCount)].map(
             (_: Floor, index: number) => {
-                return new Floor(index + 1, { ...this });
+                let floor: Floor = new Floor(index + 1, { ...this });
+                floor.setupStages(this.stageCount, this.enemyCount);
+                return floor;
             }
         );
+        floors[0].stages[0][0].setupGrid(this.gridX, this.gridY);
+        return floors;
     }
 
-    nextEnemy(run: Run, enemyCallback?: () => void, stageCallback?: () => void, floorCallback?: () => void): void {
-        let enemy: Enemy = run.findEnemy();
-        if (enemy && enemy instanceof BossEnemy) {
-            this.nextStage(run, stageCallback, floorCallback)
+    setStageBranch(index: number): void {
+        this.floors[this.currentFloorIndex].currentStageBranch = index;
+    }
+
+    next(): void {
+        if (this.enemy && this.enemy.number === this.stage.enemies.length) {
+            if (this.stage && this.stage.number === this.floor.stages.length) {
+                if (this.floor && this.floor.number === this.floors.length) {
+                    this.grid.clearGrid('GridCleared:MapEnded');
+                } else {
+                    this.grid.clearGrid('GridCleared:NextFloor');
+                }
+            } else {
+                this.grid.clearGrid('GridCleared:NextStage');
+            }
         } else {
-            run.findStage().currentEnemyIndex++;
-        }
-        if (enemyCallback) {
-            enemyCallback();
+            this.stage.currentEnemyIndex++;
+            this.emit('NextEnemyReached', this.enemy);
+            this.grid.findMatches('Loop', true);
         }
     }
 
-    nextStage(run: Run, stageCallback: () => void, floorCallback: () => void): void {
-        let stage: EnemyStage = run.findStage();
-        if (stage && stage.number === this.stageCount) {
-            this.nextFloor(run, floorCallback)
-        } else {
-            run.findFloor().currentStageIndex++;
+    nextStage(): void {
+        if (this.stage && this.stage.number <= this.floor.stages.length) {
+            this.floor.currentStageIndex++;
+            this.floor.currentStageBranch = 0
+            this.stage.setupGrid(this.gridX, this.gridY);
+            this.emit('NextStageReached');
         }
-        if (stageCallback) {
-            stageCallback();
-        }
-
     }
 
-    nextFloor(run: Run, floorCallback: () => void): void {
-        let floor: Floor = run.findFloor();
-        if (floor && floor.number === this.floorCount) {
-            this.winState = true
-            run.win()
-        } else {
+    nextFloor(): void {
+        if (this.floor && this.floor.number <= this.floors.length) {
             this.currentFloorIndex++;
+            this.stage.setupGrid(this.gridX, this.gridY);
+            this.emit('NextFloorReached');
         }
-        if (floorCallback) {
-            floorCallback();
-        }
-
     }
 
 }

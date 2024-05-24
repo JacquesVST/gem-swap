@@ -1,23 +1,28 @@
-import { Reward } from "./Reward";
+import { EventEmitter } from "./EventEmitter";
+import { Item } from "./Item";
 
-export class Character {
+export class Character extends EventEmitter {
     health: number;
     attack: number;
     defense: number;
     moves: number;
     currentHealth: number;
 
-    rewards: Reward[] = [];
-    activeItem: Reward;
+    critical: number = 1;
+    bossCritical: number = 0;
+
+    items: Item[] = [];
+    activeItem: Item;
     hasItemThatPreventsFirstLethalDamage: boolean = false;
     hasUsedItemThatPreventsFirstLethalDamage: boolean = false;
-    hpRegenFromReward: number = 0;
+    hpRegenFromItem: number = 0;
     damageMultiplier: number = 1;
     criticalMultiplier: number = 2;
     moveSaver: number = 0;
     gold: number = 0;
 
     constructor(health: number, attack: number, defense: number, moves: number) {
+        super();
         this.health = health;
         this.attack = attack;
         this.defense = defense;
@@ -25,12 +30,16 @@ export class Character {
         this.currentHealth = health;
     }
 
-    static defaultCharacter() {
+    static defaultCharacter(): Character {
         return new Character(100, 100, 0, 0);
     }
 
-    hasReward(name: string): boolean {
-        return this.rewards.map((reward: Reward) => reward.name).includes(name);
+    get movesEnded(): boolean {
+        return this.moves === 0;
+    }
+
+    hasItem(name: string): boolean {
+        return this.items.map((item: Item) => item.name).includes(name);
     }
 
     heal(heal: number): void {
@@ -41,10 +50,11 @@ export class Character {
         this.currentHealth += heal;
     }
 
-    simulateDamage(damage: number = 0): DamageData {
-        if (!damage) {
+    simulateDamage(damage: number): DamageData {
+        if (!damage || !parseInt(damage + '', 10)) {
             damage = 0;
         }
+
         let shielded = false;
         damage = (damage - this.defense < 0) ? 0 : (damage - this.defense);
 
@@ -52,7 +62,7 @@ export class Character {
             if (damage >= this.currentHealth) {
                 damage = 0;
                 this.hasUsedItemThatPreventsFirstLethalDamage = true;
-                this.rewards = this.rewards.filter((reward: Reward) => reward.name !== 'Shield');
+                this.items = this.items.filter((item: Item) => item.name !== 'Shield');
                 shielded = true
             }
         } else {
@@ -64,30 +74,20 @@ export class Character {
         return { damage, shielded };
     }
 
-    takeDamage(damage: DamageData, damageCallback: (damage: number, shielded: boolean) => void, deathCallback: () => void): void {
-
+    damage(damage: DamageData): void {
         this.currentHealth -= damage.damage;
+
+        this.emit('PlayerDamaged', this);
+
         if (this.currentHealth <= 0) {
-            if (deathCallback) {
-                deathCallback();
-            }
-        }
-        if (damageCallback) {
-            damageCallback(damage.damage, damage.shielded);
+            this.emit('PlayerDied');
         }
     }
 
-    updateMoves(newMoves: number, callback?: () => void, reloadCallback?: () => void) {
-
+    updateMoves(newMoves: number): void {
         this.moves = newMoves;
 
-        if (callback){
-            callback();
-        }
-
-        if (this.moves === 0 && reloadCallback) {
-            reloadCallback();
-        }
+        this.emit('MovesUpdated', this)
     }
 }
 

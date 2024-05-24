@@ -1,8 +1,9 @@
 import * as P5 from "p5";
-import { Position } from "./Position";
 import { Color } from "./Color";
+import { Position } from "./Position";
 
 export class CanvasInfo {
+    private static instance: CanvasInfo;
     p5: P5;
     margin: number;
     padding: number;
@@ -12,22 +13,33 @@ export class CanvasInfo {
     bottomUiSize: number;
     canvasSize: Position;
     playfield: Position;
+    totalGridHeight: number;
+    cellSideSize: number;
+    barCount: number;
 
-    constructor(p5: P5, margin: number, padding: number, radius: number, uiBarSize: number, topUiBarCount: number, bottomUiBarCount: number) {
+    private constructor(p5: P5, margin: number, padding: number, radius: number, uiBarSize: number, topUiBarCount: number, bottomUiBarCount: number) {
         this.margin = margin;
         this.padding = padding;
         this.radius = radius;
         this.uiBarSize = uiBarSize;
         this.p5 = p5
 
+        this.barCount = topUiBarCount + bottomUiBarCount;
         this.topUiSize = this.calculateTopUiSize(topUiBarCount);
         this.bottomUiSize = this.calculateBottomUiSize(bottomUiBarCount);
         this.calculateCanvasAndPlayfield();
     }
 
+    static getInstance(p5?: P5, margin?: number, padding?: number, radius?: number, uiBarSize?: number, topUiBarCount?: number, bottomUiBarCount?: number): CanvasInfo {
+        if (!CanvasInfo.instance) {
+            CanvasInfo.instance = new CanvasInfo(p5, margin, padding, radius, uiBarSize, topUiBarCount, bottomUiBarCount);
+        }
+        return CanvasInfo.instance;
+    }
+
     calculateCanvasAndPlayfield(): void {
         let screenWidth: number = document.body.clientWidth;
-        let screenHeight: number = ((screenWidth / 16) * 9) + this.topUiSize + this.bottomUiSize;
+        let screenHeight: number = ((screenWidth / 4) * 3) + this.topUiSize + this.bottomUiSize;
 
         let maxHeight: number = window.innerHeight - 360;
         if (screenHeight > maxHeight) {
@@ -47,7 +59,7 @@ export class CanvasInfo {
         return ((bottomUiBarCount + 1) * this.margin) + (bottomUiBarCount * this.uiBarSize);
     }
 
-    drawPlayfield(): void {
+    draw(): void {
         this.p5.background(0);
         this.p5.noStroke();
         this.p5.fill(new Color(20, 20, 20).value);

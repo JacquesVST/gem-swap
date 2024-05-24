@@ -69,17 +69,17 @@ canvas {
   padding: 16px;
 }
 
-.reward-ui {
+.item-ui {
   width: 100%;
   display: flex;
   justify-content: center;
 }
 
-.reward-wrap {
+.item-wrap {
   width: 25%;
 }
 
-.reward {
+.item {
   margin-left: 4px;
   margin-right: 4px;
   margin-bottom: 8px;

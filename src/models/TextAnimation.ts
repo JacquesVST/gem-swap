@@ -3,8 +3,9 @@ import { generateId } from "../utils/Functions";
 import { CanvasInfo } from "./CanvasInfo";
 import { DamageData } from "./Character";
 import { Color } from "./Color";
+import { EventEmitter } from "./EventEmitter";
 import { Position } from "./Position";
-import { Enemy } from "./Enemy";
+import { Shape } from "./Shape";
 
 export class TextAnimation {
     text: string;
@@ -56,7 +57,7 @@ export class TextAnimation {
         }
 
         p5.textSize(this.size);
-        p5.textAlign(this.align);
+        p5.textAlign(this.align, p5.CENTER);
         p5.text(
             this.text,
             this.initialPosition.x,
@@ -78,13 +79,23 @@ export class TextAnimation {
     }
 }
 
-export class TextAnimationController {
-    textAnimations: TextAnimation[]
+export class TextAnimationController extends EventEmitter {
+    private static instance: TextAnimationController;
+
+    textAnimations: TextAnimation[];
     canvas: CanvasInfo;
 
-    constructor(canvas: CanvasInfo) {
-        this.canvas = canvas;
+    private constructor() {
+        super();
+        this.canvas = CanvasInfo.getInstance();
         this.textAnimations = [];
+    }
+
+    static getInstance(): TextAnimationController {
+        if (!TextAnimationController.instance) {
+            TextAnimationController.instance = new TextAnimationController();
+        }
+        return TextAnimationController.instance;
     }
 
     draw(): void {
@@ -101,16 +112,17 @@ export class TextAnimationController {
         this.textAnimations = this.textAnimations.filter((animation: TextAnimation) => animation.id !== textAnimation.id);
     }
 
-    damageAnimation(damage: number, enemy: Enemy, positon: Position): void {
-        let overkill: boolean = damage >= enemy.currentHealth;
+    damageAnimation(damage: number, positon: Position, mainShape?: Shape): void {
 
-        let varianceX: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
-        let varianceY: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
+        let color: Color = mainShape ? mainShape.color : new Color(224, 224, 224);
+
+        let varianceX: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1);
+        let varianceY: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1);
 
         let textAnimation: TextAnimation = new TextAnimation(
             `${damage} DMG`,
             20,
-            overkill ? new Color(231, 76, 60) : new Color(224, 224, 224),
+            color,
             4,
             this.canvas.p5.CENTER,
             new Position(positon.x + varianceX, positon.y + varianceY),
@@ -137,8 +149,8 @@ export class TextAnimationController {
     }
 
     goldAnimation(amount: number) {
-        let varianceX: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
-        let varianceY: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1)
+        let varianceX: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1);
+        let varianceY: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1);
 
         let textAnimation: TextAnimation;
         if (amount > 0) {
@@ -179,7 +191,7 @@ export class TextAnimationController {
             this.canvas.p5.CENTER,
             new Position(this.canvas.p5.mouseX, this.canvas.p5.mouseY),
             new Position(0, -200),
-            240,
+            120,
         );
 
         this.textAnimations.push(floorComplete);
@@ -194,7 +206,7 @@ export class TextAnimationController {
             this.canvas.p5.CENTER,
             new Position(this.canvas.canvasSize.x / 2, this.canvas.canvasSize.y / 2),
             new Position(0, 0),
-            240,
+            120,
             -40
         );
 
@@ -210,9 +222,11 @@ export class TextAnimationController {
             this.canvas.p5.CENTER,
             new Position(this.canvas.canvasSize.x / 2, this.canvas.canvasSize.y / 2 + this.canvas.topUiSize),
             new Position(0, -200),
-            240
+            120
         );
 
         this.textAnimations.push(floorComplete);
     }
+
+
 }
