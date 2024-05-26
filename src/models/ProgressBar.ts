@@ -43,7 +43,7 @@ export class ProgressBar extends EventEmitter {
         if (this.top) {
             commonMargin = (canvas.margin * (index + 2)) + (canvas.uiBarSize * index) + canvas.margin / 2;
         } else {
-            let bottomIndex: number = index - 3;
+            let bottomIndex: number = index - 2;
             commonMargin = canvas.canvasSize.y - canvas.margin - canvas.bottomUiSize + (canvas.uiBarSize * bottomIndex) + (canvas.margin * bottomIndex) + canvas.margin / 2;
         }
         let maxBarSize: number = (canvas.playfield.x - (2 * canvas.margin));

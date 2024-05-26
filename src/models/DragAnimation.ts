@@ -36,7 +36,7 @@ export class DragAnimation {
             p5.stroke(0, 0, 0, this.fade);
             p5.fill(255, 255, 255, this.fade);
 
-            let size: number = run.canvas.cellSideSize / 6;
+            let size: number = run.canvas.gridInfo.cellSideSize / 3.5;
             let dots: number = dottedLine(this.initialPosition, this.finalPosition, size, size * 1.25, p5);
 
             if (dots !== run.dots && this.fade === 255) {

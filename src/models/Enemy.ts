@@ -38,7 +38,6 @@ export class Enemy extends EventEmitter {
         if (damage > this.currentHealth) {
             damage = this.currentHealth;
         }
-
         this.currentHealth -= damage;
 
         if (this.currentHealth > 0) {
@@ -100,8 +99,8 @@ export class MiniBossEnemy extends Enemy implements EnemyActions {
         let miniBossMultiplier = 1.5 * (floorIndex + 1);
         this.gold = Math.floor(Math.random() * (25 - 11) + 10);
 
-        let maxHealth: number = 1500 * miniBossMultiplier * (1 + (floorIndex / 2));
-        let minHealth: number = 1000 * miniBossMultiplier * (1 + (floorIndex / 2));
+        let maxHealth: number = 2000 * miniBossMultiplier * (1 + (floorIndex / 2));
+        let minHealth: number = 1500 * miniBossMultiplier * (1 + (floorIndex / 2));
 
         let enemyBaseAttack: number = 15 * (1 + (miniBossMultiplier / 2));
         let enemyBaseHealth: number = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth);
@@ -132,8 +131,8 @@ export class BossEnemy extends Enemy implements EnemyActions {
         let bossMultiplier = 2 * (floorIndex + 1);
         this.gold = Math.floor(Math.random() * (25 - 11) + 10);
 
-        let maxHealth: number = 2000 * bossMultiplier * (1 + (floorIndex / 2));
-        let minHealth: number = 1000 * bossMultiplier * (1 + (floorIndex / 2));
+        let maxHealth: number = 4000 * bossMultiplier * (1 + (floorIndex / 2));
+        let minHealth: number = 2000 * bossMultiplier * (1 + (floorIndex / 2));
 
         let enemyBaseAttack: number = 12 * (1 + (bossMultiplier / 3));
         let enemyBaseHealth: number = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth);

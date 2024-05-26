@@ -76,19 +76,20 @@ export class Dialog extends EventEmitter {
 
         let textMarginCount: number = 8;
         let optionsLength: number = this.hasAdditionalButton ? this.options.length - 1 : this.options.length;
+        let lengthOffSet: number = 5;
 
         optionsLength = optionsLength === 1 ? 2 : optionsLength;
 
-        dimension.x = optionsLength * canvas.itemSideSize + ((optionsLength + 1) * canvas.margin);
+        dimension.x = (optionsLength > lengthOffSet ? lengthOffSet : optionsLength) * canvas.itemSideSize + (((optionsLength > lengthOffSet ? lengthOffSet : optionsLength) + 1) * canvas.margin);
         margin.x = (canvas.playfield.x / 2) - (dimension.x / 2);
 
-        dimension.y = (Math.ceil(optionsLength / 5) * canvas.itemSideSize) + ((Math.ceil(optionsLength / 5) + textMarginCount) * canvas.margin) + (this.hasAdditionalButton ? canvas.margin + (canvas.itemSideSize / 4) : 0);
+        dimension.y = (Math.ceil(optionsLength / lengthOffSet) * canvas.itemSideSize) + ((Math.ceil(optionsLength / lengthOffSet) + textMarginCount) * canvas.margin) + (this.hasAdditionalButton ? canvas.margin + (canvas.itemSideSize / 4) : 0);
         margin.y = (canvas.playfield.y / 2) - (dimension.y / 2);
 
         textOffset = margin.y + (textMarginCount * canvas.margin / 2);
 
         this.drawDialogBackground(dimension, margin, textOffset, canvas);
-        this.drawOptions(dimension, margin, canvas, run);
+        this.drawOptions(lengthOffSet, dimension, margin, canvas, run);
     }
 
 
@@ -127,14 +128,14 @@ export class Dialog extends EventEmitter {
         );
     }
 
-    drawOptions(dimension: Position, margin: Position, canvas: CanvasInfo, run?: Run): void {
+    drawOptions(lengthOffSet: number, dimension: Position, margin: Position, canvas: CanvasInfo, run?: Run): void {
         const p5: P5 = canvas.p5;
 
         this.options.forEach((option: DialogOption, index: number) => {
 
             // option frame
-            let cumulativeMarginX: number = margin.x + (index % 5 * (canvas.itemSideSize + canvas.margin)) + canvas.margin;
-            let cumulativeMarginY: number = margin.y + (Math.floor(index / 5) * (canvas.itemSideSize + canvas.margin)) + (canvas.margin * 8);
+            let cumulativeMarginX: number = margin.x + (index % lengthOffSet * (canvas.itemSideSize + canvas.margin)) + canvas.margin;
+            let cumulativeMarginY: number = margin.y + (Math.floor(index / lengthOffSet) * (canvas.itemSideSize + canvas.margin)) + (canvas.margin * 8);
 
             cumulativeMarginX = this.options.length === (this.hasAdditionalButton ? 2 : 1) ? canvas.playfield.x / 2 - (canvas.itemSideSize / 2) : cumulativeMarginX;
 
@@ -172,7 +173,6 @@ export class Dialog extends EventEmitter {
                     optionHeight,
                     canvas.radius * 2
                 );
-
             }
 
             // option content
@@ -322,9 +322,24 @@ export class ItemDialogOption extends DialogOption {
                 return new ItemDialogOption(
                     () => {
                         if (item.isActive) {
-                            run.player.activeItem = item;
+
+                            if (run.player.hasItem('Extra Active Item')) {
+                                if (run.player.activeItem === undefined) {
+                                    run.player.activeItem = item;
+                                } else if (run.player.activeItem2 === undefined) {
+                                    run.player.activeItem2 = item;
+                                } else {
+                                    let aux: Item;
+                                    aux = run.player.activeItem2;
+                                    run.player.activeItem2 = item;
+                                    run.player.activeItem = aux;
+                                }
+                            } else {
+                                run.player.activeItem = item;
+                            }
                         } else {
                             item.effect();
+                            item.price = undefined
                             run.player.items.push(item);
                         }
                         if (callback) {
@@ -401,8 +416,9 @@ export class DialogController extends EventEmitter implements ConfigureListeners
                         if (!option.disabled) {
                             option.action();
                             if (option instanceof ItemDialogOption && option?.item?.price) {
+                                this.emit('ItemPurchased', option.item.price);
                                 run?.textAnimationController.goldAnimation(option.item.price * -1);
-                                option.item.price = Math.floor(option.item.price * 1.2);
+                                option.item.price = Math.floor(option.item.price * 1.25);
                             }
                             this.emit('OptionSelected', option);
                         }

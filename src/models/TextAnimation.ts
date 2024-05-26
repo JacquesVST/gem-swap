@@ -148,6 +148,8 @@ export class TextAnimationController extends EventEmitter {
         let varianceX: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1);
         let varianceY: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1);
 
+        amount = Math.floor(amount);
+
         let textAnimation: TextAnimation;
         if (amount > 0) {
 
@@ -183,6 +185,22 @@ export class TextAnimationController extends EventEmitter {
             `Move saved`,
             20,
             new Color(101, 206, 80),
+            4,
+            this.canvas.p5.CENTER,
+            new Position(this.canvas.p5.mouseX, this.canvas.p5.mouseY),
+            new Position(0, -200),
+            120,
+        );
+
+        this.textAnimations.push(floorComplete);
+    }
+
+    playerHealedAnimaiton(amount: number): void {
+        amount = Math.floor(amount);
+        let floorComplete: TextAnimation = new TextAnimation(
+            `+${amount}`,
+            20,
+            Color.GREEN,
             4,
             this.canvas.p5.CENTER,
             new Position(this.canvas.p5.mouseX, this.canvas.p5.mouseY),

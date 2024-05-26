@@ -43,7 +43,7 @@ const sketch = (p5Instance: p5) => {
     p5Instance.setup = () => {
         p5Instance.textFont('Open Sans');
 
-        canvas = CanvasInfo.getInstance(p5Instance, 16, 4, 4, 20, 3, 2);
+        canvas = CanvasInfo.getInstance(p5Instance, 16, 4, 4, 20, 3, 3);
         dragAnimationController = DragAnimationController.getInstance();
         textAnimationController = TextAnimationController.getInstance();
         dialogController = DialogController.getInstance();

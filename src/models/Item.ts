@@ -11,6 +11,7 @@ export class Item {
     effect: () => void;
     price: number;
     isActive: boolean;
+    pricePaid: number;
 
     unique: boolean;
 
@@ -22,26 +23,31 @@ export class Item {
         this.price = price;
         this.isActive = isActive;
         this.unique = unique;
+        this.pricePaid = price;
     }
 
-    static rarityColors(): { [key: string]: { color: Color, chance: number } } {
+    static rarityColors(): { [key: string]: { color: Color, chance: number, chanceShop: number } } {
         return {
             'Common': {
                 color: new Color(224, 224, 224),
-                chance: 0.75
+                chance: 0.75,
+                chanceShop: 0.50
             },
             'Rare': {
                 color: new Color(101, 206, 80),
-                chance: 0.95
+                chance: 0.95,
+                chanceShop: 0.80
             },
             'Epic': {
                 color: new Color(84, 80, 206),
-                chance: 1
+                chance: 1,
+                chanceShop: 1
             }
         };
     }
 
-    static generateItemsBasedOnRarity(amount: number, pool: Item[], rarities: string[], player: Player): Item[] {
+
+    static generateItemsBasedOnRarity(amount: number, pool: Item[], rarities: string[], player: Player, shop: boolean = false): Item[] {
         let itemsOfRarity: Item[][] = [];
         let counts = {};
 
@@ -52,7 +58,7 @@ export class Item {
             let chosenRarity: string;
 
             for (let index = 0; index < rarities.length; index++) {
-                if (chance < Item.rarityColors()[rarities[index]].chance || index === rarities.length - 1) {
+                if (chance < (shop ? Item.rarityColors()[rarities[index]].chanceShop : Item.rarityColors()[rarities[index]].chance) || index === rarities.length - 1) {
                     chosenRarity = rarities[index];
                     chosenPool = pool.filter((item: Item) => item.rarity === rarities[index]);
                     break;
@@ -90,13 +96,12 @@ export class ItemPools {
         let price: number = 20;
         let name: string = 'Max Instant health';
         price = price * run.costMultiplier;
-        price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
+        price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
         return new Item(
             'Common',
             name,
             'Full heal',
             (() => {
-                run.player.gold -= price;
                 run.player.heal(run.player.health);
             }).bind(run),
             price,
@@ -107,31 +112,29 @@ export class ItemPools {
         let shopPool: Item[] = [
             (() => {
                 let price: number = 30;
-                let name: string = 'Where it matters';
+                let name: string = 'Crit On Boss';
                 price = price * run.costMultiplier;
-                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
                 return new Item(
                     'Common',
                     name,
-                    '+1 Critical piece on a boss fight',
+                    '+1 Crit piece on a boss fight',
                     (() => {
-                        run.player.gold -= price;
                         run.player.bossCritical += 1;
                     }).bind(run),
                     price,
                 );
             })(),
             (() => {
-                let price: number = 30;
+                let price: number = 50;
                 let name: string = 'Extra Moves';
                 price = price * run.costMultiplier;
-                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
                 return new Item(
                     'Common',
                     name,
                     '+3 moves',
                     (() => {
-                        run.player.gold -= price;
                         run.maxMoves += 3;
                     }).bind(run),
                     price,
@@ -141,13 +144,12 @@ export class ItemPools {
                 let price: number = 75;
                 let name: string = 'Horizontal Expansion';
                 price = price * run.costMultiplier;
-                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
                 return new Item(
                     'Rare',
                     name,
                     '+1 column',
                     (() => {
-                        run.player.gold -= price;
                         run.map.gridX++;
                     }).bind(run),
                     price,
@@ -157,13 +159,12 @@ export class ItemPools {
                 let price: number = 75;
                 let name: string = 'Vertical Expansion';
                 price = price * run.costMultiplier;
-                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
                 return new Item(
                     'Rare',
                     name,
                     '+1 row',
                     (() => {
-                        run.player.gold -= price;
                         run.map.gridY++;
                     }).bind(run),
                     price,
@@ -173,24 +174,38 @@ export class ItemPools {
                 let price: number = 100;
                 let name: string = 'More Options';
                 price = price * run.costMultiplier;
-                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
                 return new Item(
                     'Epic',
                     name,
                     '+1 boss item option',
                     (() => {
-                        run.player.gold -= price;
                         run.itemOptions++;
                     }).bind(run),
                     price,
                 );
+            })(),
+            (() => {
+                let price: number = 150;
+                let name: string = 'Diagonal Reach';
+                price = price * run.costMultiplier;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
+                return new Item(
+                    'Epic',
+                    name,
+                    'Can match diagonals',
+                    (() => { }).bind(run),
+                    price,
+                    undefined,
+                    true
+                );
             })()
-        ]
+        ];
 
         if (run.possibleShapes.length >= 4) {
             let price: number = 150;
             price = price * run.costMultiplier;
-            price = run.player.items.findIndex((item: Item) => item.name.startsWith('Ban')) !== -1 ? Math.floor(price * 1.2) : price;
+            price = run.player.items.findIndex((item: Item) => item.name.startsWith('Ban')) !== -1 ? Math.floor(price * 1.25) : price;
 
             run.possibleShapes.forEach((shape: Shape) => {
                 shopPool.push(new Item(
@@ -205,7 +220,42 @@ export class ItemPools {
             });
         }
 
-        return shopPool;
+        if (run.player.reach <= 3) {
+            let price: number = 100;
+            let name: string = 'Reach Expansion';
+            price = price * run.costMultiplier;
+            price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
+            shopPool.push(new Item(
+                'Rare',
+                name,
+                'Can reach +1 tile over',
+                (() => {
+                    run.player.reach++;
+                }).bind(run),
+                price
+            ));
+        }
+
+        let uniqueItems = [
+            (() => {
+                let price: number = 100;
+                let name: string = 'Extra Active Item';
+                price = price * run.costMultiplier;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
+                return new Item(
+                    'Rare',
+                    name,
+                    'One more slot for actives',
+                    (() => { }).bind(run),
+                    price,
+                    undefined,
+                    true
+                );
+            })(),
+        ];
+
+
+        return shopPool.concat(uniqueItems.filter((item: Item) => !run.player.hasItem(item.name)));
     }
 
     static defaultPool(run: Run): Item[] {
@@ -213,18 +263,18 @@ export class ItemPools {
             (() => {
                 let name: string = 'Vertical AOE';
                 return new Item(
-                    'Common',
+                    'Rare',
                     name,
-                    '+3% chance of column clearing pieces',
+                    '+2% chance of column clearing pieces',
                     (() => {
                         let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
 
                         if (effectIndex === -1) {
                             run.possibleEffects.push(new Effect(name, (params: EffectParams) => {
                                 run.emit('Item:ClearColumn', params);
-                            }, 0.03));
+                            }, 0.02));
                         } else {
-                            run.possibleEffects[effectIndex].chance += 0.03;
+                            run.possibleEffects[effectIndex].chance += 0.02;
                         }
                     }).bind(run)
                 );
@@ -232,22 +282,28 @@ export class ItemPools {
             (() => {
                 let name: string = 'Horizontal AOE';
                 return new Item(
-                    'Common',
+                    'Rare',
                     name,
-                    '+3% chance of row clearing pieces',
+                    '+2% chance of row clearing pieces',
                     (() => {
                         let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
 
                         if (effectIndex === -1) {
                             run.possibleEffects.push(new Effect(name, (params: EffectParams) => {
                                 run.emit('Item:ClearRow', params);
-                            }, 0.03))
+                            }, 0.02))
                         } else {
-                            run.possibleEffects[effectIndex].chance += 0.03;
+                            run.possibleEffects[effectIndex].chance += 0.02;
                         }
                     }).bind(run)
                 );
             })(),
+            new Item(
+                'Common',
+                'Extra Piece',
+                '4+ matches can remove a random piece',
+                (() => { }).bind(run)
+            ),
             new Item(
                 'Common',
                 'Extra Move',
@@ -259,18 +315,18 @@ export class ItemPools {
             ),
             new Item(
                 'Common',
-                'Extra Critical',
-                '+1 critical on grid',
+                'Extra Crit',
+                '+1 crit on grid',
                 (() => {
                     run.player.critical += 1;
                 }).bind(run)
             ),
             new Item(
                 'Common',
-                'Critical Multiplier',
-                '+1 critical multiplier',
+                'Crit Multiplier',
+                '+0.5 crit multiplier',
                 (() => {
-                    run.player.criticalMultiplier += 1;
+                    run.player.criticalMultiplier += 0.5;
                 }).bind(run)
             ),
             new Item(
@@ -358,10 +414,8 @@ export class ItemPools {
             new Item(
                 'Rare',
                 '4+ Match Regeneration',
-                'Gain 1% HP every 4+ piece match',
-                (() => {
-                    run.player.hpRegenFromItem += 1;
-                }).bind(run)
+                'Gain 1% HP every 4+ match',
+                (() => { }).bind(run)
             ),
             new Item(
                 'Rare',
@@ -378,7 +432,10 @@ export class ItemPools {
                 (() => {
                     run.player.hasItemThatPreventsFirstLethalDamage = true;
                     run.player.hasUsedItemThatPreventsFirstLethalDamage = false;
-                }).bind(run)
+                }).bind(run),
+                undefined,
+                undefined,
+                true
             ),
             new Item(
                 'Rare',
@@ -391,11 +448,11 @@ export class ItemPools {
             ),
             new Item(
                 'Epic',
-                'Big Critical Boost',
-                '+2 criticals on grid and multiplier',
+                'Big Crit Boost',
+                '+2 crits on grid and multiplier',
                 (() => {
-                    run.player.criticalMultiplier += 2;
-                    run.player.critical += 2
+                    run.player.criticalMultiplier += 1;
+                    run.player.critical += 2;
                 }).bind(run)
             ),
             new Item(

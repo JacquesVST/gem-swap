@@ -8,6 +8,7 @@ import { Floor } from "./Floor";
 import { Grid } from "./Grid";
 import { Piece } from "./Piece";
 import { FallPieceAnimationParams, RemovePieceAnimationParams, SwapPieceAnimationParams } from "./PieceAnimation";
+import { Player } from "./Player";
 import { Position } from "./Position";
 import { Run, RunConfig } from "./Run";
 import { EnemyStage } from "./Stage";
@@ -43,19 +44,9 @@ export class Map extends EventEmitter implements ConfigureListeners {
 
     configureListeners(): void {
 
-        // Enemy damaged events
-        this.on('Enemy:EnemyDamaged', (enemy: Enemy) => {
-            this.emit('EnemyDamaged', enemy);
-        });
-
-        // Enemy died events
-        this.on('Enemy:EnemyDied', (enemy: Enemy) => {
-            this.emit('EnemyDied', enemy);
-        });
-
         // Other events
         this.on('ProgressBar:ProgressBarUpdated:DamageEnemy', (data: any) => {
-            this.enemy.damage(data);
+            this.enemy.damage(data.damage);
         });
 
         this.on('Run:Next', () => {
@@ -133,12 +124,15 @@ export class Map extends EventEmitter implements ConfigureListeners {
             }
         });
 
+        this.on('Grid:SwapValidated', () => {
+            this.grid.selectedCellPosition = undefined
+        });
+
         this.on('Piece:SwapAnimationEnded', (params: SwapPieceAnimationParams) => {
             if (params.data.callNextAction) {
                 this.grid.swap(params.data.swapData);
             }
         });
-
 
         this.on('Grid:MatchesFound:Swap', (matches: Piece[][]) => {
             if (matches?.length) {
@@ -156,12 +150,12 @@ export class Map extends EventEmitter implements ConfigureListeners {
                 this.grid.emit('MoveDone');
             }
         });
-
+        
         this.on('Piece:RemoveAnimationEnded:Loop', (params: RemovePieceAnimationParams) => {
             this.grid.removePiece('Loop', params.data);
         });
 
-        this.on('Map:EnemyDamaged', () => {
+        this.on('Enemy:EnemyDamaged', () => {
             this.grid.stabilizeGrid('Loop', true);
         });
 
@@ -175,7 +169,7 @@ export class Map extends EventEmitter implements ConfigureListeners {
 
         // Stage methods
 
-        this.on('Map:EnemyDied', () => {
+        this.on('Enemy:EnemyDied', () => {
             this.grid.stabilizeGrid('Death', true);
         });
 

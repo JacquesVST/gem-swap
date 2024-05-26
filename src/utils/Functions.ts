@@ -10,13 +10,28 @@ export function generateId(): string {
     return "id" + Math.random().toString(16).slice(2)
 }
 
-export function canReach(pos1: Position, pos2: Position): boolean {
-    if (pos1.x === pos2.x) {
-        return [pos1.y - 1, pos1.y + 1].includes(pos2.y);
-    } else if (pos1.y === pos2.y) {
-        return [pos1.x - 1, pos1.x + 1].includes(pos2.x);
+export function canReach(pos1: Position, pos2: Position, reach: number, extended: boolean = false): boolean {
+    let possibleMoves: Position[] = [];
+
+    for (let currentReach: number = 1; currentReach <= reach; currentReach++) {
+        possibleMoves.push(...[
+            new Position(pos1.x - currentReach, pos1.y),
+            new Position(pos1.x + currentReach, pos1.y),
+            new Position(pos1.x, pos1.y - currentReach),
+            new Position(pos1.x, pos1.y + currentReach)
+        ]);
     }
-    return false
+
+    if (extended) {
+        possibleMoves.push(...[
+            new Position(pos1.x - 1, pos1.y - 1),
+            new Position(pos1.x - 1, pos1.y + 1),
+            new Position(pos1.x + 1, pos1.y - 1),
+            new Position(pos1.x + 1, pos1.y + 1),
+        ]);
+    }
+
+    return possibleMoves.map((position: Position) => position.checksum).includes(pos2.checksum);
 }
 
 export function stripesWithBorderRadius(drawingPos: Position, drawingSize: Position, radius: number, stripeCount: number, isHorizontal: boolean, color1: Color, color2: Color, opacity: number, p5: P5): void {
@@ -258,7 +273,7 @@ export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMargin
         p5.strokeWeight(2);
         p5.textSize(20);
         p5.text(
-            `$ ${item.price}`,
+            `$ ${Math.floor(item.price)}`,
             cumulativeMarginX + (itemSideSize / 2),
             cumulativeMarginY + itemSideSize - canvas.padding
         );

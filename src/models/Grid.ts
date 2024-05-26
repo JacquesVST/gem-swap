@@ -1,10 +1,11 @@
 import * as P5 from "p5";
 import { canReach, checkPositionInLimit, hasConsecutive, polygon, stripesWithBorderRadius } from "../utils/Functions";
-import { CanvasInfo } from "./CanvasInfo";
+import { CanvasInfo, GridInfo } from "./CanvasInfo";
 import { Cell } from "./Cell";
 import { Color } from "./Color";
 import { EffectParams } from "./Effect";
 import { EventEmitter } from "./EventEmitter";
+import { Item } from "./Item";
 import { Piece } from "./Piece";
 import { FallPieceAnimationParams, RemovePieceAnimationData, RemovePieceAnimationParams, SwapPieceAnimationParams } from "./PieceAnimation";
 import { Position } from "./Position";
@@ -60,7 +61,7 @@ export class Grid extends EventEmitter {
                     callNextAction: index === positionsToApplyGravity.length - 1,
                     position,
                     newPosition,
-                    allowMatches: allowMatches,
+                    allowMatches: allowMatches
                 }
             );
 
@@ -196,14 +197,15 @@ export class Grid extends EventEmitter {
             this.getCellbyPosition(position).canvasPosition = new Position(currentXMargin, currentYMargin);
         });
 
-        this.canvas.cellSideSize = this.sideSize;
-        this.canvas.totalGridHeight = this.verticalCenterPadding + (this.height * (this.sideSize + this.canvas.padding)) + this.canvas.padding;
+
+        this.canvas.gridInfo = new GridInfo(this.sideSize, this.verticalCenterPadding + (this.height * (this.sideSize + this.canvas.padding)) + this.canvas.padding, this.horizontalCenterPadding, this.verticalCenterPadding);
     }
 
     setRunSnapshot(run: Run): void {
         this.runSnapshot = {
             possibleEffects: run.possibleEffects,
-            possibleShapes: run.possibleShapes
+            possibleShapes: run.possibleShapes,
+            player: run.player
         } as Run;
     }
 
@@ -261,6 +263,23 @@ export class Grid extends EventEmitter {
         });
 
         matches = validate ? this.sanitizeMatches(matches) : matches;
+
+        if (this.runSnapshot.player.hasItem('Extra Piece')) {
+            matches.forEach((match: Piece[]) => {
+                let itemStack: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Extra Piece').length
+                let chance: number = 0.10 * itemStack;
+
+                if (Math.random() < chance) {
+                    let piecesSameColor: Piece[] = this.cells.flat().map((cell: Cell) => cell.piece).filter((piece: Piece) => piece?.shape?.id === match[0].shape.id && match.findIndex((matchPiece: Piece) => matchPiece.position.checksum === piece.position.checksum) === -1);
+                    let randomChoice: number = Math.floor(Math.random() * piecesSameColor.length);
+
+                    match.push(piecesSameColor[randomChoice]);
+                }
+            });
+        }
+
+        matches = validate ? this.sanitizeMatches(matches) : matches;
+
         this.emit('MatchesFound:' + useCase, matches);
     }
 
@@ -293,9 +312,15 @@ export class Grid extends EventEmitter {
             }
         }
 
+        let sort: (a: Piece, b: Piece) => number = (a: Piece, b: Piece) => {
+            return a.position.checksum > b.position.checksum ? -1 : 1;
+        };
+
         matches.forEach((match: Piece[]) => {
-            match = match.sort((piece: Piece) => !!piece.effect ? -1 : 1);
+            match.sort(sort);
+            match.sort((piece: Piece) => !!piece.effect ? -1 : 1);
         })
+
 
         return matches;
     }
@@ -376,7 +401,7 @@ export class Grid extends EventEmitter {
             return false;
         }
 
-        if (!canReach(position1, position2)) {
+        if (!canReach(position1, position2, this.runSnapshot.player.reach, this.runSnapshot.player.hasItem('Reach Expansion'))) {
             return false;
         }
 
@@ -708,7 +733,6 @@ export class Grid extends EventEmitter {
     }
 
 }
-
 export interface SwapData {
     piece1: Piece;
     piece2: Piece;

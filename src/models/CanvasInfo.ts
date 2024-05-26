@@ -11,13 +11,12 @@ export class CanvasInfo {
     barCount: number;
     uiBarSize: number;
     topUiSize: number;
-    cellSideSize: number;
     bottomUiSize: number;
     itemSideSize: number;
-    totalGridHeight: number;
     horizontalLayout: boolean;
     canvasSize: Position;
     playfield: Position;
+    gridInfo: GridInfo;
 
     private constructor(p5: P5, margin: number, padding: number, radius: number, uiBarSize: number, topUiBarCount: number, bottomUiBarCount: number) {
         this.margin = margin;
@@ -69,5 +68,19 @@ export class CanvasInfo {
             this.playfield.y,
             this.radius + this.padding
         );
+    }
+}
+
+export class GridInfo {
+    cellSideSize: number;
+    totalGridHeight: number;
+    horizontalCenterPadding: number;
+    verticalCenterPadding: number;
+
+    constructor(cellSideSize: number, totalGridHeight: number, horizontalCenterPadding: number, verticalCenterPadding: number) {
+        this, cellSideSize = cellSideSize;
+        this.totalGridHeight = totalGridHeight;
+        this.horizontalCenterPadding = horizontalCenterPadding;
+        this.verticalCenterPadding = verticalCenterPadding;
     }
 }
