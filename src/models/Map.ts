@@ -26,7 +26,7 @@ export class Map extends EventEmitter implements ConfigureListeners {
     currentFloorIndex: number;
 
     constructor(config: RunConfig, scale: number, run: Run) {
-        super()
+        super('Map');
         this.floorCount = config.floors;
         this.stageCount = config.stages;
         this.enemyCount = config.enemies;
@@ -44,28 +44,12 @@ export class Map extends EventEmitter implements ConfigureListeners {
     configureListeners(): void {
 
         // Enemy damaged events
-        this.on('CommonEnemy:EnemyDamaged', (enemy: Enemy) => {
-            this.emit('EnemyDamaged', enemy);
-        });
-
-        this.on('MiniBossEnemy:EnemyDamaged', (enemy: Enemy) => {
-            this.emit('EnemyDamaged', enemy);
-        });
-
-        this.on('BossEnemy:EnemyDamaged', (enemy: Enemy) => {
+        this.on('Enemy:EnemyDamaged', (enemy: Enemy) => {
             this.emit('EnemyDamaged', enemy);
         });
 
         // Enemy died events
-        this.on('CommonEnemy:EnemyDied', (enemy: Enemy) => {
-            this.emit('EnemyDied', enemy);
-        });
-
-        this.on('MiniBossEnemy:EnemyDied', (enemy: Enemy) => {
-            this.emit('EnemyDied', enemy);
-        });
-
-        this.on('BossEnemy:EnemyDied', (enemy: Enemy) => {
+        this.on('Enemy:EnemyDied', (enemy: Enemy) => {
             this.emit('EnemyDied', enemy);
         });
 
@@ -110,7 +94,7 @@ export class Map extends EventEmitter implements ConfigureListeners {
 
         // Click usecase
 
-        this.on('EventEmitter:MouseClicked', (click: Position, run?: Run) => {
+        this.on('Main:MouseClicked', (click: Position, run?: Run) => {
             if (!run || run.hasDialogOpen || run.player.hasInventoryOpen) {
                 return;
             }
@@ -240,7 +224,7 @@ export class Map extends EventEmitter implements ConfigureListeners {
             this.grid.clearColumn(params);
         });
 
-        this.on('EventEmitter:WindowResized', () => {
+        this.on('Main:WindowResized', () => {
             this.grid.calculateSpacing();
         });
     }

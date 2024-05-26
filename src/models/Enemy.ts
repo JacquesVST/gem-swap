@@ -21,7 +21,7 @@ export class Enemy extends EventEmitter {
     hasDrop: boolean;
 
     constructor(number: number, stage: EnemyStage, isLast: boolean) {
-        super();
+        super('Enemy');
         this.number = number;
         this.stage = stage;
         this.isLast = isLast;

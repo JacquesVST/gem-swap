@@ -26,7 +26,7 @@ export class Grid extends EventEmitter {
     isUnstable: boolean = false;
 
     constructor(width: number, height: number, stage: Stage) {
-        super();
+        super('Grid');
         this.width = width;
         this.height = height;
         this.stage = stage;
@@ -428,7 +428,7 @@ export class Grid extends EventEmitter {
         this.setCellPiece(data.position, undefined);
 
         if (data.callNextAction) {
-            this.emit('MatchesRemoved:' + useCase, data.matches, this.id);
+            this.emit('MatchesRemoved:' + useCase, data.matches);
         }
     }
 

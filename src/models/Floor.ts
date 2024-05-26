@@ -11,7 +11,7 @@ export class Floor extends EventEmitter {
     currentStageBranch: number = 0;
 
     constructor(number: number, map: Map) {
-        super();
+        super('Floor');
         this.number = number;
         this.map = map;
     }

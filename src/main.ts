@@ -47,7 +47,7 @@ const sketch = (p5Instance: p5) => {
         dragAnimationController = DragAnimationController.getInstance();
         textAnimationController = TextAnimationController.getInstance();
         dialogController = DialogController.getInstance();
-        eventEmitter = new EventEmitter();
+        eventEmitter = new EventEmitter('Main');
 
         setupGame();
     }

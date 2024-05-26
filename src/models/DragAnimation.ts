@@ -68,7 +68,7 @@ export class DragAnimationController extends EventEmitter implements ConfigureLi
     isDragging: boolean;
 
     private constructor() {
-        super()
+        super('DragAnimationController')
         this.dragAnimations = [];
 
         this.configureListeners();
@@ -86,7 +86,7 @@ export class DragAnimationController extends EventEmitter implements ConfigureLi
     }
 
     configureListeners(): void {
-        this.on('EventEmitter:MouseClicked:Drag', (position: Position, hasDialogOpen: boolean) => {
+        this.on('Main:MouseClicked:Drag', (position: Position, hasDialogOpen: boolean) => {
             if (!hasDialogOpen && this.currentDragAnimation) {
                 this.currentDragAnimation.finalPosition = position;
             }

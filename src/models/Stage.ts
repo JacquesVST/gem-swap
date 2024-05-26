@@ -17,7 +17,7 @@ export class Stage extends EventEmitter {
     isLast: boolean;
 
     constructor(number: number, floor: Floor, isLast: boolean = false) {
-        super();
+        super('Stage');
         this.number = number;
         this.floor = floor;
         this.isLast = isLast;

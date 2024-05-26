@@ -13,7 +13,7 @@ export class PieceAnimation extends EventEmitter {
     relativeFade: number = 0;
 
     constructor() {
-        super();
+        super('Piece');
     }
 
     setupFallAnimation(frames: number, relativeEndPosition: Position, params: FallPieceAnimationParams): void {

@@ -82,7 +82,7 @@ export class TextAnimationController extends EventEmitter {
     canvas: CanvasInfo;
 
     private constructor() {
-        super();
+        super('TextAnimationController');
         this.canvas = CanvasInfo.getInstance();
         this.textAnimations = [];
     }

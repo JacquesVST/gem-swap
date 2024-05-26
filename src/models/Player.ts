@@ -31,7 +31,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
     activeItemLimits: number[];
 
     constructor(health: number, attack: number, defense: number, moves: number) {
-        super();
+        super('Player');
         this.health = health;
         this.attack = attack;
         this.defense = defense;
@@ -42,13 +42,13 @@ export class Player extends EventEmitter implements ConfigureListeners {
     }
 
     configureListeners(): void {
-        this.on('EventEmitter:KeyPressed', (event: KeyboardEvent, run: Run) => {
+        this.on('Main:KeyPressed', (event: KeyboardEvent, run: Run) => {
             if (event.key === 'Tab' && !run.hasDialogOpen) {
                 this.hasInventoryOpen = true;
             }
         });
 
-        this.on('EventEmitter:KeyReleased', (event: KeyboardEvent, run: Run) => {
+        this.on('Main:KeyReleased', (event: KeyboardEvent, run: Run) => {
             if (event.key === 'Tab') {
                 this.hasInventoryOpen = false;
             }
@@ -59,7 +59,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
         });
 
 
-        this.on('EventEmitter:MouseClicked:Click', (position: Position, run?: Run) => {
+        this.on('Main:MouseClicked:Click', (position: Position, run?: Run) => {
             setTimeout(() => {
 
 

@@ -47,7 +47,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
     //controls: { [key: string]: HTMLElement };
 
     constructor(p5: P5, player: Player, config: RunConfig, sounds: { [key: string]: P5.SoundFile }, controls: { [key: string]: HTMLElement }) {
-        super();
+        super('Run');
 
         this.p5 = p5;
         this.player = player;

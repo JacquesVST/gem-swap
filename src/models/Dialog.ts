@@ -23,7 +23,7 @@ export class Dialog extends EventEmitter {
     relativeFade: number = 0;
 
     constructor(title: string, message: string, options: DialogOption[], type: DialogType, closeCallback?: () => void, textColor?: Color) {
-        super();
+        super('Dialog');
         this.title = title;
         this.message = message;
         this.options = options;
@@ -368,7 +368,7 @@ export class DialogController extends EventEmitter implements ConfigureListeners
     dialogs: Dialog[];
 
     private constructor() {
-        super();
+        super('DialogController');
         this.dialogs = [];
         this.canvas = CanvasInfo.getInstance();
     }
@@ -385,7 +385,7 @@ export class DialogController extends EventEmitter implements ConfigureListeners
     }
 
     configureListeners(): void {
-        this.on('EventEmitter:MouseClicked:Click', (position: Position, run?: Run) => {
+        this.on('Main:MouseClicked:Click', (position: Position, run?: Run) => {
             setTimeout(() => {
 
                 if (!this.currentDialog) {

@@ -20,7 +20,7 @@ export class ProgressBar extends EventEmitter {
     fade: number = 255;
 
     constructor(maxValue: number, value: number, title: string, color: Color, top: boolean) {
-        super();
+        super('ProgressBar');
         this.maxValue = maxValue;
         this.value = value;
         this.title = title;

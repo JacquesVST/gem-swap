@@ -17,15 +17,15 @@ export class EventHandler {
 }
 
 export class EventEmitter {
-    id: string;
     eventHandler: EventHandler;
     params: EventParams;
     log: boolean;
+    className: string;
 
-    constructor(id: string = '') {
-        this.id = id;
+    constructor(className: string) {
         this.eventHandler = EventHandler.getInstance();
         this.log = !!localStorage.getItem('log');
+        this.className = className;
     }
 
     get events(): EE {
@@ -33,11 +33,10 @@ export class EventEmitter {
     }
 
     emit(event: string, ...params: any): void {
-        let className = this.constructor.name + this.id;
         if (this.log && !event.includes('Animation')) {
-            console.log('%c%s emitted with', 'color:cyan', `${className}:${event}`, params);
+            console.log('%c%s emitted with', 'color:cyan', `${this.className}:${event}`, params);
         }
-        this.events.emit(`${className}:${event}`, ...params);
+        this.events.emit(`${this.className}:${event}`, ...params);
     }
 
     clear(): void {
@@ -47,7 +46,7 @@ export class EventEmitter {
     on(eventName: string, listener: (...params: any) => void): void {
         this.events.on(eventName, (...params: any) => {
             if (this.log && !eventName.includes('Animation')) {
-                console.log('%c%s%c listened to %c%s', 'color:orange', `${this.constructor.name + (this.id ? ' (' + this.id + ')' : '')}`, 'background:inherit;', 'color:yellow;', eventName);
+                console.log('%c%s%c listened to %c%s', 'color:orange', `${this.className}`, 'background:inherit;', 'color:yellow;', eventName);
             }
             listener(...params);
         });
