@@ -30,13 +30,13 @@ export class DragAnimation {
 
     draw(run: Run, dragAnimationController: DragAnimationController, isDragging: boolean): void {
         let p5: P5 = run.canvas.p5
-        if (this.finalPosition && this.finalPosition.checksum !== this.initialPosition.checksum) {
 
+        if (this.finalPosition && this.finalPosition.checksum !== this.initialPosition.checksum) {
             p5.strokeWeight(3);
             p5.stroke(0, 0, 0, this.fade);
             p5.fill(255, 255, 255, this.fade);
 
-            let size: number = run.canvas.gridInfo.cellSideSize / 3.5;
+            let size: number = CanvasInfo.getInstance().gridInfo.cellSideSize / 3.5;
             let dots: number = dottedLine(this.initialPosition, this.finalPosition, size, size * 1.25, p5);
 
             if (dots !== run.dots && this.fade === 255) {

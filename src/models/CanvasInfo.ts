@@ -78,7 +78,7 @@ export class GridInfo {
     verticalCenterPadding: number;
 
     constructor(cellSideSize: number, totalGridHeight: number, horizontalCenterPadding: number, verticalCenterPadding: number) {
-        this, cellSideSize = cellSideSize;
+        this.cellSideSize = cellSideSize;
         this.totalGridHeight = totalGridHeight;
         this.horizontalCenterPadding = horizontalCenterPadding;
         this.verticalCenterPadding = verticalCenterPadding;
