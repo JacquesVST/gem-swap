@@ -1,6 +1,6 @@
-import { Character } from "./Character";
 import { Color } from "./Color";
 import { Effect, EffectParams } from "./Effect";
+import { Player } from "./Player";
 import { Run } from "./Run";
 import { Shape } from "./Shape";
 
@@ -41,7 +41,7 @@ export class Item {
         };
     }
 
-    static generateItemsBasedOnRarity(amount: number, pool: Item[], rarities: string[], character: Character): Item[] {
+    static generateItemsBasedOnRarity(amount: number, pool: Item[], rarities: string[], player: Player): Item[] {
         let itemsOfRarity: Item[][] = [];
         let counts = {};
 
@@ -65,7 +65,7 @@ export class Item {
 
         let itemList: Item[] = [];
         itemsOfRarity.forEach((items: Item[]) => {
-            items = items.filter((item: Item) => !(character.hasItem(item.name) && item.unique));
+            items = items.filter((item: Item) => !(player.hasItem(item.name) && item.unique));
             let initialLength: number = itemList.length;
             do {
                 let random: number = Math.floor(Math.random() * items.length);
@@ -90,14 +90,14 @@ export class ItemPools {
         let price: number = 20;
         let name: string = 'Max Instant health';
         price = price * run.costMultiplier;
-        price = run.character.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
+        price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
         return new Item(
             'Common',
             name,
             'Full heal',
             (() => {
-                run.character.gold -= price;
-                run.character.heal(run.character.health);
+                run.player.gold -= price;
+                run.player.heal(run.player.health);
             }).bind(run),
             price,
         );
@@ -109,14 +109,14 @@ export class ItemPools {
                 let price: number = 30;
                 let name: string = 'Where it matters';
                 price = price * run.costMultiplier;
-                price = run.character.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
                 return new Item(
                     'Common',
                     name,
                     '+1 Critical piece on a boss fight',
                     (() => {
-                        run.character.gold -= price;
-                        run.character.bossCritical += 1;
+                        run.player.gold -= price;
+                        run.player.bossCritical += 1;
                     }).bind(run),
                     price,
                 );
@@ -125,13 +125,13 @@ export class ItemPools {
                 let price: number = 30;
                 let name: string = 'Extra Moves';
                 price = price * run.costMultiplier;
-                price = run.character.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
                 return new Item(
                     'Common',
                     name,
                     '+3 moves',
                     (() => {
-                        run.character.gold -= price;
+                        run.player.gold -= price;
                         run.maxMoves += 3;
                     }).bind(run),
                     price,
@@ -141,14 +141,14 @@ export class ItemPools {
                 let price: number = 75;
                 let name: string = 'Horizontal Expansion';
                 price = price * run.costMultiplier;
-                price = run.character.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
                 return new Item(
                     'Rare',
                     name,
                     '+1 column',
                     (() => {
-                        run.character.gold -= price;
-                        run.map.grid.width++;
+                        run.player.gold -= price;
+                        run.map.gridX++;
                     }).bind(run),
                     price,
                 );
@@ -157,14 +157,14 @@ export class ItemPools {
                 let price: number = 75;
                 let name: string = 'Vertical Expansion';
                 price = price * run.costMultiplier;
-                price = run.character.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
                 return new Item(
                     'Rare',
                     name,
                     '+1 row',
                     (() => {
-                        run.character.gold -= price;
-                        run.map.grid.height++;
+                        run.player.gold -= price;
+                        run.map.gridY++;
                     }).bind(run),
                     price,
                 );
@@ -173,13 +173,13 @@ export class ItemPools {
                 let price: number = 100;
                 let name: string = 'More Options';
                 price = price * run.costMultiplier;
-                price = run.character.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.2) : price;
                 return new Item(
                     'Epic',
                     name,
                     '+1 boss item option',
                     (() => {
-                        run.character.gold -= price;
+                        run.player.gold -= price;
                         run.itemOptions++;
                     }).bind(run),
                     price,
@@ -190,13 +190,13 @@ export class ItemPools {
         if (run.possibleShapes.length >= 4) {
             let price: number = 150;
             price = price * run.costMultiplier;
-            price = run.character.items.findIndex((item: Item) => item.name.startsWith('Ban')) !== -1 ? Math.floor(price * 1.2) : price;
+            price = run.player.items.findIndex((item: Item) => item.name.startsWith('Ban')) !== -1 ? Math.floor(price * 1.2) : price;
 
             run.possibleShapes.forEach((shape: Shape) => {
                 shopPool.push(new Item(
                     'Epic',
                     `Ban ${shape.id} pieces`,
-                    `No more ${shape.id} pieces for the rest of the run`,
+                    `No more ${shape.id} pieces forever`,
                     (() => {
                         run.emit('Item:BanShape', shape.id);
                     }).bind(run),
@@ -254,7 +254,7 @@ export class ItemPools {
                 '+1 move',
                 (() => {
                     run.maxMoves += 1;
-                    run.character.moves += 1;
+                    run.player.moves += 1;
                 }).bind(run)
             ),
             new Item(
@@ -262,7 +262,7 @@ export class ItemPools {
                 'Extra Critical',
                 '+1 critical on grid',
                 (() => {
-                    run.character.critical += 1;
+                    run.player.critical += 1;
                 }).bind(run)
             ),
             new Item(
@@ -270,7 +270,7 @@ export class ItemPools {
                 'Critical Multiplier',
                 '+1 critical multiplier',
                 (() => {
-                    run.character.criticalMultiplier += 1;
+                    run.player.criticalMultiplier += 1;
                 }).bind(run)
             ),
             new Item(
@@ -278,8 +278,8 @@ export class ItemPools {
                 'Max Health Gain',
                 '+5 HP Max',
                 (() => {
-                    run.character.health += 5;
-                    run.character.heal(5);
+                    run.player.health += 5;
+                    run.player.heal(5);
                 }).bind(run)
             ),
             new Item(
@@ -287,15 +287,16 @@ export class ItemPools {
                 'Defense Gain',
                 '+5 Defense',
                 (() => {
-                    run.character.defense += 5;
+                    run.player.defense += 5;
                 }).bind(run)
+
             ),
             new Item(
                 'Common',
                 'Instant Health',
                 '+10% HP',
                 (() => {
-                    run.character.heal(run.character.health / 10);
+                    run.player.heal(run.player.health / 10);
                 }).bind(run)
             ),
             new Item(
@@ -303,7 +304,7 @@ export class ItemPools {
                 'Damage Boost',
                 '+25 base DMG',
                 (() => {
-                    run.character.attack += 25;
+                    run.player.attack += 25;
                 }).bind(run)
             ),
             new Item(
@@ -354,14 +355,12 @@ export class ItemPools {
                     run.emit('Item:ColorDamageBoost', 'pink', 50);
                 }).bind(run)
             ),
-
-
             new Item(
                 'Rare',
                 '4+ Match Regeneration',
-                'Gain 1% HP every 4+ pieces in a single match',
+                'Gain 1% HP every 4+ piece match',
                 (() => {
-                    run.character.hpRegenFromItem += 1;
+                    run.player.hpRegenFromItem += 1;
                 }).bind(run)
             ),
             new Item(
@@ -369,7 +368,7 @@ export class ItemPools {
                 'Move Saver',
                 '10% chance of not consuming moves',
                 (() => {
-                    run.character.moveSaver += 0.10;
+                    run.player.moveSaver += 0.10;
                 }).bind(run)
             ),
             new Item(
@@ -377,8 +376,8 @@ export class ItemPools {
                 'Shield',
                 'Block one letal hit',
                 (() => {
-                    run.character.hasItemThatPreventsFirstLethalDamage = true;
-                    run.character.hasUsedItemThatPreventsFirstLethalDamage = false;
+                    run.player.hasItemThatPreventsFirstLethalDamage = true;
+                    run.player.hasUsedItemThatPreventsFirstLethalDamage = false;
                 }).bind(run)
             ),
             new Item(
@@ -386,8 +385,8 @@ export class ItemPools {
                 'Big Max Health Gain',
                 '+20 HP Max',
                 (() => {
-                    run.character.health += 20;
-                    run.character.heal(20);
+                    run.player.health += 20;
+                    run.player.heal(20);
                 }).bind(run)
             ),
             new Item(
@@ -395,8 +394,8 @@ export class ItemPools {
                 'Big Critical Boost',
                 '+2 criticals on grid and multiplier',
                 (() => {
-                    run.character.criticalMultiplier += 2;
-                    run.character.critical += 2
+                    run.player.criticalMultiplier += 2;
+                    run.player.critical += 2
                 }).bind(run)
             ),
             new Item(
@@ -404,7 +403,7 @@ export class ItemPools {
                 'Big Damage Boost',
                 'x1.5 DMG',
                 (() => {
-                    run.character.damageMultiplier *= 1.5;
+                    run.player.damageMultiplier *= 1.5;
                 }).bind(run)
             ),
             new Item(
@@ -421,7 +420,7 @@ export class ItemPools {
             defaultPool.push(new Item(
                 'Rare',
                 `Eliminate all ${shape.id} pieces`,
-                `Remove current ${shape.id} pieces from the board`,
+                `Remove current ${shape.id} pieces`,
                 (() => {
                     run.stackCombo = true;
                     run.emit('Item:EliminateShape', shape.id);
@@ -453,7 +452,7 @@ export class ItemPools {
             new Item(
                 'Rare',
                 'Hit Streak',
-                'Consecutive matches from moves counts one bonus piece',
+                'Bonus DMG for Consecutive matches',
                 (() => { run.consecutiveCombo = 0; }).bind(run),
                 undefined,
                 undefined,
@@ -461,6 +460,6 @@ export class ItemPools {
             ),
         ];
 
-        return defaultPool.concat(uniqueItems.filter((item: Item) => !run.character.hasItem(item.name)));
+        return defaultPool.concat(uniqueItems.filter((item: Item) => !run.player.hasItem(item.name)));
     }
 }

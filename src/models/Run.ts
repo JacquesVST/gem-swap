@@ -2,9 +2,8 @@ import * as P5 from "p5";
 import { formatNumber, getBestNumbers, setBestNumbers } from "../utils/Functions";
 import { CanvasInfo } from "./CanvasInfo";
 import { Cell } from "./Cell";
-import { Character, DamageData } from "./Character";
 import { Color } from "./Color";
-import { DefaultDialogOption, Dialog, DialogController, ItemDialogOption, NavigationDialogOption } from "./Dialog";
+import { DefaultDialogOption, Dialog, DialogController, DialogType, ItemDialogOption, NavigationDialogOption } from "./Dialog";
 import { Effect } from "./Effect";
 import { BossEnemy, Enemy, MiniBossEnemy } from "./Enemy";
 import { ConfigureListeners, EventEmitter, EventParams } from "./EventEmitter";
@@ -12,6 +11,7 @@ import { Floor } from "./Floor";
 import { Item, ItemPools } from "./Item";
 import { Map } from "./Map";
 import { Piece } from "./Piece";
+import { DamageData, Player } from "./Player";
 import { Position } from "./Position";
 import { ProgressBar } from "./ProgressBar";
 import { Shape } from "./Shape";
@@ -20,7 +20,7 @@ import { TextAnimationController } from "./TextAnimation";
 
 export class Run extends EventEmitter implements ConfigureListeners {
     p5: P5;
-    character: Character;
+    player: Player;
     maxMoves: number;
     costMultiplier: number;
 
@@ -44,18 +44,18 @@ export class Run extends EventEmitter implements ConfigureListeners {
     stackCombo: boolean = false;
 
     sounds: { [key: string]: P5.SoundFile };
-    controls: { [key: string]: HTMLElement };
+    //controls: { [key: string]: HTMLElement };
 
-    constructor(p5: P5, character: Character, config: RunConfig, sounds: { [key: string]: P5.SoundFile }, controls: { [key: string]: HTMLElement }) {
+    constructor(p5: P5, player: Player, config: RunConfig, sounds: { [key: string]: P5.SoundFile }, controls: { [key: string]: HTMLElement }) {
         super();
 
         this.p5 = p5;
-        this.character = character;
+        this.player = player;
         this.maxMoves = config.moves;
         this.costMultiplier = config.costMultiplier;
-        this.character.moves = config.moves;
+        this.player.moves = config.moves;
         this.sounds = sounds;
-        this.controls = controls;
+        //this.controls = controls;
 
         this.textAnimationController = TextAnimationController.getInstance();
         this.dialogController = DialogController.getInstance();
@@ -91,14 +91,14 @@ export class Run extends EventEmitter implements ConfigureListeners {
 
         this.on('Map:NextStageReached', () => {
             if (!this.map.winState) {
-                this.character.updateMoves(this.maxMoves);
+                this.player.updateMoves(this.maxMoves);
                 this.newNavigationDialog();
             }
         });
 
         this.on('Map:NextFloorReached', () => {
             if (!this.map.winState) {
-                this.character.updateMoves(this.maxMoves);
+                this.player.updateMoves(this.maxMoves);
                 this.emit('InitGrid', this);
             }
         });
@@ -106,9 +106,8 @@ export class Run extends EventEmitter implements ConfigureListeners {
         this.on('Map:ResumeRun', () => {
             this.updateTopProgressBars();
             this.updateMoves();
-            this.updatePlayerStatsAndItems();
 
-            this.character.updateMoves(this.maxMoves);
+            this.player.updateMoves(this.maxMoves);
             this.emit('InitGrid', this);
         });
 
@@ -117,7 +116,6 @@ export class Run extends EventEmitter implements ConfigureListeners {
             this.updateCombo([]);
             this.updateDamage(0);
 
-            this.updatePlayerStatsAndItems();
             this.updateMoves();
             this.updateHealth();
 
@@ -125,14 +123,14 @@ export class Run extends EventEmitter implements ConfigureListeners {
         });
 
         this.on('ProgressBar:ProgressBarUpdated:DamagePlayer', (data: DamageData) => {
-            this.character.damage(data);
+            this.player.damage(data);
         });
 
         // Grid events
 
         this.on('Grid:GridStabilized:Death', () => {
             let enemy: Enemy = this.map.enemy;
-            this.character.gold += enemy.gold;
+            this.player.gold += enemy.gold;
             if (enemy.gold > 0) {
                 this.textAnimationController.goldAnimation(enemy.gold);
                 enemy.gold = 0;
@@ -154,7 +152,6 @@ export class Run extends EventEmitter implements ConfigureListeners {
                     this.updateTopProgressBars();
                     this.updateHealth();
                     this.updateMoves();
-                    this.updatePlayerStatsAndItems();
 
                     this.sounds['item'].play();
                     this.emit('Next');
@@ -165,9 +162,9 @@ export class Run extends EventEmitter implements ConfigureListeners {
         });
 
         this.on('Grid:MoveDone', () => {
-            this.emit('ApplyCritical', this.character.critical + (this.map.isBoss ? this.character.bossCritical : 0));
+            this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.bossCritical : 0));
             this.consecutiveCombo = this.combo === 0 ? 0 : this.consecutiveCombo + 1;
-            if (this.character.movesEnded) {
+            if (this.player.movesEnded) {
                 this.reload();
                 this.updateMoves();
             }
@@ -190,7 +187,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
         });
 
         this.on('Grid:GridStabilized:Init', () => {
-            this.emit('ApplyCritical', this.character.critical + (this.map.isBoss ? this.character.bossCritical : 0));
+            this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.bossCritical : 0));
             this.updateTopProgressBars();
         });
 
@@ -226,12 +223,10 @@ export class Run extends EventEmitter implements ConfigureListeners {
 
                     this.updateHealth();
                     this.updateMoves();
-                    this.updatePlayerStatsAndItems();
                 }, () => {
                     this.updateTopProgressBars();
                     this.updateHealth();
                     this.updateMoves();
-                    this.updatePlayerStatsAndItems();
 
                     this.dialogController.close();
                     this.emit('AllowNextFloor');
@@ -304,14 +299,14 @@ export class Run extends EventEmitter implements ConfigureListeners {
                 true
             ),
             new ProgressBar(
-                this.character.health,
-                this.character.currentHealth,
+                this.player.health,
+                this.player.currentHealth,
                 'Your Health',
                 new Color(231, 76, 60),
                 false
             ),
             new ProgressBar(
-                this.character.moves,
+                this.player.moves,
                 this.maxMoves,
                 'Your Moves',
                 new Color(46, 204, 113),
@@ -332,11 +327,11 @@ export class Run extends EventEmitter implements ConfigureListeners {
     }
 
     updateHealth(): void {
-        this.updateProgressBar(ProgressBarIndexes.HEALTH, ProgressBar.yourHealthBar(this.character.health, this.character.currentHealth));
+        this.updateProgressBar(ProgressBarIndexes.HEALTH, ProgressBar.yourHealthBar(this.player.health, this.player.currentHealth));
     }
 
     updateMoves(): void {
-        this.updateProgressBar(ProgressBarIndexes.MOVES, ProgressBar.yourMovesBar(this.maxMoves, this.character.moves));
+        this.updateProgressBar(ProgressBarIndexes.MOVES, ProgressBar.yourMovesBar(this.maxMoves, this.player.moves));
     }
 
     updateProgressBar(index: ProgressBarIndexes, newProgressBar: ProgressBar, params?: EventParams): void {
@@ -359,6 +354,159 @@ export class Run extends EventEmitter implements ConfigureListeners {
         });
         this.map.grid.draw(!!this.dialogController.currentDialog);
         this.map.grid.drawPieces();
+        this.player.draw(this.canvas)
+        this.drawNumbers(this.canvas);
+    }
+
+    drawNumbers(canvas: CanvasInfo): void {
+        const p5: P5 = canvas.p5
+
+        let height: number = canvas.itemSideSize / 4
+
+        let numbersSlotX: number = canvas.canvasSize.x - (canvas.margin * 1.5) - canvas.itemSideSize;
+        let numbersSlotY: number = (canvas.canvasSize.y / 2) - (height / 2);
+
+        let bests: BestNumbers = getBestNumbers();
+
+        if (canvas.horizontalLayout) {
+            // score
+            p5.noStroke()
+            p5.fill(60);
+            p5.rect(
+                numbersSlotX,
+                numbersSlotY - height - (canvas.margin * 1.5),
+                canvas.itemSideSize,
+                height,
+                canvas.radius
+            );
+
+            p5.textAlign(p5.LEFT, p5.CENTER)
+            p5.fill(255);
+            p5.stroke(0);
+            p5.strokeWeight(3);
+            p5.textSize(24)
+            p5.text(
+                'Score',
+                numbersSlotX + canvas.padding,
+                numbersSlotY - (height / 2) - (canvas.margin * 2.5),
+            );
+
+            p5.textAlign(p5.RIGHT, p5.CENTER)
+            p5.text(
+                formatNumber(this.score),
+                numbersSlotX + canvas.itemSideSize - (canvas.margin * 1.5),
+                numbersSlotY - (height / 2) - (canvas.margin * 2.5),
+            );
+
+            p5.textAlign(p5.LEFT, p5.CENTER)
+            p5.fill(200);
+            p5.textSize(16)
+            p5.text(
+                'Best',
+                numbersSlotX + canvas.padding,
+                numbersSlotY - (height / 2) - (canvas.margin * 0.5),
+            );
+
+            p5.textAlign(p5.RIGHT, p5.CENTER)
+            p5.text(
+                formatNumber(bests.bestScore),
+                numbersSlotX + canvas.itemSideSize - (canvas.margin * 1.5),
+                numbersSlotY - (height / 2) - (canvas.margin * 0.5),
+            );
+
+
+            // damage
+            p5.noStroke()
+            p5.fill(60);
+            p5.rect(
+                numbersSlotX,
+                numbersSlotY,
+                canvas.itemSideSize,
+                height,
+                canvas.radius
+            );
+
+            p5.textAlign(p5.LEFT, p5.CENTER)
+            p5.fill(255);
+            p5.stroke(0);
+            p5.strokeWeight(3);
+            p5.textSize(24)
+            p5.text(
+                'Damage',
+                numbersSlotX + canvas.padding,
+                numbersSlotY + (height / 2) - canvas.margin,
+            );
+
+            p5.textAlign(p5.RIGHT, p5.CENTER)
+            p5.text(
+                formatNumber(this.damage),
+                numbersSlotX + canvas.itemSideSize - (canvas.margin * 1.5),
+                numbersSlotY + (height / 2) - canvas.margin,
+            );
+
+            p5.textAlign(p5.LEFT, p5.CENTER)
+            p5.fill(200);
+            p5.textSize(16)
+            p5.text(
+                'Best',
+                numbersSlotX + canvas.padding,
+                numbersSlotY + (height / 2) + canvas.margin,
+            );
+
+            p5.textAlign(p5.RIGHT, p5.CENTER)
+            p5.text(
+                formatNumber(bests.bestDamage),
+                numbersSlotX + canvas.itemSideSize - (canvas.margin * 1.5),
+                numbersSlotY + (height / 2) + canvas.margin,
+            );
+
+
+            // combo
+            p5.noStroke()
+            p5.fill(60);
+            p5.rect(
+                numbersSlotX,
+                numbersSlotY + height + (canvas.margin * 1.5),
+                canvas.itemSideSize,
+                height,
+                canvas.radius
+            );
+
+            p5.textAlign(p5.LEFT, p5.CENTER)
+            p5.fill(255);
+            p5.stroke(0);
+            p5.strokeWeight(3);
+            p5.textSize(24)
+            p5.text(
+                'Combo',
+                numbersSlotX + canvas.padding,
+                numbersSlotY + height * 1.5 + (canvas.margin * 0.5),
+            );
+
+            p5.textAlign(p5.RIGHT, p5.CENTER)
+            p5.text(
+                formatNumber(this.combo),
+                numbersSlotX + canvas.itemSideSize - (canvas.margin * 1.5),
+                numbersSlotY + height * 1.5 + (canvas.margin * 0.5),
+            );
+
+            p5.textAlign(p5.LEFT, p5.CENTER)
+            p5.fill(200);
+            p5.textSize(16)
+            p5.text(
+                'Best',
+                numbersSlotX + canvas.padding,
+                numbersSlotY + height * 1.5 + (canvas.margin * 2.5),
+            );
+
+            p5.textAlign(p5.RIGHT, p5.CENTER)
+            p5.text(
+                formatNumber(bests.bestCombo),
+                numbersSlotX + canvas.itemSideSize - (canvas.margin * 1.5),
+                numbersSlotY + height * 1.5 + (canvas.margin * 2.5),
+            );
+
+        }
     }
 
     processMacthList(matches: Piece[][]): void {
@@ -375,27 +523,26 @@ export class Run extends EventEmitter implements ConfigureListeners {
     updateCombo(matches: Piece[][]): void {
         if (matches.length === 0) {
             this.combo = 0;
-            this.controls['comboCounter'].setAttribute('style', 'font-size: 1em');
+            //this.controls['comboCounter'].setAttribute('style', 'font-size: 1em');
         }
 
         if (this.stackCombo) {
             this.combo += [...matches].length;
-            if (this.combo > 1 && this.character.hasItem('Valuable combo')) {
+            if (this.combo > 1 && this.player.hasItem('Valuable combo')) {
                 let goldAmount: number = 1;
-                this.character.gold += goldAmount;
+                this.player.gold += goldAmount;
                 this.textAnimationController.goldAnimation(goldAmount);
-                this.updatePlayerStatsAndItems();
             }
         }
-        this.controls['comboCounter'].innerHTML = formatNumber(this.combo);
+        //this.controls['comboCounter'].innerHTML = formatNumber(this.combo);
 
         let bests: BestNumbers = getBestNumbers();
         bests.bestCombo = bests.bestCombo > this.combo ? bests.bestCombo : this.combo;
-        this.controls['bestComboCounter'].innerHTML = formatNumber(bests.bestCombo);
+        //this.controls['bestComboCounter'].innerHTML = formatNumber(bests.bestCombo);
         setBestNumbers(bests);
 
         let fontSize: number = this.combo > 0 ? ((this.combo / bests.bestCombo) * 2 >= 1 ? (this.combo / bests.bestCombo) * 2 : 1) : 1;
-        this.controls['comboCounter'].setAttribute('style', 'font-size: ' + fontSize + 'em; ' + (bests.bestCombo === this.combo && this.combo !== 0 ? 'color: red' : 'color: white'));
+        //this.controls['comboCounter'].setAttribute('style', 'font-size: ' + fontSize + 'em; ' + (bests.bestCombo === this.combo && this.combo !== 0 ? 'color: red' : 'color: white'));
     }
 
     updateScore(match: Piece[]): number {
@@ -408,20 +555,20 @@ export class Run extends EventEmitter implements ConfigureListeners {
         let criticalInMatch: boolean = match.some((piece: Piece) => piece.critical);
 
         let lengthMultiplier = match.length;
-        if (this.character.hasItem('Hit Streak')) {
+        if (this.player.hasItem('Hit Streak')) {
             lengthMultiplier += this.consecutiveCombo;
         }
 
-        let additiveScore: number = (this.character.attack + bonusDmg) * lengthMultiplier;
-        additiveScore *= this.character.hasItem('Combos multiply DMG') ? this.combo : 1;
-        additiveScore *= criticalInMatch ? this.character.criticalMultiplier : 1;
+        let additiveScore: number = (this.player.attack + bonusDmg) * lengthMultiplier;
+        additiveScore *= this.player.hasItem('Combos multiply DMG') ? this.combo : 1;
+        additiveScore *= criticalInMatch ? this.player.criticalMultiplier : 1;
 
         this.score += additiveScore;
-        this.controls['scoreCounter'].innerHTML = formatNumber(this.score);
+        //this.controls['scoreCounter'].innerHTML = formatNumber(this.score);
 
         let bests: BestNumbers = getBestNumbers();
         bests.bestScore = bests.bestScore > this.score ? bests.bestScore : this.score;
-        this.controls['bestScoreCounter'].innerHTML = formatNumber(bests.bestScore);
+        //this.controls['bestScoreCounter'].innerHTML = formatNumber(bests.bestScore);
         setBestNumbers(bests);
 
         if (match?.length) {
@@ -429,7 +576,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             let cell2: Cell = this.map.grid.getCellbyPosition(match[match.length - 1].position);
             let position: Position = cell1.canvasPosition.average(cell2.canvasPosition);
 
-            this.textAnimationController.damageAnimation(additiveScore, position, match[0]?.shape);
+            this.textAnimationController.damageAnimation(additiveScore, criticalInMatch, position, match[0]?.shape);
             this.updateDamage(additiveScore);
         }
 
@@ -439,141 +586,48 @@ export class Run extends EventEmitter implements ConfigureListeners {
     updateDamage(damageDealt: number): void {
         if (damageDealt === 0) {
             this.damage = 0;
-            this.controls['damageCounter'].setAttribute('style', 'font-size: 1em');
+            //this.controls['damageCounter'].setAttribute('style', 'font-size: 1em');
         }
 
         this.damage += damageDealt;
-        this.controls['damageCounter'].innerHTML = formatNumber(this.damage);
+        //this.controls['damageCounter'].innerHTML = formatNumber(this.damage);
 
         let bests: BestNumbers = getBestNumbers();
         bests.bestDamage = bests.bestDamage > this.damage ? bests.bestDamage : this.damage;
-        this.controls['bestDamageCounter'].innerHTML = formatNumber(bests.bestDamage);
+        //this.controls['bestDamageCounter'].innerHTML = formatNumber(bests.bestDamage);
         setBestNumbers(bests);
 
         let fontSize: number = this.damage > 0 ? ((this.damage / bests.bestDamage) * 2 >= 1 ? (this.damage / bests.bestDamage) * 2 : 1) : 1;
-        this.controls['damageCounter'].setAttribute('style', 'font-size: ' + fontSize + 'em; ' + (bests.bestDamage === this.damage && this.damage !== 0 ? 'color: red' : 'color: white'));
+        //this.controls['damageCounter'].setAttribute('style', 'font-size: ' + fontSize + 'em; ' + (bests.bestDamage === this.damage && this.damage !== 0 ? 'color: red' : 'color: white'));
     }
 
     damageEnemy(damage: number): void {
-        damage = damage * this.character.damageMultiplier;
+        damage = damage * this.player.damageMultiplier;
         let enemy: Enemy = this.map.enemy;
         let finalDamage: number = enemy.simulateDamage(damage);
         this.updateProgressBar(ProgressBarIndexes.ENEMY, ProgressBar.enemyHealthBar(enemy, enemy.currentHealth - finalDamage, this.map.stage.enemies.length), { useCase: 'DamageEnemy', data: finalDamage });
     }
 
-    updatePlayerStatsAndItems(): void {
-        if (!this.controls['runInfo'].classList.contains('show')) {
-            this.controls['runInfo'].classList.add('show');
-        }
-
-        let statsContent: string = '';
-        if (this.character) {
-            statsContent += '<div class="stats-ui">';
-
-            statsContent += '<div class="stat-3">';
-            statsContent += `<strong>Attack:</strong>&nbsp;<span>${formatNumber(this.character.attack)}</span>`;
-            statsContent += '</div>';
-
-            statsContent += '<div class="stat-3">';
-            statsContent += `<strong>Defense:</strong>&nbsp;<span>${this.character.defense}</span>`;
-            statsContent += '</div>';
-
-            statsContent += '<div class="stat-4">';
-            statsContent += `<strong>Gold:</strong>&nbsp;<span>${this.character.gold}</span>`;
-            statsContent += '</div>';
-
-            statsContent += '</div><div class="stats-ui">';
-
-            statsContent += '<div class="stat-3">';
-            statsContent += `<strong>Multiplier:</strong>&nbsp;<span>x${this.character.damageMultiplier}</span>`;
-            statsContent += '</div>';
-
-            statsContent += '<div class="stat-3">';
-            statsContent += `<strong>Critical Multiplier:</strong>&nbsp;<span>x${this.character.criticalMultiplier}</span>`;
-            statsContent += '</div>';
-
-            statsContent += '<div class="stat-3">';
-            statsContent += `<strong>Critical on Grid:</strong>&nbsp;<span>${this.character.critical}</span>`;
-            statsContent += '</div>';
-
-            statsContent += '</div>';
-        }
-
-        this.controls['statsContainer'].innerHTML = statsContent;
-
-        let itemsContent: string = '';
-
-        if (this.character?.items || this.character?.activeItem) {
-            let itemsToShow = [...this.character.items];
-
-            if (this.character?.activeItem) {
-                itemsToShow.unshift(this.character.activeItem);
-            }
-
-            itemsToShow.forEach((item: Item, index: number) => {
-                if (index % 4 === 0 || index === 0) {
-                    itemsContent += '</div><div class="item-ui">';
-                }
-
-                itemsContent += `
-                <div class="item-wrap">
-                <div class="centered item rarity-${item.rarity}">
-                <span class="rarity">${item.rarity}</span>`;
-
-
-                if (item.price || item.unique) {
-
-                    itemsContent += item.price ? `<span class="price">$ ${item.price}</span><br>` : '';
-                    itemsContent += item.unique ? `<span class="unique">Unique</span><br>` : '';
-
-                } else {
-                    itemsContent += '<br>';
-                }
-
-                itemsContent += `   
-                <h3>${item.name}</h3>
-                <strong>${item.description}</strong>`
-
-                itemsContent += item.isActive ? '<br><input type="button" id="activeItem" value="Activate">' : '';
-
-                itemsContent += '</div></div> <br>';
-            });
-            itemsContent += '</div>';
-        }
-
-        this.controls['itemsContainer'].innerHTML = itemsContent;
-
-        if (this.character?.activeItem) {
-            let activeItemButton: HTMLElement = document.getElementById('activeItem');
-            activeItemButton.onclick = (() => {
-                this.character.activeItem.effect();
-                this.character.activeItem = undefined;
-                this.sounds['item'].play();
-                this.updatePlayerStatsAndItems();
-            }).bind(this);
-        }
-    }
 
     updatePlayerMoves(): void {
         this.inAnimation = true;
-        let movesLeft: number = this.character.moves - 1;
-        if (Math.random() < this.character.moveSaver) {
-            movesLeft = this.character.moves;
+        let movesLeft: number = this.player.moves - 1;
+        if (Math.random() < this.player.moveSaver) {
+            movesLeft = this.player.moves;
             this.textAnimationController.moveSavedAnimation();
         }
-        this.character.updateMoves(movesLeft);
+        this.player.updateMoves(movesLeft);
         this.updateMoves();
-        this.updatePlayerStatsAndItems();
     }
 
     reload(): void {
-        this.character.updateMoves(this.maxMoves);
-        let damage: DamageData = this.character.simulateDamage(this.map.enemy.attack);
+        this.player.updateMoves(this.maxMoves);
+        let damage: DamageData = this.player.simulateDamage(this.map.enemy.attack);
 
         this.sounds['defeat'].play();
         this.textAnimationController.damagePlayerAnimation(damage);
 
-        this.updateProgressBar(ProgressBarIndexes.HEALTH, ProgressBar.yourHealthBar(this.character.health, this.character.currentHealth - damage.damage), { useCase: 'DamagePlayer', data: damage });
+        this.updateProgressBar(ProgressBarIndexes.HEALTH, ProgressBar.yourHealthBar(this.player.health, this.player.currentHealth - damage.damage), { useCase: 'DamagePlayer', data: damage });
     }
 
     newNavigationDialog(callback?: (index: number) => void): void {
@@ -593,22 +647,20 @@ export class Run extends EventEmitter implements ConfigureListeners {
             'Choose your destination',
             'Higher risk higher reward',
             options,
-            new Color(255, 255, 255)
+            DialogType.NAVIGATION
         );
 
         this.dialogController.dialogs.push(dialog);
     }
 
     newRandomDropDialog(rarities: string[], callback: () => void): void {
-        let itemList: Item[] = Item.generateItemsBasedOnRarity(1, ItemPools.defaultPool(this), rarities, this.character);
+        let itemList: Item[] = Item.generateItemsBasedOnRarity(1, ItemPools.defaultPool(this), rarities, this.player);
 
         let dialog: Dialog = new Dialog(
             'This Enemy Dropped Something',
             'You may take it',
             ItemDialogOption.itemListToDialogOption(itemList, this, callback),
-            new Color(255, 255, 255),
-            false,
-            true,
+            DialogType.SKIPPABLE_ITEM,
             callback
         );
 
@@ -620,21 +672,22 @@ export class Run extends EventEmitter implements ConfigureListeners {
             this.itemOptions,
             ItemPools.defaultPool(this),
             ['Common', 'Rare', 'Epic'],
-            this.character
+            this.player
         );
 
         let dialog: Dialog = new Dialog(
-            'Pick a item',
+            'Pick an item',
             'Choose one from the options below',
             ItemDialogOption.itemListToDialogOption(itemList, this, callback),
-            new Color(255, 255, 255)
+            DialogType.ITEM,
+            undefined,
         );
 
         this.dialogController.dialogs.unshift(dialog);
     }
 
     newShopDialog(selectCallback: () => void, closeCallback?: () => void): void {
-        let itemList: Item[] = Item.generateItemsBasedOnRarity(2, ItemPools.shopPool(this), ['Common', 'Rare', 'Epic'], this.character);
+        let itemList: Item[] = Item.generateItemsBasedOnRarity(2, ItemPools.shopPool(this), ['Common', 'Rare', 'Epic'], this.player);
 
         itemList = [ItemPools.fullHealthShopItem(this), ...itemList];
 
@@ -642,9 +695,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             'Floor item shop',
             'Buy what you can with your gold',
             ItemDialogOption.itemListToDialogOption(itemList, this, selectCallback),
-            new Color(255, 255, 255),
-            true,
-            false,
+            DialogType.SHOP,
             closeCallback
         );
 
@@ -654,15 +705,13 @@ export class Run extends EventEmitter implements ConfigureListeners {
     newInitialItemDialog(): void {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(3, ItemPools.defaultPool(this).filter((item: Item) => {
             return item.name !== 'Instant Health';
-        }), ['Common'], this.character);
+        }), ['Common'], this.player);
 
         let dialog: Dialog = new Dialog(
-            'Pick a starting piece',
-            'Make your run different from the last or not',
+            'Pick a starting item',
+            'Make your run different from the last',
             ItemDialogOption.itemListToDialogOption(itemList, this, () => this.emit('InitialItemSelected')),
-            new Color(255, 255, 255),
-            false,
-            true,
+            DialogType.SKIPPABLE_ITEM,
             () => this.emit('InitialItemSelected')
         );
 
@@ -687,7 +736,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
                 },
                 new Color(46, 204, 113),
                 'Easy',
-                '5 Enemies, 3 Stages, 3 Floors',
+                '3 Floors',
                 '12x8 grid'
             ),
             new DefaultDialogOption(
@@ -704,7 +753,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
                 },
                 new Color(244, 208, 63),
                 'Normal',
-                '8 Enemies, 5 Stages, 5 Floors',
+                '5 Floors',
                 '10x8 grid'
             ),
             new DefaultDialogOption(
@@ -721,7 +770,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
                 },
                 new Color(231, 76, 60),
                 'Hard',
-                '10 Enemies, 8 Stages, 8 Floors',
+                '8 Floors',
                 '8x6 grid'
             ),
         ];
@@ -750,7 +799,9 @@ export class Run extends EventEmitter implements ConfigureListeners {
             status ?? 'New Run',
             subtext,
             options,
-            color ?? new Color(255, 255, 255)
+            DialogType.CHOICE,
+            undefined,
+            color
         );
     }
 

@@ -111,7 +111,7 @@ export class Map extends EventEmitter implements ConfigureListeners {
         // Click usecase
 
         this.on('EventEmitter:MouseClicked', (click: Position, run?: Run) => {
-            if (!run || run.hasDialogOpen) {
+            if (!run || run.hasDialogOpen || run.player.hasInventoryOpen) {
                 return;
             }
 
@@ -195,7 +195,7 @@ export class Map extends EventEmitter implements ConfigureListeners {
             this.grid.stabilizeGrid('Death', true);
         });
 
-        this.on('Character:PlayerDied', () => {
+        this.on('Player:PlayerDied', () => {
             this.grid.clearGrid('GridCleared:PlayerDied');
         });
 
@@ -238,6 +238,10 @@ export class Map extends EventEmitter implements ConfigureListeners {
 
         this.on('Run:Item:ClearColumn', (params: EffectParams) => {
             this.grid.clearColumn(params);
+        });
+
+        this.on('EventEmitter:WindowResized', () => {
+            this.grid.calculateSpacing();
         });
     }
 

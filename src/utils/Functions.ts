@@ -1,7 +1,10 @@
 import * as P5 from "p5";
+import { CanvasInfo } from "../models/CanvasInfo";
 import { Color } from "../models/Color";
+import { ItemDialogOption } from "../models/Dialog";
+import { Item } from "../models/Item";
 import { Position } from "../models/Position";
-import { BestNumbers } from "../models/Run";
+import { BestNumbers, Run } from "../models/Run";
 
 export function generateId(): string {
     return "id" + Math.random().toString(16).slice(2)
@@ -103,7 +106,6 @@ export function dottedLine(position1: Position, position2: Position, size: numbe
     return dots;
 }
 
-
 export function checkPositionInLimit(position: Position, ...coords: number[]): boolean {
     return position.x > coords[0] && position.x < coords[1] && position.y > coords[2] && position.y < coords[3];
 }
@@ -139,5 +141,127 @@ export function setBestNumbers(numbers: BestNumbers): void {
 
 export function randomBetween(max: number, min: number): number {
     return Math.floor(Math.random() * (max - min + 1) + min);
+}
 
+export function insertLineBreaks(input: string, every: number): string {
+    let result: string = '';
+    let currentLength: number = 0;
+    let words: string[] = input.split(' ');
+
+    for (let i: number = 0; i < words.length; i++) {
+        if (currentLength + words[i].length > Math.floor(every)) {
+            result += '\n';
+            currentLength = 0;
+        } else if (currentLength > 0) {
+            result += ' ';
+            currentLength++;
+        }
+
+        result += words[i];
+        currentLength += words[i].length;
+    }
+
+    return result;
+}
+export function countOcurrences(input: string, of: string) {
+    return (input.match(new RegExp(of, 'g')) || []).length;
+
+}
+
+export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMarginY: number, itemSideSize: number, canvas: CanvasInfo, relativeFade: number = 0, run?: Run, option?: ItemDialogOption) {
+    const p5: P5 = canvas.p5
+
+    let limits: number[] = [
+        cumulativeMarginX,
+        cumulativeMarginX + itemSideSize,
+        cumulativeMarginY,
+        cumulativeMarginY + itemSideSize
+    ];
+
+    if (option) {
+        option.limits = limits;
+    }
+
+    let isMouseOver: boolean = checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...limits)
+    let opacity: number = (isMouseOver ? 255 : 200) + relativeFade
+    let color: Color = Item.rarityColors()[item.rarity].color;
+
+    p5.noStroke();
+    p5.fill(...(option?.disabled ? new Color(86, 101, 115).value : color.value), opacity <= 0 ? 0 : opacity);
+    p5.rect(
+        cumulativeMarginX,
+        cumulativeMarginY,
+        itemSideSize,
+        itemSideSize,
+        canvas.radius * 2
+    );
+
+    p5.textAlign(p5.CENTER, p5.CENTER);
+    p5.textSize(20);
+    let name: string = insertLineBreaks(item.name, p5.map(itemSideSize - canvas.margin, 0, p5.textWidth(item.name), 0, item.name.length));
+    let textMargin: number = cumulativeMarginY + (itemSideSize / 2);
+
+    p5.fill(255, 255, 255, 255 + relativeFade);
+    p5.stroke(0, 0, 0, 255 + relativeFade);
+    p5.strokeWeight(3);
+    p5.text(
+        name,
+        cumulativeMarginX + (itemSideSize / 2),
+        textMargin - canvas.margin
+    );
+
+    p5.textSize(16);
+    let description: string = insertLineBreaks(item.description, p5.map(itemSideSize - canvas.margin, 0, p5.textWidth(item.description), 0, item.description.length));
+    let subOffset: number = (countOcurrences(name, '\n') + Math.max(1, countOcurrences(description, '\n') - 1)) * canvas.margin;
+
+    p5.fill(200, 200, 200, 255 + relativeFade);
+    p5.strokeWeight(2);
+    p5.text(
+        description,
+        cumulativeMarginX + (itemSideSize / 2),
+        textMargin + subOffset
+    );
+
+    p5.textAlign(p5.LEFT, p5.TOP);
+    p5.fill(255, 255, 255, 255 + relativeFade);
+    p5.stroke(0, 0, 0, 255 + this.relativeFade);
+    p5.strokeWeight(3);
+    p5.textSize(16);
+    p5.text(
+        item.rarity,
+        cumulativeMarginX + canvas.padding,
+        cumulativeMarginY + canvas.padding
+    );
+
+    if (item.unique || item.isActive) {
+        p5.textAlign(p5.RIGHT, p5.TOP);
+        p5.fill([...(item.unique ? Color.YELLOW : Color.ORANGE).value, 255 + relativeFade]);
+        p5.stroke(0, 0, 0, 255 + this.relativeFade);
+        p5.strokeWeight(3);
+        p5.textSize(16);
+        p5.text(
+            item.unique ? 'Unique' : 'Single Use',
+            cumulativeMarginX + itemSideSize - canvas.padding,
+            cumulativeMarginY + canvas.padding
+        );
+    }
+
+    if (item.price) {
+        let canAfford: boolean = true;
+        if (run?.player && option) {
+            canAfford = run?.player.gold >= item.price;
+            option.disabled = !canAfford;
+        }
+
+        p5.textAlign(p5.CENTER, p5.BOTTOM);
+        p5.fill(...(canAfford ? Color.YELLOW : Color.RED).value, 255 + relativeFade);
+        p5.strokeWeight(2);
+        p5.textSize(20);
+        p5.text(
+            `$ ${item.price}`,
+            cumulativeMarginX + (itemSideSize / 2),
+            cumulativeMarginY + itemSideSize - canvas.padding
+        );
+
+    }
 }

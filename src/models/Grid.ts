@@ -173,12 +173,25 @@ export class Grid extends EventEmitter {
             this.sideSize++;
             this.horizontalCenterPadding = this.canvas.playfield.x - (this.width * this.sideSize) - (this.width * this.canvas.padding) - this.canvas.padding;
             this.verticalCenterPadding = this.canvas.playfield.y - this.canvas.topUiSize - this.canvas.bottomUiSize - (this.height * this.sideSize) - (this.height * this.canvas.padding) - this.canvas.padding;
+
+            if (this.canvas.horizontalLayout) {
+                this.horizontalCenterPadding -= (this.canvas.itemSideSize + this.canvas.margin) * 2
+            } else {
+                this.verticalCenterPadding -= (this.canvas.itemSideSize + this.canvas.margin) * 2
+            }
+
         } while (this.horizontalCenterPadding - this.width >= 0 && this.verticalCenterPadding - this.height >= 0);
 
         this.iterateXtoY((position: Position) => {
 
-            let currentXMargin = (this.horizontalCenterPadding / 2) + (position.x * this.sideSize) + (position.x * this.canvas.padding) + this.canvas.padding + this.canvas.margin;
-            let currentYMargin = this.canvas.topUiSize + (this.verticalCenterPadding / 2) + (position.y * this.sideSize) + (position.y * this.canvas.padding) + this.canvas.padding + this.canvas.margin;
+            let currentXMargin = (this.horizontalCenterPadding / 2) + (position.x * this.sideSize) + ((position.x + 1) * this.canvas.padding) + this.canvas.margin;
+            let currentYMargin = this.canvas.topUiSize + (this.verticalCenterPadding / 2) + (position.y * this.sideSize) + ((position.y + 1) * this.canvas.padding) + this.canvas.margin;
+
+            if (this.canvas.horizontalLayout) {
+                currentXMargin += this.canvas.itemSideSize + this.canvas.margin;
+            } else {
+                currentYMargin += this.canvas.itemSideSize + this.canvas.margin;
+            }
 
             this.getCellbyPosition(position).canvasPosition = new Position(currentXMargin, currentYMargin);
         });
@@ -608,8 +621,9 @@ export class Grid extends EventEmitter {
         let p5: P5 = this.canvas.p5;
         this.cells.flat().map((cell: Cell) => cell.piece).forEach((piece: Piece) => {
             if (piece) {
+                piece.sideSize = this.sideSize / 3
                 let cellRef: Cell = this.getCellbyPosition(piece.position);
-                p5.strokeWeight(2);
+                p5.strokeWeight(3);
                 p5.stroke(0, 0, 0, 255 - piece.additiveFade);
                 p5.fill(piece.shape.color.r, piece.shape.color.g, piece.shape.color.b, 255 - piece.additiveFade);
                 polygon(

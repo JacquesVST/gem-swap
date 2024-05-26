@@ -43,10 +43,10 @@ export class ProgressBar extends EventEmitter {
         if (this.top) {
             commonMargin = (canvas.margin * (index + 2)) + (canvas.uiBarSize * index) + canvas.margin / 2;
         } else {
-            let bottomIndex: number = canvas.barCount - 1 - index;
-            commonMargin = (canvas.margin * (bottomIndex + 2)) + (canvas.uiBarSize * bottomIndex) + canvas.totalGridHeight + canvas.topUiSize + canvas.margin / 2;
+            let bottomIndex: number = index - 3;
+            commonMargin = canvas.canvasSize.y - canvas.margin - canvas.bottomUiSize + (canvas.uiBarSize * bottomIndex) + (canvas.margin * bottomIndex) + canvas.margin / 2;
         }
-        let maxBarSize: number = (canvas.playfield.x - (2 * canvas.padding));
+        let maxBarSize: number = (canvas.playfield.x - (2 * canvas.margin));
 
         let finalElementSize: number = (maxBarSize * percentageOfBar);
         finalElementSize = finalElementSize > maxBarSize ? maxBarSize : finalElementSize;
@@ -54,7 +54,7 @@ export class ProgressBar extends EventEmitter {
         p5.fill(percentageOfBar ? [...this.color.value, this.fade] : [20, 20, 20, this.fade]);
         p5.noStroke();
         p5.rect(
-            canvas.margin + canvas.padding,
+            canvas.margin * 2,
             commonMargin,
             finalElementSize <= 1 ? 1 : finalElementSize,
             canvas.uiBarSize,
@@ -63,20 +63,20 @@ export class ProgressBar extends EventEmitter {
 
         p5.fill(this.color.value);
         p5.stroke(0);
-        p5.strokeWeight(4);
+        p5.strokeWeight(3);
         p5.textSize(20);
 
         p5.textAlign(p5.LEFT, p5.CENTER);
         p5.text(
             this.title,
-            canvas.margin + canvas.padding * 4,
+            canvas.margin * 3,
             commonMargin + (canvas.padding * 0.5),
         );
 
         p5.textAlign(p5.RIGHT, p5.CENTER);
         p5.text(
             `${formatNumber(Math.floor(this.value))}/${formatNumber(Math.floor(this.maxValue))}`,
-            canvas.margin + maxBarSize - (canvas.padding * 4),
+            canvas.margin + maxBarSize,
             commonMargin + canvas.padding,
         );
         this.updateAnimation();

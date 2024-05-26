@@ -6,16 +6,18 @@ export class CanvasInfo {
     private static instance: CanvasInfo;
     p5: P5;
     margin: number;
-    padding: number;
     radius: number;
+    padding: number;
+    barCount: number;
     uiBarSize: number;
     topUiSize: number;
+    cellSideSize: number;
     bottomUiSize: number;
+    itemSideSize: number;
+    totalGridHeight: number;
+    horizontalLayout: boolean;
     canvasSize: Position;
     playfield: Position;
-    totalGridHeight: number;
-    cellSideSize: number;
-    barCount: number;
 
     private constructor(p5: P5, margin: number, padding: number, radius: number, uiBarSize: number, topUiBarCount: number, bottomUiBarCount: number) {
         this.margin = margin;
@@ -39,15 +41,12 @@ export class CanvasInfo {
 
     calculateCanvasAndPlayfield(): void {
         let screenWidth: number = document.body.clientWidth;
-        let screenHeight: number = ((screenWidth / 4) * 3) + this.topUiSize + this.bottomUiSize;
+        let screenHeight: number = window.innerHeight
 
-        let maxHeight: number = window.innerHeight - 360;
-        if (screenHeight > maxHeight) {
-            screenHeight = maxHeight
-        }
-
+        this.horizontalLayout = screenWidth > screenHeight
         this.canvasSize = new Position(screenWidth, screenHeight);
         this.playfield = new Position(this.canvasSize.x - 2 * this.margin, (this.canvasSize.y - 2 * this.margin));
+        this.itemSideSize = (this.playfield.x - (this.margin * 6)) / 7;
         this.p5.createCanvas(this.canvasSize.x, this.canvasSize.y);
     }
 
@@ -58,8 +57,8 @@ export class CanvasInfo {
     calculateBottomUiSize(bottomUiBarCount: number): number {
         return ((bottomUiBarCount + 1) * this.margin) + (bottomUiBarCount * this.uiBarSize);
     }
-
     draw(): void {
+
         this.p5.background(0);
         this.p5.noStroke();
         this.p5.fill(new Color(20, 20, 20).value);

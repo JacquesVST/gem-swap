@@ -13,6 +13,7 @@ export class DragAnimation {
     frames: number = 0;
     fade: number = 255;
     velocityFade: number = 0;
+    isFading: boolean = false;
 
     constructor(initialPosition: Position, frames: number) {
         this.initialPosition = initialPosition
@@ -31,20 +32,21 @@ export class DragAnimation {
         let p5: P5 = run.canvas.p5
         if (this.finalPosition && this.finalPosition.checksum !== this.initialPosition.checksum) {
 
-            p5.strokeWeight(2);
+            p5.strokeWeight(3);
             p5.stroke(0, 0, 0, this.fade);
             p5.fill(255, 255, 255, this.fade);
 
             let size: number = run.canvas.cellSideSize / 6;
             let dots: number = dottedLine(this.initialPosition, this.finalPosition, size, size * 1.25, p5);
 
-            if (dots !== run.dots) {
+            if (dots !== run.dots && this.fade === 255) {
                 run.dots = dots;
                 run.sounds['dot'].setVolume(0.2);
                 run.sounds['dot'].play();
             }
 
-            if (!isDragging) {
+            if (!isDragging || this.isFading) {
+                this.isFading = true;
                 this.updatePosition(dragAnimationController);
             }
         }

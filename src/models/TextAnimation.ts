@@ -1,9 +1,9 @@
 import * as P5 from "p5";
 import { generateId } from "../utils/Functions";
 import { CanvasInfo } from "./CanvasInfo";
-import { DamageData } from "./Character";
 import { Color } from "./Color";
 import { EventEmitter } from "./EventEmitter";
+import { DamageData } from "./Player";
 import { Position } from "./Position";
 import { Shape } from "./Shape";
 
@@ -49,12 +49,8 @@ export class TextAnimation {
 
     draw(p5: P5, textAnimationController: TextAnimationController): void {
         p5.fill(...this.color.value, this.fade);
-        if (this.stroke > 0) {
-            p5.stroke(0, 0, 0, this.fade);
-            p5.strokeWeight(this.stroke);
-        } else {
-            p5.noStroke();
-        }
+        p5.stroke(0, 0, 0, this.fade)
+        p5.strokeWeight(3);
 
         p5.textSize(this.size);
         p5.textAlign(this.align, p5.CENTER);
@@ -112,7 +108,7 @@ export class TextAnimationController extends EventEmitter {
         this.textAnimations = this.textAnimations.filter((animation: TextAnimation) => animation.id !== textAnimation.id);
     }
 
-    damageAnimation(damage: number, positon: Position, mainShape?: Shape): void {
+    damageAnimation(damage: number, criticalInMatch: boolean, positon: Position, mainShape?: Shape): void {
 
         let color: Color = mainShape ? mainShape.color : new Color(224, 224, 224);
 
@@ -120,8 +116,8 @@ export class TextAnimationController extends EventEmitter {
         let varianceY: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1);
 
         let textAnimation: TextAnimation = new TextAnimation(
-            `${damage} DMG`,
-            20,
+            `${damage} DMG${criticalInMatch ? '!' : ''}`,
+            20 * (criticalInMatch ? 2 : 1),
             color,
             4,
             this.canvas.p5.CENTER,

@@ -1,4 +1,5 @@
-import { checkPositionInLimit } from "../utils/Functions";
+import * as P5 from "p5";
+import { checkPositionInLimit, drawItem, generateId, insertLineBreaks } from "../utils/Functions";
 import { CanvasInfo } from "./CanvasInfo";
 import { Color } from "./Color";
 import { ConfigureListeners, EventEmitter } from "./EventEmitter";
@@ -9,32 +10,36 @@ import { Run } from "./Run";
 import { BossStage, EnemyStage, MiniBossStage } from "./Stage";
 
 export class Dialog extends EventEmitter {
+    id: string;
     title: string;
     message: string;
     options: DialogOption[];
-    color: Color;
-    keep: boolean;
-    skip: boolean;
+    textColor: Color;
+    type: DialogType;
 
     animationStatus: AnimationStatus = AnimationStatus.NOT_STARTED;
     frames: number = 0;
     velocityFade: number = 0;
     relativeFade: number = 0;
 
-    constructor(title: string, message: string, options: DialogOption[], color: Color, keep?: boolean, skip?: boolean, closeCallback?: () => void) {
+    constructor(title: string, message: string, options: DialogOption[], type: DialogType, closeCallback?: () => void, textColor?: Color) {
         super();
         this.title = title;
         this.message = message;
         this.options = options;
-        this.color = color;
-        this.keep = keep;
-        this.skip = skip;
+        this.textColor = textColor ?? new Color(255, 255, 255);
+        this.type = type
+        this.id = generateId();
 
         this.setupAdditionalOptions(closeCallback);
     }
 
+    get hasAdditionalButton(): boolean {
+        return this.type === DialogType.SHOP || this.type === DialogType.SKIPPABLE_ITEM;
+    }
+
     setupAdditionalOptions(closeCallback: () => void): void {
-        if (this.keep) {
+        if (this.type === DialogType.SHOP) {
             this.options.push(new DefaultDialogOption(
                 () => {
                     if (closeCallback) {
@@ -46,7 +51,7 @@ export class Dialog extends EventEmitter {
             ));
         }
 
-        if (this.skip) {
+        if (this.type === DialogType.SKIPPABLE_ITEM) {
             this.options.push(new DefaultDialogOption(
                 () => {
                     if (closeCallback) {
@@ -60,60 +65,95 @@ export class Dialog extends EventEmitter {
     }
 
     draw(canvas: CanvasInfo, run?: Run): void {
-        const p5 = canvas.p5;
-
         if (this.animationStatus === AnimationStatus.NOT_STARTED) {
             this.setupAnimation();
         }
 
-        let dialogWidth: number = canvas.playfield.x / 2;
-        let dialogHeigth: number = canvas.playfield.y - (canvas.margin * 2);
-        let marginX: number = (canvas.canvasSize.x / 2) - (dialogWidth / 2)
+        let dimension: Position = new Position(0, 0);
+        let margin: Position = new Position(0, 0);
+
+        let textOffset: number = 0;
+
+        let textMarginCount: number = 8;
+        let optionsLength: number = this.hasAdditionalButton ? this.options.length - 1 : this.options.length;
+
+        optionsLength = optionsLength === 1 ? 2 : optionsLength;
+
+        dimension.x = optionsLength * canvas.itemSideSize + ((optionsLength + 1) * canvas.margin);
+        margin.x = (canvas.playfield.x / 2) - (dimension.x / 2);
+
+        dimension.y = (Math.ceil(optionsLength / 5) * canvas.itemSideSize) + ((Math.ceil(optionsLength / 5) + textMarginCount) * canvas.margin) + (this.hasAdditionalButton ? canvas.margin + (canvas.itemSideSize / 4) : 0);
+        margin.y = (canvas.playfield.y / 2) - (dimension.y / 2);
+
+        textOffset = margin.y + (textMarginCount * canvas.margin / 2);
+
+        this.drawDialogBackground(dimension, margin, textOffset, canvas);
+        this.drawOptions(dimension, margin, canvas, run);
+    }
+
+
+    drawDialogBackground(dimension: Position, margin: Position, textOffset: number, canvas: CanvasInfo): void {
+        const p5: P5 = canvas.p5;
 
         p5.noStroke();
         p5.fill([...new Color(40, 40, 40).value, 255 + this.relativeFade]);
         p5.rect(
-            marginX,
-            canvas.margin * 2,
-            dialogWidth,
-            dialogHeigth,
-            canvas.radius * 2
+            margin.x,
+            margin.y,
+            dimension.x,
+            dimension.y,
+            canvas.radius * 4
         );
 
         p5.textAlign(p5.CENTER, p5.CENTER)
 
-        p5.fill([...this.color.value, 255 + this.relativeFade]);
+        p5.fill([...this.textColor.value, 255 + this.relativeFade]);
         p5.stroke(0, 0, 0, 255 + this.relativeFade);
-        p5.strokeWeight(4);
+        p5.strokeWeight(3);
         p5.textSize(24)
         p5.text(
             this.title,
-            canvas.canvasSize.x / 2,
-            canvas.margin * 5,
+            canvas.playfield.x / 2,
+            textOffset - canvas.margin
         );
 
         p5.fill(200, 200, 200, 255 + this.relativeFade);
         p5.textSize(16)
+        p5.strokeWeight(2);
         p5.text(
             this.message,
-            canvas.canvasSize.x / 2,
-            canvas.margin * 7,
+            canvas.playfield.x / 2,
+            textOffset + canvas.margin
         );
+    }
 
-        let addFiller: boolean = this.options.length < 3
-
-        let optionWidth: number = dialogWidth - (canvas.margin * 2);
-        let optionHeight: number = ((dialogHeigth * 0.85) - ((this.options.length + (addFiller ? 2 : 0) + 1) * canvas.margin)) / (this.options.length + (addFiller ? 2 : 0));
+    drawOptions(dimension: Position, margin: Position, canvas: CanvasInfo, run?: Run): void {
+        const p5: P5 = canvas.p5;
 
         this.options.forEach((option: DialogOption, index: number) => {
 
-            let cumulativeMargin: number = ((addFiller ? index + 1 : index) * (optionHeight + canvas.margin)) + (dialogHeigth * 0.15) + canvas.margin;
+            // option frame
+            let cumulativeMarginX: number = margin.x + (index % 5 * (canvas.itemSideSize + canvas.margin)) + canvas.margin;
+            let cumulativeMarginY: number = margin.y + (Math.floor(index / 5) * (canvas.itemSideSize + canvas.margin)) + (canvas.margin * 8);
+
+            cumulativeMarginX = this.options.length === (this.hasAdditionalButton ? 2 : 1) ? canvas.playfield.x / 2 - (canvas.itemSideSize / 2) : cumulativeMarginX;
+
+            let optionWidth: number = canvas.itemSideSize;
+            let optionHeight: number = canvas.itemSideSize;
+
+            if (this.hasAdditionalButton && index === this.options.length - 1) {
+                optionWidth = (canvas.itemSideSize * 2) + canvas.margin;
+                optionHeight = canvas.itemSideSize / 4;
+
+                cumulativeMarginX = canvas.playfield.x / 2 - (optionWidth / 2);
+                cumulativeMarginY = margin.y + dimension.y - canvas.margin - optionHeight;
+            }
 
             let limits: number[] = [
-                marginX + canvas.margin,
-                marginX + canvas.margin + optionWidth,
-                cumulativeMargin,
-                cumulativeMargin + optionHeight
+                cumulativeMarginX,
+                cumulativeMarginX + optionWidth,
+                cumulativeMarginY,
+                cumulativeMarginY + optionHeight
             ];
 
             option.limits = limits;
@@ -122,128 +162,63 @@ export class Dialog extends EventEmitter {
 
             let opacity: number = (isMouseOver ? 255 : 200) + this.relativeFade
 
-            p5.noStroke();
-            p5.fill(...(option.disabled ? new Color(86, 101, 115).value : option.color.value), opacity <= 0 ? 0 : opacity);
-            p5.rect(
-                marginX + canvas.margin,
-                cumulativeMargin,
-                optionWidth,
-                optionHeight,
-                canvas.radius * 2
-            );
-
-            if (option instanceof ItemDialogOption) {
-                p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.fill([...option.color.value, 255 + this.relativeFade]);
-                p5.stroke(0, 0, 0, 255 + this.relativeFade);
-                p5.strokeWeight(4);
-                p5.textSize(16)
-                p5.text(
-                    option.item.rarity,
-                    (canvas.canvasSize.x / 2) - (optionWidth / 2) + canvas.padding,
-                    cumulativeMargin + canvas.margin + (canvas.padding / 2),
+            if (!(option instanceof ItemDialogOption)) {
+                p5.noStroke();
+                p5.fill(...(option.disabled ? new Color(86, 101, 115).value : option.color.value), opacity <= 0 ? 0 : opacity);
+                p5.rect(
+                    cumulativeMarginX,
+                    cumulativeMarginY,
+                    optionWidth,
+                    optionHeight,
+                    canvas.radius * 2
                 );
 
-                if (option.item.price && run?.character) {
-                    let canAfford: boolean = run?.character.gold >= option.item.price;
-
-                    p5.textAlign(p5.RIGHT, p5.CENTER)
-                    p5.fill([...(canAfford ? new Color(244, 208, 63) : new Color(231, 76, 60)).value, 255 + this.relativeFade]);
-                    p5.stroke(0, 0, 0, 255 + this.relativeFade);
-                    p5.strokeWeight(4);
-                    p5.textSize(16)
-                    p5.text(
-                        `$ ${option.item.price}`,
-                        (canvas.canvasSize.x / 2) + (optionWidth / 2) - canvas.padding,
-                        cumulativeMargin + canvas.margin + (canvas.padding / 2),
-                    );
-
-                    option.disabled = !canAfford;
-                }
-
-                if (option.item.unique) {
-                    p5.textAlign(p5.LEFT, p5.CENTER)
-                    p5.fill([...new Color(243, 156, 18).value, 255 + this.relativeFade]);
-                    p5.stroke(0, 0, 0, 255 + this.relativeFade);
-                    p5.strokeWeight(4);
-                    p5.textSize(16)
-                    p5.text(
-                        'Unique',
-                        (canvas.canvasSize.x / 2) - (optionWidth / 2) + canvas.padding,
-                        cumulativeMargin + (canvas.margin * 3) + (canvas.padding / 2),
-                    );
-                }
-
-                p5.textAlign(p5.CENTER, p5.CENTER)
-
-                p5.fill(255, 255, 255, 255 + this.relativeFade);
-                p5.stroke(0, 0, 0, 255 + this.relativeFade);
-                p5.strokeWeight(4);
-                p5.textSize(20)
-                p5.text(
-                    option.item.name,
-                    canvas.canvasSize.x / 2,
-                    cumulativeMargin + (3 * canvas.margin),
-                );
-
-                p5.fill(200, 200, 200, 255 + this.relativeFade);
-                p5.textSize(16)
-
-                p5.text(
-                    option.item.description,
-                    canvas.canvasSize.x / 2,
-                    cumulativeMargin + (5 * canvas.margin),
-                );
-
-                if (option.item.isActive) {
-                    p5.text(
-                        'Single Use',
-                        canvas.canvasSize.x / 2,
-                        cumulativeMargin + (7 * canvas.margin),
-                    );
-                }
             }
 
+            // option content
             if (option instanceof DefaultDialogOption) {
                 p5.textAlign(p5.CENTER, p5.CENTER)
 
-                let positonY: number = cumulativeMargin + (2 * canvas.margin)
-
-                if (!option.subtext && !option.subsubtext) {
-                    positonY = cumulativeMargin + optionHeight / 2
-                }
+                let textMargin: number = cumulativeMarginY + (optionHeight / 2);
+                let mainOffset: number = (option.subsubtext ? -2 : option.subtext ? -1 : 0) * canvas.margin;
 
                 p5.fill(255, 255, 255, 255 + this.relativeFade);
                 p5.stroke(0, 0, 0, 255 + this.relativeFade);
-                p5.strokeWeight(4);
+                p5.strokeWeight(3);
                 p5.textSize(20)
                 p5.text(
                     option.text,
-                    canvas.canvasSize.x / 2,
-                    positonY,
+                    cumulativeMarginX + (optionWidth / 2),
+                    textMargin + mainOffset
                 );
 
-                p5.fill(200, 200, 200, 255 + this.relativeFade);
-                p5.textSize(16)
-                p5.text(
-                    option.subtext,
-                    canvas.canvasSize.x / 2,
-                    cumulativeMargin + (4 * canvas.margin),
-                );
+                if (option.subtext) {
+                    let subOffset: number = (option.subsubtext ? 0 : 1) * canvas.margin;
 
-                p5.fill(200, 200, 200, 255 + this.relativeFade);
-                p5.textSize(16)
-                p5.text(
-                    option.subsubtext,
-                    canvas.canvasSize.x / 2,
-                    cumulativeMargin + (6 * canvas.margin),
-                );
+                    p5.fill(200, 200, 200, 255 + this.relativeFade);
+                    p5.strokeWeight(2);
+                    p5.textSize(16)
+                    p5.text(
+                        insertLineBreaks(option.subtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(option.subtext), 0, option.subtext.length)),
+                        cumulativeMarginX + (optionWidth / 2),
+                        textMargin + subOffset
+                    );
+                }
+
+                if (option.subsubtext) {
+                    p5.fill(200, 200, 200, 255 + this.relativeFade);
+                    p5.strokeWeight(2);
+                    p5.textSize(16)
+                    p5.text(
+                        insertLineBreaks(option.subsubtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(option.subsubtext), 0, option.subsubtext.length)),
+                        cumulativeMarginX + (optionWidth / 2),
+                        textMargin + (2 * canvas.margin)
+                    );
+                }
             }
 
             if (option instanceof NavigationDialogOption) {
                 p5.textAlign(p5.CENTER, p5.CENTER)
-
-                let positonY: number = cumulativeMargin + (2 * canvas.margin)
 
                 let text: string = 'Common Stage';
                 let subtext: string = `${option.stage.enemies.length} enemies`;
@@ -258,24 +233,33 @@ export class Dialog extends EventEmitter {
                     subtext = `${option.stage.enemies.length} Strong Enemies`;
                 }
 
-                p5.fill(255 + this.relativeFade);
-                p5.strokeWeight(4);
+                let textMargin: number = cumulativeMarginY + (optionHeight / 2);
+                p5.fill(255, 255, 255, 255 + this.relativeFade);
                 p5.stroke(0, 0, 0, 255 + this.relativeFade);
+                p5.strokeWeight(3);
                 p5.textSize(20)
                 p5.text(
                     text,
-                    canvas.canvasSize.x / 2,
-                    positonY,
+                    cumulativeMarginX + (optionWidth / 2),
+                    textMargin - canvas.margin
                 );
 
-                p5.fill(200, 200, 200, 255 + this.relativeFade);
-                p5.textSize(16)
-                p5.text(
-                    subtext,
-                    canvas.canvasSize.x / 2,
-                    cumulativeMargin + (4 * canvas.margin),
-                );
+                if (subtext) {
+                    p5.fill(200, 200, 200, 255 + this.relativeFade);
+                    p5.strokeWeight(2);
+                    p5.textSize(16)
+                    p5.text(
+                        insertLineBreaks(subtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(subtext), 0, subtext.length)),
+                        cumulativeMarginX + (optionWidth / 2),
+                        textMargin + canvas.margin
+                    );
+                }
             }
+
+            if (option instanceof ItemDialogOption) {
+                drawItem(option.item, cumulativeMarginX, cumulativeMarginY, canvas.itemSideSize, canvas, this.relativeFade, run, option);
+            }
+
         });
 
         if (this.animationStatus === AnimationStatus.IN_PROGRESS) {
@@ -304,6 +288,14 @@ export class Dialog extends EventEmitter {
     }
 }
 
+export enum DialogType {
+    CHOICE,
+    ITEM,
+    NAVIGATION,
+    SHOP,
+    SKIPPABLE_ITEM,
+}
+
 export class DialogOption {
     action: () => void;
     color: Color;
@@ -330,10 +322,10 @@ export class ItemDialogOption extends DialogOption {
                 return new ItemDialogOption(
                     () => {
                         if (item.isActive) {
-                            run.character.activeItem = item;
+                            run.player.activeItem = item;
                         } else {
                             item.effect();
-                            run.character.items.push(item);
+                            run.player.items.push(item);
                         }
                         if (callback) {
                             callback();
@@ -402,7 +394,7 @@ export class DialogController extends EventEmitter implements ConfigureListeners
 
                 let selected: boolean = false;
 
-                this.currentDialog.options.forEach((option: DialogOption, index: number) => {
+                this.currentDialog.options.forEach((option: DialogOption) => {
                     if (option?.limits && checkPositionInLimit(position, ...option.limits)) {
 
                         selected = true;
@@ -419,7 +411,7 @@ export class DialogController extends EventEmitter implements ConfigureListeners
 
                 if (selected) {
 
-                    if (this.currentDialog && !this.currentDialog.keep) {
+                    if (this.currentDialog && this.currentDialog.type !== DialogType.SHOP) {
                         this.close();
                         this.emit('DialogClosed');
                     }

@@ -2,15 +2,14 @@ import './global.js';
 import 'p5/lib/addons/p5.sound';
 import * as p5 from 'p5';
 import { CanvasInfo } from "./models/CanvasInfo";
-import { Character } from "./models/Character";
 import { Color } from './models/Color.js';
 import { DialogController } from "./models/Dialog";
 import { DragAnimation, DragAnimationController } from './models/DragAnimation';
 import { EventEmitter } from './models/EventEmitter.js';
+import { Player } from "./models/Player";
 import { Position } from "./models/Position";
-import { BestNumbers, Run, RunConfig } from "./models/Run";
+import { Run, RunConfig } from "./models/Run";
 import { TextAnimationController } from "./models/TextAnimation";
-import { formatNumber, getBestNumbers } from './utils/Functions';
 
 const sketch = (p5Instance: p5) => {
     let run: Run;
@@ -44,24 +43,6 @@ const sketch = (p5Instance: p5) => {
     p5Instance.setup = () => {
         p5Instance.textFont('Open Sans');
 
-        controls = {
-            bestComboCounter: document.getElementById('bestComboCounter'),
-            bestDamageCounter: document.getElementById('bestDamageCounter'),
-            bestScoreCounter: document.getElementById('bestScoreCounter'),
-            comboCounter: document.getElementById('comboCounter'),
-            damageCounter: document.getElementById('damageCounter'),
-            itemsContainer: document.getElementById('itemsContainer'),
-            runInfo: document.getElementById('runInfo'),
-            scoreCounter: document.getElementById('scoreCounter'),
-            statsContainer: document.getElementById('statsContainer'),
-        }
-
-        let bests: BestNumbers = getBestNumbers();
-
-        controls.bestScoreCounter.innerHTML = formatNumber(bests.bestScore);
-        controls.bestComboCounter.innerHTML = formatNumber(bests.bestCombo);
-        controls.bestDamageCounter.innerHTML = formatNumber(bests.bestDamage);
-
         canvas = CanvasInfo.getInstance(p5Instance, 16, 4, 4, 20, 3, 2);
         dragAnimationController = DragAnimationController.getInstance();
         textAnimationController = TextAnimationController.getInstance();
@@ -80,6 +61,7 @@ const sketch = (p5Instance: p5) => {
         textAnimationController.draw();
     }
 
+    // mouse events
     p5Instance.mouseClicked = () => {
         eventEmitter.emit('MouseClicked:Click', new Position(p5Instance.mouseX, p5Instance.mouseY), run)
     }
@@ -100,6 +82,21 @@ const sketch = (p5Instance: p5) => {
         eventEmitter.emit('MouseClicked:Drag', new Position(p5Instance.mouseX, p5Instance.mouseY), !!dialogController.currentDialog)
     }
 
+    // keyboard events
+
+    p5Instance.keyPressed = (event: KeyboardEvent) => {
+        eventEmitter.emit('KeyPressed', event, run)
+    }
+
+    p5Instance.keyReleased = (event: KeyboardEvent) => {
+        eventEmitter.emit('KeyReleased', event, run)
+    }
+    //other events
+    p5Instance.windowResized = () => {
+        canvas.calculateCanvasAndPlayfield();
+        eventEmitter.emit('WindowResized')
+    }
+
     function setupGame(status?: string, score?: number, color?: Color): void {
         eventEmitter.clear();
         textAnimationController.clear();
@@ -112,7 +109,7 @@ const sketch = (p5Instance: p5) => {
         });
 
         eventEmitter.on('DialogController:DifficultyChosen', (config: RunConfig) => {
-            run = new Run(p5Instance, Character.defaultCharacter(), config, sounds, controls)
+            run = new Run(p5Instance, Player.defaultPlayer(), config, sounds, controls)
         });
 
         dialogController.add(Run.newGameDialog(status, score, color));

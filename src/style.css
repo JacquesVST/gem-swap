@@ -14,12 +14,6 @@ body {
   height: 100vh;
 }
 
-@media screen and (min-width: 1440px) {
-  .wrapper {
-    width: 1440px
-  }
-}
-
 canvas {
   display: block;
 }
@@ -30,7 +24,7 @@ canvas {
 }
 
 .show {
-  visibility: visible !important
+  visibility: visible !important;
 }
 
 .game-ui {
