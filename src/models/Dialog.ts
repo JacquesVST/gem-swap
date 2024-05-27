@@ -414,7 +414,6 @@ export class DialogController extends EventEmitter implements ConfigureListeners
                         selected = true;
                         if (!option.disabled) {
                             option.action();
-                            console.log(option)
                             if (option instanceof ItemDialogOption && option?.item?.price) {
                                 this.emit('ItemPurchased', option.item.price);
                                 option.item.price = Math.floor(option.item.price * 1.25);
