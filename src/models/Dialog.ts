@@ -339,7 +339,6 @@ export class ItemDialogOption extends DialogOption {
                             }
                         } else {
                             item.effect();
-                            item.price = undefined
                             run.player.items.push(item);
                         }
                         if (callback) {
@@ -415,9 +414,9 @@ export class DialogController extends EventEmitter implements ConfigureListeners
                         selected = true;
                         if (!option.disabled) {
                             option.action();
+                            console.log(option)
                             if (option instanceof ItemDialogOption && option?.item?.price) {
                                 this.emit('ItemPurchased', option.item.price);
-                                run?.textAnimationController.goldAnimation(option.item.price * -1);
                                 option.item.price = Math.floor(option.item.price * 1.25);
                             }
                             this.emit('OptionSelected', option);

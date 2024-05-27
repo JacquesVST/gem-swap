@@ -628,6 +628,28 @@ export class Grid extends EventEmitter {
                         p5
                     );
                 }
+
+                if (cell.piece.effect.id === 'Money') {
+                    p5.fill([...color1.value, highlight ? 200 : 255]);
+                    p5.rect(
+                        cell.canvasPosition.x,
+                        cell.canvasPosition.y,
+                        this.sideSize,
+                        this.sideSize,
+                        this.canvas.radius
+                    );
+
+                    p5.textAlign(p5.LEFT, p5.TOP);
+                    p5.fill(...Color.YELLOW.value, 255);
+                    p5.stroke(0, 0, 0, 255);
+                    p5.strokeWeight(3);
+                    p5.textSize(24);
+                    p5.text(
+                        '$',
+                        cell.canvasPosition.x + this.canvas.padding,
+                        cell.canvasPosition.y + this.canvas.padding
+                    );
+                }
             } else {
                 p5.fill([...color1.value, highlight ? 200 : 255]);
                 p5.rect(

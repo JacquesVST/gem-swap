@@ -238,7 +238,7 @@ export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMargin
     );
 
     p5.textAlign(p5.LEFT, p5.TOP);
-    p5.fill(255, 255, 255, 255 + relativeFade);
+    p5.fill(...color.value, 255 + relativeFade);
     p5.stroke(0, 0, 0, 255 + relativeFade);
     p5.strokeWeight(3);
     p5.textSize(16);

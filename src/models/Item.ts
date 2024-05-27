@@ -10,9 +10,8 @@ export class Item {
     description: string;
     effect: () => void;
     price: number;
-    isActive: boolean;
-    pricePaid: number;
 
+    isActive: boolean;
     unique: boolean;
 
     constructor(rarity: string, name: string, description: string, effect: () => void, price?: number, isActive?: boolean, unique?: boolean) {
@@ -23,7 +22,6 @@ export class Item {
         this.price = price;
         this.isActive = isActive;
         this.unique = unique;
-        this.pricePaid = price;
     }
 
     static rarityColors(): { [key: string]: { color: Color, chance: number, chanceShop: number } } {
@@ -298,10 +296,30 @@ export class ItemPools {
                     }).bind(run)
                 );
             })(),
+            (() => {
+                let name: string = 'Money';
+                return new Item(
+                    'Common',
+                    name,
+                    '+5% chance of pieces with gold',
+                    (() => {
+                        let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
+
+                        if (effectIndex === -1) {
+                            run.possibleEffects.push(new Effect(name, (params: EffectParams) => {
+                                params.piece.effect = undefined
+                                run.emit('Item:Money', params);
+                            }, 0.05))
+                        } else {
+                            run.possibleEffects[effectIndex].chance += 0.05;
+                        }
+                    }).bind(run)
+                );
+            })(),
             new Item(
                 'Common',
                 'Extra Piece',
-                '4+ matches can remove a random piece',
+                'Matches can remove a random piece',
                 (() => { }).bind(run)
             ),
             new Item(

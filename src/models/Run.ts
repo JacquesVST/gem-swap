@@ -74,6 +74,10 @@ export class Run extends EventEmitter implements ConfigureListeners {
     }
 
     configureListeners(): void {
+        this.on('Player:AddedGold', (gold: number) => {
+            this.textAnimationController.goldAnimation(gold);
+        })
+        
         this.on('Piece:StartedAnimation', () => {
             this.inAnimation = true;
         });
@@ -132,11 +136,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
 
         this.on('Grid:GridStabilized:Death', () => {
             let enemy: Enemy = this.map.enemy;
-            this.player.gold += enemy.gold;
-            if (enemy.gold > 0) {
-                this.textAnimationController.goldAnimation(enemy.gold);
-                enemy.gold = 0;
-            }
+            this.player.addGold(enemy.gold)
 
             if (this.map.findNextEnemy() instanceof BossEnemy) {
                 this.textAnimationController.bossFightAnimation();
@@ -275,9 +275,12 @@ export class Run extends EventEmitter implements ConfigureListeners {
             this.emit('BanShape', id, this);
         });
 
+        this.on('Run:Item:Money', () => {
+            this.player.addGold(1)
+        });
+
         this.on('DialogController:ItemPurchased', (price: number) => {
-            this.player.gold -= price;
-            this.player.gold = Math.floor(this.player.gold);
+            this.player.addGold(-price);
         });
 
     }
@@ -526,7 +529,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
         p5.textSize(20)
         p5.text(
             '(I)nventory',
-            canvas.canvasSize.x / 2 - canvas.itemSideSize / 3,
+            canvas.canvasSize.x / 2 - canvas.itemSideSize / 2,
             canvas.canvasSize.y - canvas.bottomUiSize
         );
 
@@ -535,7 +538,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
         p5.textSize(20)
         p5.text(
             '(S)tats',
-            canvas.canvasSize.x / 2 + canvas.itemSideSize / 3,
+            canvas.canvasSize.x / 2 + canvas.itemSideSize / 2,
             canvas.canvasSize.y - canvas.bottomUiSize
         );
         p5.textStyle(p5.NORMAL)
@@ -592,9 +595,8 @@ export class Run extends EventEmitter implements ConfigureListeners {
         if (this.stackCombo) {
             this.combo += [...matches].length;
             if (this.combo > 1 && this.player.hasItem('Valuable combo')) {
-                let goldAmount: number = 1;
-                this.player.gold += goldAmount;
-                this.textAnimationController.goldAnimation(goldAmount);
+                let goldAmount: number = this.combo;
+                this.player.addGold(goldAmount);
             }
         }
         //this.controls['comboCounter'].innerHTML = formatNumber(this.combo);
@@ -845,10 +847,10 @@ export class Run extends EventEmitter implements ConfigureListeners {
                     dialogController.emit('DifficultyChosen', {
                         enemies: 1,
                         stages: 1,
-                        floors: 1,
-                        moves: 2,
-                        gridX: 7,
-                        gridY: 5,
+                        floors: 3,
+                        moves: 10,
+                        gridX: 10,
+                        gridY: 8,
                         costMultiplier: 1
                     });
                 },

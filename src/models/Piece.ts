@@ -34,7 +34,7 @@ export class Piece extends PieceAnimation {
             if (chance <= effect.chance) {
                 piece.effect = effect;
             }
-        })
+        });
 
         return piece;
     }

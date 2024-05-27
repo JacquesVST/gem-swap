@@ -218,6 +218,10 @@ export class Map extends EventEmitter implements ConfigureListeners {
             this.grid.clearColumn(params);
         });
 
+        this.on('Run:Item:Money', (params: EffectParams) => {
+            this.grid.removeMatches(this.grid.sanitizeMatches(params.matches), 'Loop');
+        });
+
         this.on('Main:WindowResized', () => {
             this.grid.calculateSpacing();
         });

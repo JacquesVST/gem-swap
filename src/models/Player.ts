@@ -30,7 +30,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
     reach: number = 1;
 
     hasInventoryOpen: boolean = false;
-    hasStatsOpen: boolean = false;
+    hasStatsOpen: boolean = true;
     activeItemLimits: number[];
     activeItem2Limits: number[];
 
@@ -72,13 +72,13 @@ export class Player extends EventEmitter implements ConfigureListeners {
                     return;
                 }
 
-                if (this.activeItem) {
+                if (this.activeItem && this.activeItemLimits) {
                     if (checkPositionInLimit(position, ...this.activeItemLimits)) {
                         this.useActiveItem(run);
                     }
                 }
 
-                if (this.activeItem2) {
+                if (this.activeItem2 && this.activeItem2Limits) {
                     if (checkPositionInLimit(position, ...this.activeItem2Limits)) {
                         this.useActiveItem2(run);
                     }
@@ -122,6 +122,13 @@ export class Player extends EventEmitter implements ConfigureListeners {
         }
 
         this.currentHealth += heal;
+    }
+
+    addGold(gold: number): void {
+        if (gold !== 0) {
+            this.gold = Math.floor(this.gold + gold);
+            this.emit('AddedGold', gold)
+        }
     }
 
     simulateDamage(damage: number): DamageData {
@@ -295,7 +302,19 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
             if (this.hasStatsOpen) {
                 let height: number = canvas.itemSideSize / 4;
-                let marginY: number = (canvas.gridInfo.verticalCenterPadding / 2) + canvas.topUiSize + canvas.padding + canvas.margin + (canvas.gridInfo.totalGridHeight / 2);
+                let marginY: number = canvas.margin + canvas.topUiSize + (canvas.gridInfo.totalGridHeight / 2);
+                let marginX: number = itemMarginX + canvas.padding;
+
+
+                p5.noStroke()
+                p5.fill(60);
+                p5.rect(
+                    itemMarginX,
+                    marginY - (height * 3.5),
+                    canvas.itemSideSize,
+                    height * 7,
+                    canvas.radius
+                );
 
                 // gold
                 p5.textAlign(p5.LEFT, p5.CENTER)
@@ -305,8 +324,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(16)
                 p5.text(
                     'Gold',
-                    itemMarginX,
-                    marginY + canvas.margin - height * 3
+                    marginX,
+                    marginY - height * 3
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
@@ -314,8 +333,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(20)
                 p5.text(
                     `$ ${this.gold}`,
-                    itemMarginX + canvas.itemSideSize,
-                    marginY + canvas.margin - height * 3
+                    marginX + canvas.itemSideSize - canvas.padding * 2,
+                    marginY - height * 3
                 );
 
                 // attack
@@ -326,8 +345,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(16)
                 p5.text(
                     'Attack',
-                    itemMarginX,
-                    marginY + canvas.margin - height * 2
+                    marginX,
+                    marginY - height * 2
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
@@ -335,8 +354,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(20)
                 p5.text(
                     `${formatNumber(this.attack)}`,
-                    itemMarginX + canvas.itemSideSize,
-                    marginY + canvas.margin - height * 2
+                    marginX + canvas.itemSideSize - canvas.padding * 2,
+                    marginY - height * 2
                 );
 
                 // defense
@@ -347,8 +366,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(16)
                 p5.text(
                     'Defense',
-                    itemMarginX,
-                    marginY + canvas.margin - height
+                    marginX,
+                    marginY - height
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
@@ -356,8 +375,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(20)
                 p5.text(
                     `${formatNumber(this.defense)}`,
-                    itemMarginX + canvas.itemSideSize,
-                    marginY + canvas.margin - height
+                    marginX + canvas.itemSideSize - canvas.padding * 2,
+                    marginY - height
                 );
 
                 // crit count
@@ -368,8 +387,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(16)
                 p5.text(
                     'Crit Count',
-                    itemMarginX,
-                    marginY + canvas.margin
+                    marginX,
+                    marginY
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
@@ -377,8 +396,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(20)
                 p5.text(
                     `${formatNumber(this.critical)}`,
-                    itemMarginX + canvas.itemSideSize,
-                    marginY + canvas.margin
+                    marginX + canvas.itemSideSize - canvas.padding * 2,
+                    marginY
                 );
 
                 // crit damage
@@ -389,8 +408,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(16)
                 p5.text(
                     'Crit Damage',
-                    itemMarginX,
-                    marginY + canvas.margin + height
+                    marginX,
+                    marginY + height
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
@@ -398,8 +417,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(20)
                 p5.text(
                     `${Math.floor((this.criticalMultiplier - 1) * 100)}%`,
-                    itemMarginX + canvas.itemSideSize,
-                    marginY + canvas.margin + height
+                    marginX + canvas.itemSideSize - canvas.padding * 2,
+                    marginY + height
                 );
 
                 // damage multiplier
@@ -410,8 +429,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(16)
                 p5.text(
                     'Multiplier',
-                    itemMarginX,
-                    marginY + canvas.margin + height * 2
+                    marginX,
+                    marginY + height * 2
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
@@ -419,8 +438,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(20)
                 p5.text(
                     `${Math.floor((this.damageMultiplier) * 100)}%`,
-                    itemMarginX + canvas.itemSideSize,
-                    marginY + canvas.margin + height * 2
+                    marginX + canvas.itemSideSize - canvas.padding * 2,
+                    marginY + height * 2
                 );
 
                 // xp
@@ -431,8 +450,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(16)
                 p5.text(
                     'XP',
-                    itemMarginX,
-                    marginY + canvas.margin + height * 3
+                    marginX,
+                    marginY + height * 3
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
@@ -440,10 +459,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.textSize(20)
                 p5.text(
                     `${Math.floor(this.xp)}`,
-                    // 300,
-                    //  itemMarginX, + canvas.itemSideSize,
-                    itemMarginX + canvas.itemSideSize,
-                    marginY + canvas.margin + height * 3
+                    marginX + canvas.itemSideSize - canvas.padding * 2,
+                    marginY + height * 3
                 );
 
                 if (this.hasInventoryOpen && this.items.length) {
@@ -508,6 +525,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                     commonItems.sort(sort);
 
                     this.items = epicItems.concat(rareItems.concat(commonItems));
+
+                    this.items.forEach((item: Item) => item.price = undefined)
 
                     this.items.forEach((item: Item, index: number) => {
                         let cumulativeMarginX: number = margin.x + ((index % lengthOffSet) * (sideSize + canvas.margin)) + canvas.margin;
