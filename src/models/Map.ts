@@ -8,7 +8,6 @@ import { Floor } from "./Floor";
 import { Grid } from "./Grid";
 import { Piece } from "./Piece";
 import { FallPieceAnimationParams, RemovePieceAnimationParams, SwapPieceAnimationParams } from "./PieceAnimation";
-import { Player } from "./Player";
 import { Position } from "./Position";
 import { Run, RunConfig } from "./Run";
 import { EnemyStage } from "./Stage";
@@ -150,7 +149,7 @@ export class Map extends EventEmitter implements ConfigureListeners {
                 this.grid.emit('MoveDone');
             }
         });
-        
+
         this.on('Piece:RemoveAnimationEnded:Loop', (params: RemovePieceAnimationParams) => {
             this.grid.removePiece('Loop', params.data);
         });

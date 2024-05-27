@@ -70,7 +70,6 @@ export class PieceAnimation extends EventEmitter {
         this.velocityX = 0;
         this.velocityY = 0;
         this.velocityFade = 0;
-        this.params = undefined;
 
     }
 }

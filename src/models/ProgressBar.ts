@@ -1,10 +1,11 @@
 import * as P5 from "p5";
-import { formatNumber } from "../utils/Functions";
+import { checkPositionInLimit, formatNumber } from "../utils/Functions";
 import { CanvasInfo } from "./CanvasInfo";
 import { Color } from "./Color";
 import { Enemy } from "./Enemy";
 import { EventEmitter, EventParams } from "./EventEmitter";
 import { Run } from "./Run";
+import { Position } from "./Position";
 
 export class ProgressBar extends EventEmitter {
     maxValue: number;
@@ -12,6 +13,7 @@ export class ProgressBar extends EventEmitter {
     title: string;
     color: Color;
     top: boolean;
+    limits: number[];
 
     frames: number = 0;
     velocity: number = 0;
@@ -36,7 +38,7 @@ export class ProgressBar extends EventEmitter {
     }
 
     drawBar(index: number, canvas: CanvasInfo): void {
-        let p5: P5 = canvas.p5;
+        const p5: P5 = canvas.p5;
         let percentageOfBar: number = (this.value + this.delta) / this.maxValue;
 
         let commonMargin: number;
@@ -50,6 +52,26 @@ export class ProgressBar extends EventEmitter {
 
         let finalElementSize: number = (maxBarSize * percentageOfBar);
         finalElementSize = finalElementSize > maxBarSize ? maxBarSize : finalElementSize;
+
+        this.limits = [
+            canvas.margin * 1.5,
+            canvas.playfield.x - canvas.margin * 1.5,
+            commonMargin - canvas.margin / 2,
+            commonMargin - canvas.margin / 2 + canvas.uiBarSize + canvas.margin
+        ];
+
+        let highlight: boolean = checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...this.limits);
+        if (highlight && this.top) {
+            p5.fill(60, 200);
+            p5.noStroke();
+            p5.rect(
+                this.limits[0],
+                this.limits[2],
+                maxBarSize + canvas.margin,
+                canvas.uiBarSize + canvas.margin,
+                canvas.radius + canvas.padding
+            );
+        }
 
         p5.fill(percentageOfBar ? [...this.color.value, this.fade] : [20, 20, 20, this.fade]);
         p5.noStroke();

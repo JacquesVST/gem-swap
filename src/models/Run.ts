@@ -1,5 +1,5 @@
 import * as P5 from "p5";
-import { formatNumber, getBestNumbers, setBestNumbers } from "../utils/Functions";
+import { checkPositionInLimit, formatNumber, getBestNumbers, setBestNumbers } from "../utils/Functions";
 import { CanvasInfo } from "./CanvasInfo";
 import { Cell } from "./Cell";
 import { Color } from "./Color";
@@ -42,6 +42,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
     lastShapeIds: string[] = [];
     inAnimation: boolean = false;
     stackCombo: boolean = false;
+    enemyDetailsOpen: boolean = false;
 
     sounds: { [key: string]: P5.SoundFile };
     //controls: { [key: string]: HTMLElement };
@@ -77,7 +78,18 @@ export class Run extends EventEmitter implements ConfigureListeners {
         this.on('Player:AddedGold', (gold: number) => {
             this.textAnimationController.goldAnimation(gold);
         })
-        
+
+        this.on('Main:MouseClicked:Click', (click: Position) => {
+            if (this.hasDialogOpen, this.player.hasInventoryOpen) {
+                return;
+            }
+
+            this.progressBars.forEach((progressBar: ProgressBar, index: number) => {
+                if (checkPositionInLimit(click, ...progressBar.limits) && index === 2) {
+                    this.enemyDetailsOpen = !this.enemyDetailsOpen;
+                }
+            })
+        });
         this.on('Piece:StartedAnimation', () => {
             this.inAnimation = true;
         });
@@ -369,6 +381,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
         this.map.grid.draw(!!this.dialogController.currentDialog);
         this.map.grid.drawPieces();
         this.drawNumbers(this.canvas);
+        this.drawEnemyDetails(this.canvas)
         this.player.draw(this.canvas)
     }
 
@@ -381,7 +394,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
         let horizontalCenterPadding: number = canvas.canvasSize.x - canvas.margin - ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridInfo.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
 
         let numbersSlotX: number = horizontalCenterPadding
-        let numbersSlotY: number = (canvas.canvasSize.y / 2) - (height / 2);
+        let numbersSlotY: number = canvas.canvasSize.y / 2;
 
         let bests: BestNumbers = getBestNumbers();
 
@@ -391,7 +404,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             p5.fill(60);
             p5.rect(
                 numbersSlotX,
-                numbersSlotY - height - (canvas.margin * 1.5),
+                numbersSlotY - height * 2 - canvas.margin * 1.5,
                 canvas.itemSideSize,
                 height,
                 canvas.radius
@@ -405,14 +418,14 @@ export class Run extends EventEmitter implements ConfigureListeners {
             p5.text(
                 'Score',
                 numbersSlotX + canvas.padding,
-                numbersSlotY - (height / 2) - (canvas.margin * 2.5),
+                numbersSlotY - height * 1.5 - canvas.margin * 2,
             );
 
             p5.textAlign(p5.RIGHT, p5.CENTER)
             p5.text(
                 formatNumber(this.score),
                 numbersSlotX + canvas.itemSideSize - canvas.padding,
-                numbersSlotY - (height / 2) - (canvas.margin * 2.5),
+                numbersSlotY - height * 1.5 - canvas.margin * 2,
             );
 
             p5.textAlign(p5.LEFT, p5.CENTER)
@@ -421,14 +434,14 @@ export class Run extends EventEmitter implements ConfigureListeners {
             p5.text(
                 'Best',
                 numbersSlotX + canvas.padding,
-                numbersSlotY - (height / 2) - (canvas.margin * 0.5),
+                numbersSlotY - height * 1.5 - canvas.margin / 2,
             );
 
             p5.textAlign(p5.RIGHT, p5.CENTER)
             p5.text(
                 formatNumber(bests.bestScore),
                 numbersSlotX + canvas.itemSideSize - canvas.padding,
-                numbersSlotY - (height / 2) - (canvas.margin * 0.5),
+                numbersSlotY - height * 1.5 - canvas.margin / 2,
             );
 
 
@@ -437,7 +450,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             p5.fill(60);
             p5.rect(
                 numbersSlotX,
-                numbersSlotY,
+                numbersSlotY - height - canvas.margin / 2,
                 canvas.itemSideSize,
                 height,
                 canvas.radius
@@ -451,14 +464,14 @@ export class Run extends EventEmitter implements ConfigureListeners {
             p5.text(
                 'Damage',
                 numbersSlotX + canvas.padding,
-                numbersSlotY + (height / 2) - canvas.margin,
+                numbersSlotY - height / 2 - canvas.margin
             );
 
             p5.textAlign(p5.RIGHT, p5.CENTER)
             p5.text(
                 formatNumber(this.damage),
                 numbersSlotX + canvas.itemSideSize - canvas.padding,
-                numbersSlotY + (height / 2) - canvas.margin,
+                numbersSlotY - height / 2 - canvas.margin
             );
 
             p5.textAlign(p5.LEFT, p5.CENTER)
@@ -467,14 +480,14 @@ export class Run extends EventEmitter implements ConfigureListeners {
             p5.text(
                 'Best',
                 numbersSlotX + canvas.padding,
-                numbersSlotY + (height / 2) + canvas.margin,
+                numbersSlotY - height / 2 + canvas.margin / 2
             );
 
             p5.textAlign(p5.RIGHT, p5.CENTER)
             p5.text(
                 formatNumber(bests.bestDamage),
                 numbersSlotX + canvas.itemSideSize - canvas.padding,
-                numbersSlotY + (height / 2) + canvas.margin,
+                numbersSlotY - height / 2 + canvas.margin / 2
             );
 
             // combo
@@ -482,7 +495,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             p5.fill(60);
             p5.rect(
                 numbersSlotX,
-                numbersSlotY + height + (canvas.margin * 1.5),
+                numbersSlotY + canvas.margin / 2,
                 canvas.itemSideSize,
                 height,
                 canvas.radius
@@ -496,14 +509,14 @@ export class Run extends EventEmitter implements ConfigureListeners {
             p5.text(
                 'Combo',
                 numbersSlotX + canvas.padding,
-                numbersSlotY + height * 1.5 + (canvas.margin * 0.5),
+                numbersSlotY + height / 2
             );
 
             p5.textAlign(p5.RIGHT, p5.CENTER)
             p5.text(
                 formatNumber(this.combo),
                 numbersSlotX + canvas.itemSideSize - canvas.padding,
-                numbersSlotY + height * 1.5 + (canvas.margin * 0.5),
+                numbersSlotY + height / 2
             );
 
             p5.textAlign(p5.LEFT, p5.CENTER)
@@ -512,15 +525,49 @@ export class Run extends EventEmitter implements ConfigureListeners {
             p5.text(
                 'Best',
                 numbersSlotX + canvas.padding,
-                numbersSlotY + height * 1.5 + (canvas.margin * 2.5),
+                numbersSlotY + height / 2 + canvas.margin * 1.5,
             );
 
             p5.textAlign(p5.RIGHT, p5.CENTER)
             p5.text(
                 formatNumber(bests.bestCombo),
                 numbersSlotX + canvas.itemSideSize - canvas.padding,
-                numbersSlotY + height * 1.5 + (canvas.margin * 2.5),
+                numbersSlotY + height / 2 + canvas.margin * 1.5,
             );
+
+            // gold
+
+            p5.noStroke()
+            p5.fill(60);
+            p5.rect(
+                numbersSlotX,
+                numbersSlotY + height + canvas.margin * 1.5,
+                canvas.itemSideSize,
+                height,
+                canvas.radius
+            );
+
+            p5.textAlign(p5.LEFT, p5.CENTER)
+            p5.fill(...Color.YELLOW.value, 255);
+            p5.stroke(0);
+            p5.strokeWeight(3);
+            p5.textSize(24)
+            p5.text(
+                'Gold',
+                numbersSlotX + canvas.padding,
+                numbersSlotY + height * 1.5 + canvas.margin * 1.5,
+            );
+
+            p5.textAlign(p5.RIGHT, p5.CENTER)
+            p5.fill(...Color.YELLOW.value, 255);
+            p5.textSize(24)
+            p5.text(
+                `$ ${this.player.gold}`,
+                numbersSlotX + canvas.itemSideSize - canvas.padding,
+                numbersSlotY + height * 1.5 + canvas.margin * 1.5,
+            );
+
+
         }
 
         p5.textStyle(p5.ITALIC)
@@ -528,7 +575,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
         p5.fill(255);
         p5.textSize(20)
         p5.text(
-            '(I)nventory',
+            '(S)tats',
             canvas.canvasSize.x / 2 - canvas.itemSideSize / 2,
             canvas.canvasSize.y - canvas.bottomUiSize
         );
@@ -537,13 +584,71 @@ export class Run extends EventEmitter implements ConfigureListeners {
         p5.fill(255);
         p5.textSize(20)
         p5.text(
-            '(S)tats',
+            '(I)nventory',
             canvas.canvasSize.x / 2 + canvas.itemSideSize / 2,
             canvas.canvasSize.y - canvas.bottomUiSize
         );
         p5.textStyle(p5.NORMAL)
     }
 
+    drawEnemyDetails(canvas: CanvasInfo) {
+        const p5: P5 = canvas.p5;
+
+        if (this.enemyDetailsOpen) {
+
+            let slotX: number = canvas.canvasSize.x - canvas.margin - ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridInfo.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
+            let slotY: number = canvas.topUiSize + canvas.margin * 2;
+
+            p5.noStroke()
+            p5.fill(60, 200);
+            p5.rect(
+                slotX,
+                slotY,
+                canvas.itemSideSize,
+                canvas.itemSideSize / 3,
+                canvas.radius
+            );
+
+            p5.triangle(
+                slotX + canvas.itemSideSize / 2 - canvas.margin,
+                slotY,
+                slotX + canvas.itemSideSize / 2 + canvas.margin,
+                slotY,
+                slotX + canvas.itemSideSize / 2,
+                slotY - canvas.margin,
+            );
+
+            p5.textAlign(p5.CENTER, p5.CENTER)
+            p5.fill(255);
+            p5.stroke(0);
+            p5.strokeWeight(3);
+            p5.textSize(20)
+            p5.text(
+                this.map.enemy.name,
+                slotX + canvas.itemSideSize / 2,
+                slotY + canvas.margin + canvas.padding
+            );
+
+            p5.textAlign(p5.LEFT, p5.CENTER)
+            p5.fill(200);
+            p5.stroke(0);
+            p5.strokeWeight(3);
+            p5.textSize(20)
+            p5.text(
+                'Attack',
+                slotX + canvas.padding,
+                slotY + (canvas.itemSideSize / 12) * 3
+            );
+
+            p5.textAlign(p5.RIGHT, p5.CENTER)
+            p5.text(
+                formatNumber(this.map.enemy.attack),
+                slotX + canvas.itemSideSize - canvas.padding,
+                slotY + (canvas.itemSideSize / 12) * 3
+            );
+
+        }
+    }
     processMacthList(matches: Piece[][]): void {
         if (this.combo === 0) {
             let shapeIds: string[] = [];

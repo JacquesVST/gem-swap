@@ -30,7 +30,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
     reach: number = 1;
 
     hasInventoryOpen: boolean = false;
-    hasStatsOpen: boolean = true;
+    hasStatsOpen: boolean = false;
     activeItemLimits: number[];
     activeItem2Limits: number[];
 
@@ -302,39 +302,18 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
             if (this.hasStatsOpen) {
                 let height: number = canvas.itemSideSize / 4;
-                let marginY: number = canvas.margin + canvas.topUiSize + (canvas.gridInfo.totalGridHeight / 2);
-                let marginX: number = itemMarginX + canvas.padding;
+                let marginY: number = canvas.canvasSize.y / 2;
 
+                let marginX: number = itemMarginX + canvas.padding;
 
                 p5.noStroke()
                 p5.fill(60);
                 p5.rect(
                     itemMarginX,
-                    marginY - (height * 3.5),
+                    marginY - (height * 3),
                     canvas.itemSideSize,
-                    height * 7,
+                    height * 6,
                     canvas.radius
-                );
-
-                // gold
-                p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.fill(...Color.YELLOW.value, 255);
-                p5.stroke(0);
-                p5.strokeWeight(3);
-                p5.textSize(16)
-                p5.text(
-                    'Gold',
-                    marginX,
-                    marginY - height * 3
-                );
-
-                p5.textAlign(p5.RIGHT, p5.CENTER)
-                p5.fill(...Color.YELLOW.value, 255);
-                p5.textSize(20)
-                p5.text(
-                    `$ ${this.gold}`,
-                    marginX + canvas.itemSideSize - canvas.padding * 2,
-                    marginY - height * 3
                 );
 
                 // attack
@@ -346,7 +325,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.text(
                     'Attack',
                     marginX,
-                    marginY - height * 2
+                    marginY - height * 2.5
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
@@ -355,7 +334,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.text(
                     `${formatNumber(this.attack)}`,
                     marginX + canvas.itemSideSize - canvas.padding * 2,
-                    marginY - height * 2
+                    marginY - height * 2.5
                 );
 
                 // defense
@@ -367,7 +346,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.text(
                     'Defense',
                     marginX,
-                    marginY - height
+                    marginY - height * 1.5
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
@@ -376,7 +355,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.text(
                     `${formatNumber(this.defense)}`,
                     marginX + canvas.itemSideSize - canvas.padding * 2,
-                    marginY - height
+                    marginY - height * 1.5
                 );
 
                 // crit count
@@ -388,7 +367,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.text(
                     'Crit Count',
                     marginX,
-                    marginY
+                    marginY - height * 0.5
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
@@ -397,7 +376,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.text(
                     `${formatNumber(this.critical)}`,
                     marginX + canvas.itemSideSize - canvas.padding * 2,
-                    marginY
+                    marginY - height * 0.5
                 );
 
                 // crit damage
@@ -409,7 +388,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.text(
                     'Crit Damage',
                     marginX,
-                    marginY + height
+                    marginY + height * 0.5
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
@@ -418,7 +397,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.text(
                     `${Math.floor((this.criticalMultiplier - 1) * 100)}%`,
                     marginX + canvas.itemSideSize - canvas.padding * 2,
-                    marginY + height
+                    marginY + height * 0.5
                 );
 
                 // damage multiplier
@@ -430,7 +409,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.text(
                     'Multiplier',
                     marginX,
-                    marginY + height * 2
+                    marginY + height * 1.5
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
@@ -439,7 +418,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.text(
                     `${Math.floor((this.damageMultiplier) * 100)}%`,
                     marginX + canvas.itemSideSize - canvas.padding * 2,
-                    marginY + height * 2
+                    marginY + height * 1.5
                 );
 
                 // xp
@@ -451,7 +430,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.text(
                     'XP',
                     marginX,
-                    marginY + height * 3
+                    marginY + height * 2.5
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
@@ -460,82 +439,84 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.text(
                     `${Math.floor(this.xp)}`,
                     marginX + canvas.itemSideSize - canvas.padding * 2,
-                    marginY + height * 3
+                    marginY + height * 2.5
                 );
 
-                if (this.hasInventoryOpen && this.items.length) {
-
-                    p5.noStroke();
-                    p5.fill(50, 50, 50, 100);
-                    p5.rect(
-                        0,
-                        0,
-                        canvas.canvasSize.x,
-                        canvas.canvasSize.y,
-                    );
-
-                    let sideSize: number = canvas.itemSideSize / Math.ceil(this.items.length / 20);
-                    let dimension: Position = new Position(0, 0);
-                    let margin: Position = new Position(0, 0);
-
-                    let textMarginCount: number = 3;
-                    let lengthOffSet: number = 4 + Math.ceil(this.items.length / 20);
-                    let maxLength: number = this.items.length > lengthOffSet ? lengthOffSet : this.items.length
-
-                    dimension.x = maxLength * sideSize + ((maxLength + 1) * canvas.margin);
-                    margin.x = (canvas.playfield.x / 2) - (dimension.x / 2);
-
-                    dimension.y = (Math.ceil(this.items.length / lengthOffSet) * sideSize) + ((Math.ceil(this.items.length / lengthOffSet) + textMarginCount) * canvas.margin);
-                    margin.y = (canvas.playfield.y / 2) - (dimension.y / 2);
-
-                    p5.noStroke();
-                    p5.fill(40);
-                    p5.rect(
-                        margin.x,
-                        margin.y,
-                        dimension.x,
-                        dimension.y,
-                        canvas.radius * 4
-                    );
+            }
 
 
+            if (this.hasInventoryOpen && this.items.length) {
 
-                    p5.textAlign(p5.CENTER, p5.CENTER)
+                p5.noStroke();
+                p5.fill(50, 50, 50, 100);
+                p5.rect(
+                    0,
+                    0,
+                    canvas.canvasSize.x,
+                    canvas.canvasSize.y,
+                );
 
-                    p5.fill(255);
-                    p5.stroke(0);
-                    p5.strokeWeight(3);
-                    p5.textSize(24)
-                    p5.text(
-                        'Inventory',
-                        canvas.playfield.x / 2,
-                        margin.y + (textMarginCount * canvas.margin / 2)
-                    );
+                let sideSize: number = canvas.itemSideSize / Math.ceil(this.items.length / 20);
+                let dimension: Position = new Position(0, 0);
+                let margin: Position = new Position(0, 0);
 
-                    let epicItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Epic');
-                    let rareItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Rare');
-                    let commonItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Common');
+                let textMarginCount: number = 3;
+                let lengthOffSet: number = 4 + Math.ceil(this.items.length / 20);
+                let maxLength: number = this.items.length > lengthOffSet ? lengthOffSet : this.items.length
 
-                    let sort: (a: Item, b: Item) => number = (a: Item, b: Item) => {
-                        return a.name > b.name ? 1 : -1;
-                    };
+                dimension.x = maxLength * sideSize + ((maxLength + 1) * canvas.margin);
+                margin.x = (canvas.playfield.x / 2) - (dimension.x / 2);
 
-                    epicItems.sort(sort);
-                    rareItems.sort(sort);
-                    commonItems.sort(sort);
+                dimension.y = (Math.ceil(this.items.length / lengthOffSet) * sideSize) + ((Math.ceil(this.items.length / lengthOffSet) + textMarginCount) * canvas.margin);
+                margin.y = (canvas.playfield.y / 2) - (dimension.y / 2);
 
-                    this.items = epicItems.concat(rareItems.concat(commonItems));
+                p5.noStroke();
+                p5.fill(40);
+                p5.rect(
+                    margin.x,
+                    margin.y,
+                    dimension.x,
+                    dimension.y,
+                    canvas.radius * 4
+                );
 
-                    this.items.forEach((item: Item) => item.price = undefined)
 
-                    this.items.forEach((item: Item, index: number) => {
-                        let cumulativeMarginX: number = margin.x + ((index % lengthOffSet) * (sideSize + canvas.margin)) + canvas.margin;
-                        let cumulativeMarginY: number = margin.y + (Math.floor(index / lengthOffSet) * (sideSize + canvas.margin)) + (canvas.margin * textMarginCount);
 
-                        drawItem(item, cumulativeMarginX, cumulativeMarginY, sideSize, canvas)
-                    })
+                p5.textAlign(p5.CENTER, p5.CENTER)
 
-                }
+                p5.fill(255);
+                p5.stroke(0);
+                p5.strokeWeight(3);
+                p5.textSize(24)
+                p5.text(
+                    'Inventory',
+                    canvas.playfield.x / 2,
+                    margin.y + (textMarginCount * canvas.margin / 2)
+                );
+
+                let epicItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Epic');
+                let rareItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Rare');
+                let commonItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Common');
+
+                let sort: (a: Item, b: Item) => number = (a: Item, b: Item) => {
+                    return a.name > b.name ? 1 : -1;
+                };
+
+                epicItems.sort(sort);
+                rareItems.sort(sort);
+                commonItems.sort(sort);
+
+                this.items = epicItems.concat(rareItems.concat(commonItems));
+
+                this.items.forEach((item: Item) => item.price = undefined)
+
+                this.items.forEach((item: Item, index: number) => {
+                    let cumulativeMarginX: number = margin.x + ((index % lengthOffSet) * (sideSize + canvas.margin)) + canvas.margin;
+                    let cumulativeMarginY: number = margin.y + (Math.floor(index / lengthOffSet) * (sideSize + canvas.margin)) + (canvas.margin * textMarginCount);
+
+                    drawItem(item, cumulativeMarginX, cumulativeMarginY, sideSize, canvas)
+                })
+
             }
         }
     }
