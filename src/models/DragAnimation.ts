@@ -4,6 +4,7 @@ import { CanvasInfo } from "./CanvasInfo";
 import { ConfigureListeners, EventEmitter } from "./EventEmitter";
 import { Position } from "./Position";
 import { Run } from "./Run";
+import { Color } from "./Color";
 
 export class DragAnimation {
     id: string;
@@ -32,9 +33,11 @@ export class DragAnimation {
         let p5: P5 = run.canvas.p5
 
         if (this.finalPosition && this.finalPosition.checksum !== this.initialPosition.checksum) {
+            let color: Color = run.player.itemData.omniMoves > 0 ? Color.GREEN : Color.WHITE
+            
             p5.strokeWeight(3);
             p5.stroke(0, 0, 0, this.fade);
-            p5.fill(255, 255, 255, this.fade);
+            p5.fill(...color.value, this.fade);
 
             let size: number = CanvasInfo.getInstance().gridInfo.cellSideSize / 3.5;
             let dots: number = dottedLine(this.initialPosition, this.finalPosition, size, size * 1.25, p5);

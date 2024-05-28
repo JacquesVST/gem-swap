@@ -401,8 +401,12 @@ export class Grid extends EventEmitter {
             return false;
         }
 
-        if (!canReach(position1, position2, this.runSnapshot.player.reach, this.runSnapshot.player.hasItem('Reach Expansion'))) {
-            return false;
+        if(this.runSnapshot.player.itemData.omniMoves > 0) {
+            this.emit('OmniMoveDone')
+        } else {
+            if (!canReach(position1, position2, this.runSnapshot.player.itemData.reach, this.runSnapshot.player.hasItem('Reach Expansion'))) {
+                return false;
+            }
         }
 
         let piece1: Piece | undefined = this.getPieceByPosition(position1);

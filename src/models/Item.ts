@@ -118,7 +118,7 @@ export class ItemPools {
                     name,
                     '+1 Crit piece on a boss fight',
                     (() => {
-                        run.player.bossCritical += 1;
+                        run.player.itemData.bossCritical += 1;
                     }).bind(run),
                     price,
                 );
@@ -183,21 +183,7 @@ export class ItemPools {
                     price,
                 );
             })(),
-            (() => {
-                let price: number = 150;
-                let name: string = 'Diagonal Reach';
-                price = price * run.costMultiplier;
-                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
-                return new Item(
-                    'Epic',
-                    name,
-                    'Can match diagonals',
-                    (() => { }).bind(run),
-                    price,
-                    undefined,
-                    true
-                );
-            })()
+
         ];
 
         if (run.possibleShapes.length >= 4) {
@@ -218,7 +204,7 @@ export class ItemPools {
             });
         }
 
-        if (run.player.reach <= 3) {
+        if (run.player.itemData.reach <= 3) {
             let price: number = 100;
             let name: string = 'Reach Expansion';
             price = price * run.costMultiplier;
@@ -228,7 +214,7 @@ export class ItemPools {
                 name,
                 'Can reach +1 tile over',
                 (() => {
-                    run.player.reach++;
+                    run.player.itemData.reach++;
                 }).bind(run),
                 price
             ));
@@ -250,6 +236,21 @@ export class ItemPools {
                     true
                 );
             })(),
+            (() => {
+                let price: number = 150;
+                let name: string = 'Diagonal Reach';
+                price = price * run.costMultiplier;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
+                return new Item(
+                    'Epic',
+                    name,
+                    'Can match diagonals',
+                    (() => { }).bind(run),
+                    price,
+                    undefined,
+                    true
+                );
+            })()
         ];
 
 
@@ -324,6 +325,16 @@ export class ItemPools {
             ),
             new Item(
                 'Common',
+                'Teleport',
+                'Make a match anywhere',
+                (() => { 
+                    run.emit('Item:AddOmniMove');
+                }).bind(run),
+                undefined,
+                true
+            ),
+            new Item(
+                'Common',
                 'Extra Move',
                 '+1 move',
                 (() => {
@@ -382,54 +393,6 @@ export class ItemPools {
                 }).bind(run)
             ),
             new Item(
-                'Common',
-                'Red Boost',
-                '+50 base DMG on red matches',
-                (() => {
-                    run.emit('Item:ColorDamageBoost', 'red', 50);
-                }).bind(run)
-            ),
-            new Item(
-                'Common',
-                'Green Boost',
-                '+50 base DMG on green matches',
-                (() => {
-                    run.emit('Item:ColorDamageBoost', 'green', 50);
-                }).bind(run)
-            ),
-            new Item(
-                'Common',
-                'Blue Boost',
-                '+50 base DMG on blue matches',
-                (() => {
-                    run.emit('Item:ColorDamageBoost', 'blue', 50);
-                }).bind(run)
-            ),
-            new Item(
-                'Common',
-                'Yellow Boost',
-                '+50 base DMG on yellow matches',
-                (() => {
-                    run.emit('Item:ColorDamageBoost', 'yellow', 50);
-                }).bind(run)
-            ),
-            new Item(
-                'Common',
-                'Orange Boost',
-                '+50 base DMG on orange matches',
-                (() => {
-                    run.emit('Item:ColorDamageBoost', 'orange', 50);
-                }).bind(run)
-            ),
-            new Item(
-                'Common',
-                'Pink Boost',
-                '+50 base DMG on pink matches',
-                (() => {
-                    run.emit('Item:ColorDamageBoost', 'pink', 50);
-                }).bind(run)
-            ),
-            new Item(
                 'Rare',
                 '4+ Match Regeneration',
                 'Gain 1% HP every 4+ match',
@@ -440,7 +403,7 @@ export class ItemPools {
                 'Move Saver',
                 '10% chance of not consuming moves',
                 (() => {
-                    run.player.moveSaver += 0.10;
+                    run.player.itemData.moveSaver += 0.10;
                 }).bind(run)
             ),
             new Item(
@@ -448,8 +411,8 @@ export class ItemPools {
                 'Shield',
                 'Block one letal hit',
                 (() => {
-                    run.player.hasItemThatPreventsFirstLethalDamage = true;
-                    run.player.hasUsedItemThatPreventsFirstLethalDamage = false;
+                    run.player.itemData.hasShield = true;
+                    run.player.itemData.usedShield = false;
                 }).bind(run),
                 undefined,
                 undefined,
@@ -503,12 +466,21 @@ export class ItemPools {
                 undefined,
                 true
             ));
-        })
+            defaultPool.push(new Item(
+                'Common',
+                `${shape.id.charAt(0).toUpperCase() + shape.id.slice(1)} Boost`,
+                `+50 base DMG on ${shape.id} matches`,
+                (() => {
+                    run.emit('Item:ColorDamageBoost', shape.id, 50);
+                }).bind(run)
+            ));
+
+        });
 
         let uniqueItems = [
             new Item(
                 'Epic',
-                'Combos multiply DMG',
+                'Combos Multiply DMG',
                 'Final DMG multiplies combo counter',
                 (() => { }).bind(run),
                 undefined,
@@ -516,8 +488,21 @@ export class ItemPools {
                 true
             ),
             new Item(
+                'Epic',
+                'Moves as you Crits',
+                'Extra move for every Crit you have currently',
+                (() => { 
+                    run.player.moves += run.player.critical;
+                    run.itemData.bonusMoves = run.player.critical;
+                    run.updateMoves();
+                }).bind(run),
+                undefined,
+                undefined,
+                true
+            ),
+            new Item(
                 'Rare',
-                'Valuable combo',
+                'Valuable Combo',
                 'Get 1 gold every combo over 1',
                 (() => { }).bind(run),
                 undefined,
@@ -529,6 +514,15 @@ export class ItemPools {
                 'Hit Streak',
                 'Bonus DMG for Consecutive matches',
                 (() => { run.consecutiveCombo = 0; }).bind(run),
+                undefined,
+                undefined,
+                true
+            ),
+            new Item(
+                'Rare',
+                'Gold Fees',
+                'Every third time get double gold',
+                (() => { run.player.itemData.goldAddCount = 0; }).bind(run),
                 undefined,
                 undefined,
                 true

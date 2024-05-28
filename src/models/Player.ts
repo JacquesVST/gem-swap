@@ -14,25 +14,30 @@ export class Player extends EventEmitter implements ConfigureListeners {
     moves: number;
     currentHealth: number;
 
-    critical: number = 1;
-    bossCritical: number = 0;
-
     items: Item[] = [];
-    activeItem: Item;
-    activeItem2: Item;
-    hasItemThatPreventsFirstLethalDamage: boolean = false;
-    hasUsedItemThatPreventsFirstLethalDamage: boolean = false;
+    
+    critical: number = 3;
     damageMultiplier: number = 1;
     criticalMultiplier: number = 1.5;
-    moveSaver: number = 0;
     gold: number = 0;
     xp: number = 0;
-    reach: number = 1;
-
+    
     hasInventoryOpen: boolean = false;
     hasStatsOpen: boolean = false;
-    activeItemLimits: number[];
-    activeItem2Limits: number[];
+
+    itemData: any = {
+        activeItem: undefined,
+        activeItemLimits: [],
+        activeItem2: undefined,
+        activeItem2Limits: [],
+        bossCritical: 0,
+        goldAddCount: 0,
+        hasShield:  false,
+        usedShield: false,
+        moveSaver: 0,
+        omniMoves: 0,
+        reach:  1,
+    }
 
     constructor(health: number, attack: number, defense: number, moves: number) {
         super('Player');
@@ -72,18 +77,27 @@ export class Player extends EventEmitter implements ConfigureListeners {
                     return;
                 }
 
-                if (this.activeItem && this.activeItemLimits) {
-                    if (checkPositionInLimit(position, ...this.activeItemLimits)) {
+                if (this.itemData.activeItem && this.itemData.activeItemLimits) {
+                    if (checkPositionInLimit(position, ...this.itemData.activeItemLimits)) {
                         this.useActiveItem(run);
                     }
                 }
 
-                if (this.activeItem2 && this.activeItem2Limits) {
-                    if (checkPositionInLimit(position, ...this.activeItem2Limits)) {
+                if (this.itemData.activeItem2 && this.itemData.activeItem2Limits) {
+                    if (checkPositionInLimit(position, ...this.itemData.activeItem2Limits)) {
                         this.useActiveItem2(run);
                     }
                 }
             }, 0);
+        });
+
+        
+        this.on('Run:Item:AddOmniMove', () => {
+            this.itemData.omniMoves++;
+        });
+
+        this.on('Grid:OmniMoveDone', () => {
+            this.itemData.omniMoves--;
         });
     }
 
@@ -96,17 +110,17 @@ export class Player extends EventEmitter implements ConfigureListeners {
     }
 
     useActiveItem(run: Run): void {
-        if (this.activeItem) {
-            this.activeItem.effect();
-            this.activeItem = undefined;
+        if (this.itemData.activeItem) {
+            this.itemData.activeItem.effect();
+            this.itemData.activeItem = undefined;
             run.sounds['item'].play();
         }
     }
 
     useActiveItem2(run: Run): void {
-        if (this.activeItem2 && 'Extra Active Item') {
-            this.activeItem2.effect();
-            this.activeItem2 = undefined;
+        if (this.itemData.activeItem2 && 'Extra Active Item') {
+            this.itemData.activeItem2.effect();
+            this.itemData.activeItem2 = undefined;
             run.sounds['item'].play();
         }
     }
@@ -126,6 +140,13 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
     addGold(gold: number): void {
         if (gold !== 0) {
+            if (gold > 0){
+                this.itemData.goldAddCount++;
+                if (this.hasItem('Gold Fees') && this.itemData.goldAddCount % 3===0) {
+                    this.itemData.goldAddCount = 0;
+                    gold *=2;
+                }
+            }
             this.gold = Math.floor(this.gold + gold);
             this.emit('AddedGold', gold)
         }
@@ -139,10 +160,10 @@ export class Player extends EventEmitter implements ConfigureListeners {
         let shielded = false;
         damage = (damage - this.defense < 0) ? 0 : (damage - this.defense);
 
-        if (this.hasItemThatPreventsFirstLethalDamage && !this.hasUsedItemThatPreventsFirstLethalDamage) {
+        if (this.itemData.hasShield && !this.itemData.usedShield) {
             if (damage >= this.currentHealth) {
                 damage = 0;
-                this.hasUsedItemThatPreventsFirstLethalDamage = true;
+                this.itemData.usedShield = true;
                 this.items = this.items.filter((item: Item) => item.name !== 'Shield');
                 shielded = true
             }
@@ -167,7 +188,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
     updateMoves(newMoves: number): void {
         this.moves = newMoves;
-
+        
         this.emit('MovesUpdated', this)
     }
 
@@ -177,7 +198,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
         let itemMarginX: number = canvas.margin + ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridInfo.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
 
         if (canvas.horizontalLayout) {
-            // active item slot
+            // active item slots
             if (!this.hasStatsOpen) {
 
                 let activeSlotX: number = itemMarginX
@@ -185,22 +206,22 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 let activeSlotY: number = (canvas.canvasSize.y / 2) - (canvas.itemSideSize / 2);
                 let activeSlotY2: number = activeSlotY - canvas.margin * 1.5 - canvas.itemSideSize / 2
 
-                this.activeItemLimits = [
+                this.itemData.activeItemLimits = [
                     activeSlotX,
                     activeSlotX + canvas.itemSideSize,
                     activeSlotY,
                     activeSlotY + canvas.itemSideSize
                 ];
 
-                this.activeItem2Limits = [
+                this.itemData.activeItem2Limits = [
                     activeSlotX,
                     activeSlotX2 + canvas.itemSideSize / 2,
                     activeSlotY2,
                     activeSlotY2 + canvas.itemSideSize / 2
                 ];
 
-                let highlight: boolean = (checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...this.activeItemLimits));
-                let highlight2: boolean = (checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...this.activeItem2Limits));
+                let highlight: boolean = (checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...this.itemData.activeItemLimits));
+                let highlight2: boolean = (checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...this.itemData.activeItem2Limits));
 
 
                 (p5.drawingContext as CanvasRenderingContext2D).setLineDash([10, 10]);
@@ -226,10 +247,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 }
                 (p5.drawingContext as CanvasRenderingContext2D).setLineDash([]);
 
-
-
-                if (this.activeItem) {
-                    p5.fill([...Item.rarityColors()[this.activeItem.rarity].color.value, highlight ? 200 : 255]);
+                if (this.itemData.activeItem) {
+                    p5.fill([...Item.rarityColors()[this.itemData.activeItem.rarity].color.value, highlight ? 200 : 255]);
                     p5.rect(
                         activeSlotX,
                         activeSlotY,
@@ -240,7 +259,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
                     p5.textAlign(p5.CENTER, p5.CENTER)
                     p5.textSize(20)
-                    let name: string = insertLineBreaks(this.activeItem.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.activeItem.name), 0, this.activeItem.name.length));
+                    let name: string = insertLineBreaks(this.itemData.activeItem.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.itemData.activeItem.name), 0, this.itemData.activeItem.name.length));
 
                     p5.fill(255);
                     p5.stroke(0);
@@ -263,9 +282,9 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
                 }
 
-                if (this.hasItem('Extra Active Item') && this.activeItem2) {
+                if (this.hasItem('Extra Active Item') && this.itemData.activeItem2) {
 
-                    p5.fill([...Item.rarityColors()[this.activeItem2.rarity].color.value, highlight2 ? 200 : 255]);
+                    p5.fill([...Item.rarityColors()[this.itemData.activeItem2.rarity].color.value, highlight2 ? 200 : 255]);
                     p5.rect(
                         activeSlotX2,
                         activeSlotY2,
@@ -276,7 +295,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
                     p5.textAlign(p5.CENTER, p5.CENTER)
                     p5.textSize(20)
-                    let name: string = insertLineBreaks(this.activeItem2.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.activeItem2.name), 0, this.activeItem2.name.length));
+                    let name: string = insertLineBreaks(this.itemData.activeItem2.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.itemData.activeItem2.name), 0, this.itemData.activeItem2.name.length));
 
                     p5.fill(255);
                     p5.stroke(0);

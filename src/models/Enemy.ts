@@ -64,7 +64,8 @@ export class CommonEnemy extends Enemy implements EnemyActions {
         let stageIndex = stage.number - 1;
         let floorIndex = stage.floor.number - 1;
 
-        this.gold = Math.floor(Math.random() * (5 - 1));
+       // this.gold = Math.floor(Math.random() * (5 - 1));
+        this.gold = 5
 
         let maxHealth: number = 1500 * (1 + (floorIndex / 2));
         let minHealth: number = 500 * (1 + (floorIndex / 2));

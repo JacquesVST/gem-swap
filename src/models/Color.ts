@@ -11,6 +11,8 @@ export class Color {
     static ORANGE: Color = new Color(243, 156, 18);
     static PINK: Color = new Color(240, 98, 146);
     static PURPLE: Color = new Color(87, 49, 214);
+    static WHITE: Color = new Color(255, 255, 255);
+    static BLACK: Color = new Color(0, 0, 0);
 
     constructor(r: number, g: number, b: number) {
         this.r = r;

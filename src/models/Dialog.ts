@@ -324,18 +324,18 @@ export class ItemDialogOption extends DialogOption {
                         if (item.isActive) {
 
                             if (run.player.hasItem('Extra Active Item')) {
-                                if (run.player.activeItem === undefined) {
-                                    run.player.activeItem = item;
-                                } else if (run.player.activeItem2 === undefined) {
-                                    run.player.activeItem2 = item;
+                                if (run.player.itemData.activeItem === undefined) {
+                                    run.player.itemData.activeItem = item;
+                                } else if (run.player.itemData.activeItem2 === undefined) {
+                                    run.player.itemData.activeItem2 = item;
                                 } else {
                                     let aux: Item;
-                                    aux = run.player.activeItem2;
-                                    run.player.activeItem2 = item;
-                                    run.player.activeItem = aux;
+                                    aux = run.player.itemData.activeItem2;
+                                    run.player.itemData.activeItem2 = item;
+                                    run.player.itemData.activeItem = aux;
                                 }
                             } else {
-                                run.player.activeItem = item;
+                                run.player.itemData.activeItem = item;
                             }
                         } else {
                             item.effect();

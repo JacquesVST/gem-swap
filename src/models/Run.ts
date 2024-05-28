@@ -47,6 +47,10 @@ export class Run extends EventEmitter implements ConfigureListeners {
     sounds: { [key: string]: P5.SoundFile };
     //controls: { [key: string]: HTMLElement };
 
+    itemData: any = {
+        bonusMoves: 0
+    }
+
     constructor(p5: P5, player: Player, config: RunConfig, sounds: { [key: string]: P5.SoundFile }, controls: { [key: string]: HTMLElement }) {
         super('Run');
 
@@ -90,6 +94,13 @@ export class Run extends EventEmitter implements ConfigureListeners {
                 }
             })
         });
+
+        this.on('Main:KeyPressed', (event: KeyboardEvent, run: Run) => {
+            if ((event.key === 'e' || event.key === 'E') && !run.hasDialogOpen) {
+                this.enemyDetailsOpen = !this.enemyDetailsOpen;
+            }
+        });
+
         this.on('Piece:StartedAnimation', () => {
             this.inAnimation = true;
         });
@@ -109,14 +120,14 @@ export class Run extends EventEmitter implements ConfigureListeners {
             if (!this.map.winState) {
                 this.consecutiveCombo = 0;
                 this.lastShapeIds = [];
-                this.player.updateMoves(this.maxMoves);
+                this.player.updateMoves(this.maxMoves + this.itemData.bonusMoves);
                 this.newNavigationDialog();
             }
         });
 
         this.on('Map:NextFloorReached', () => {
             if (!this.map.winState) {
-                this.player.updateMoves(this.maxMoves);
+                this.player.updateMoves(this.maxMoves + this.itemData.bonusMoves);
                 this.emit('InitGrid', this);
             }
         });
@@ -125,11 +136,12 @@ export class Run extends EventEmitter implements ConfigureListeners {
             this.updateTopProgressBars();
             this.updateMoves();
 
-            this.player.updateMoves(this.maxMoves);
+            this.player.updateMoves(this.maxMoves + this.itemData.bonusMoves);
             this.emit('InitGrid', this);
         });
 
         this.on('Run:InitialItemSelected', () => {
+            this.sounds['item'].play();
             this.updateScore([]);
             this.updateCombo([]);
             this.updateDamage(0);
@@ -177,7 +189,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
 
         this.on('Grid:MoveDone', () => {
             if (this.combo > 0) {
-                this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.bossCritical : 0));
+                this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCritical : 0));
             } else {
                 this.map.grid.isUnstable = false;
             }
@@ -204,7 +216,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
         });
 
         this.on('Grid:GridStabilized:Init', () => {
-            this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.bossCritical : 0));
+            this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCritical : 0));
             this.updateTopProgressBars();
         });
 
@@ -333,7 +345,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             ),
             new ProgressBar(
                 this.player.moves,
-                this.maxMoves,
+                this.maxMoves + this.itemData.bonusMoves,
                 'Your Moves',
                 new Color(46, 204, 113),
                 false
@@ -357,12 +369,14 @@ export class Run extends EventEmitter implements ConfigureListeners {
     }
 
     updateMoves(): void {
-        this.updateProgressBar(ProgressBarIndexes.MOVES, ProgressBar.yourMovesBar(this.maxMoves, this.player.moves));
+        if (this.player.hasItem('Moves as you Crits')) {
+            this.itemData.bonusMoves = this.player.critical
+        }
+        this.updateProgressBar(ProgressBarIndexes.MOVES, ProgressBar.yourMovesBar(this.maxMoves + this.itemData.bonusMoves, this.player.moves));
     }
 
     updateProgressBar(index: ProgressBarIndexes, newProgressBar: ProgressBar, params?: EventParams): void {
         let difference: number = this.progressBars[index].value - newProgressBar.value;
-
         if (difference !== 0) {
             this.inAnimation = true;
             this.progressBars[index] = newProgressBar;
@@ -597,7 +611,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
         if (this.enemyDetailsOpen) {
 
             let slotX: number = canvas.canvasSize.x - canvas.margin - ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridInfo.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
-            let slotY: number = canvas.topUiSize + canvas.margin * 2;
+            let slotY: number = canvas.topUiSize + canvas.margin * 2 + canvas.padding;
 
             p5.noStroke()
             p5.fill(60, 200);
@@ -783,7 +797,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
     updatePlayerMoves(): void {
         this.inAnimation = true;
         let movesLeft: number = this.player.moves - 1;
-        if (Math.random() < this.player.moveSaver) {
+        if (Math.random() < this.player.itemData.moveSaver) {
             movesLeft = this.player.moves;
             this.textAnimationController.moveSavedAnimation();
         }
@@ -792,7 +806,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
     }
 
     reload(): void {
-        this.player.updateMoves(this.maxMoves);
+        this.player.updateMoves(this.maxMoves + this.itemData.bonusMoves);
         let damage: DamageData = this.player.simulateDamage(this.map.enemy.attack);
 
         this.sounds['defeat'].play();
@@ -877,6 +891,8 @@ export class Run extends EventEmitter implements ConfigureListeners {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(3, ItemPools.defaultPool(this).filter((item: Item) => {
             return item.name !== 'Instant Health';
         }), ['Common'], this.player);
+
+        console.log(ItemPools.defaultPool(this).concat(ItemPools.shopPool(this)))
 
         let dialog: Dialog = new Dialog(
             'Pick a starting item',
