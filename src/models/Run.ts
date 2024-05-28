@@ -892,8 +892,6 @@ export class Run extends EventEmitter implements ConfigureListeners {
             return item.name !== 'Instant Health';
         }), ['Common'], this.player);
 
-        console.log(ItemPools.defaultPool(this).concat(ItemPools.shopPool(this)))
-
         let dialog: Dialog = new Dialog(
             'Pick a starting item',
             'Make your run different from the last',
