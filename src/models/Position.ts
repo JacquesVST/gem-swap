@@ -2,6 +2,8 @@ export class Position {
     x: number;
     y: number;
 
+    static ORIGIN: Position = new Position(0, 0);
+
     constructor(x: number, y: number) {
         this.x = x;
         this.y = y;
@@ -13,6 +15,14 @@ export class Position {
 
     difference(other: Position): Position {
         return new Position(other.x - this.x, other.y - this.y);
+    }
+
+    divide(divisor: number): Position {
+        return new Position(this.x / divisor, this.y / divisor);
+    }
+
+    sum(other: Position): Position {
+        return new Position(this.x + other.x, this.y + other.y);
     }
 
     minus(other: Position): Position {

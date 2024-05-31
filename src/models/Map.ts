@@ -1,38 +1,42 @@
-import { checkPositionInLimit } from "../utils/Functions";
+import { EventEmitter } from "../controllers/EventEmitter";
+import { IMap, IRunConfig } from "../interfaces";
 import { Cell } from "./Cell";
 import { DialogOption, NavigationDialogOption } from "./Dialog";
 import { EffectParams } from "./Effect";
 import { BossEnemy, Enemy } from "./Enemy";
-import { ConfigureListeners, EventEmitter } from "./EventEmitter";
 import { Floor } from "./Floor";
 import { Grid } from "./Grid";
-import { Piece } from "./Piece";
-import { FallPieceAnimationParams, RemovePieceAnimationParams, SwapPieceAnimationParams } from "./PieceAnimation";
+import { Limits } from "./Limits";
+import { FallPieceAnimationParams, Piece, RemovePieceAnimationParams, SwapPieceAnimationParams } from "./Piece";
 import { Position } from "./Position";
-import { Run, RunConfig } from "./Run";
+import { Run, RunConfig} from "./Run";
 import { EnemyStage } from "./Stage";
 
-export class Map extends EventEmitter implements ConfigureListeners {
+export class Map extends EventEmitter implements IMap {
     floorCount: number;
     stageCount: number;
     enemyCount: number;
     gridX: number;
     gridY: number;
-    scale: number;
     run: Run;
 
     winState: boolean;
     floors: Floor[];
     currentFloorIndex: number;
 
-    constructor(config: RunConfig, scale: number, run: Run) {
+    constructor(config: RunConfig, run: Run) {
         super('Map');
         this.floorCount = config.floors;
         this.stageCount = config.stages;
         this.enemyCount = config.enemies;
+
+        if (config?.item?.name === 'No barriers') {
+            config.gridX += 1;
+            config.gridY += 1;
+        }
+
         this.gridX = config.gridX;
         this.gridY = config.gridY;
-        this.scale = scale;
         this.run = run;
 
         this.currentFloorIndex = 0;
@@ -97,16 +101,10 @@ export class Map extends EventEmitter implements ConfigureListeners {
             this.grid.setRunSnapshot(run);
             let clickFound: boolean;
             this.grid.iterateXtoY((position: Position) => {
-                let cell: Cell = this.grid.getCellbyPosition(position);
+                const cell: Cell = this.grid.getCellbyPosition(position);
+                const limits: Limits = new Limits(new Position(cell.canvasPosition.x, cell.canvasPosition.y), new Position(cell.canvasPosition.x + this.grid.sideSize, cell.canvasPosition.y + this.grid.sideSize))
 
-                let limits: number[] = [
-                    cell.canvasPosition.x,
-                    cell.canvasPosition.x + this.grid.sideSize,
-                    cell.canvasPosition.y,
-                    cell.canvasPosition.y + this.grid.sideSize
-                ];
-
-                if (checkPositionInLimit(click, ...limits)) {
+                if (limits.contains(click)) {
                     clickFound = true;
                     if (!this.grid.selectedCellPosition) {
                         this.grid.emit('FirstClickFound', position);
@@ -236,7 +234,7 @@ export class Map extends EventEmitter implements ConfigureListeners {
     }
 
     get stage(): EnemyStage {
-        let floor: Floor = this.floor;
+        const floor: Floor = this.floor;
         if (floor) {
             return floor.stages[floor.currentStageIndex][floor.currentStageBranch];
         }
@@ -244,7 +242,7 @@ export class Map extends EventEmitter implements ConfigureListeners {
     }
 
     get grid(): Grid {
-        let stage: EnemyStage = this.stage;
+        const stage: EnemyStage = this.stage;
         if (stage) {
             return stage.grid;
         }
@@ -252,7 +250,7 @@ export class Map extends EventEmitter implements ConfigureListeners {
     }
 
     get enemy(): Enemy {
-        let stage: EnemyStage = this.stage;
+        const stage: EnemyStage = this.stage;
         if (stage) {
             return stage.enemies[stage.currentEnemyIndex];
         }
@@ -260,7 +258,7 @@ export class Map extends EventEmitter implements ConfigureListeners {
     }
 
     findNextEnemy(): Enemy {
-        let stage: EnemyStage = this.stage;
+        const stage: EnemyStage = this.stage;
         if (stage && stage.currentEnemyIndex < stage.enemies.length - 1) {
             return stage.enemies[stage.currentEnemyIndex + 1];
         };
@@ -268,7 +266,7 @@ export class Map extends EventEmitter implements ConfigureListeners {
     }
 
     setupFloors(): Floor[] {
-        let floors: Floor[] = [...Array(this.floorCount)].map(
+        const floors: Floor[] = [...Array(this.floorCount)].map(
             (_: Floor, index: number) => {
                 let floor: Floor = new Floor(index + 1, { ...this });
                 floor.setupStages(this.stageCount, this.enemyCount);

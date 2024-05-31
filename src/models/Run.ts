@@ -1,104 +1,93 @@
 import * as P5 from "p5";
-import { checkPositionInLimit, formatNumber, getBestNumbers, setBestNumbers } from "../utils/Functions";
-import { CanvasInfo } from "./CanvasInfo";
+import { Canvas } from "../controllers/Canvas";
+import { DialogController } from "../controllers/DialogController";
+import { EventEmitter } from "../controllers/EventEmitter";
+import { ProgressBarController } from "../controllers/ProgressBarController";
+import { TextController } from "../controllers/TextController";
+import { DialogType, Difficulty, IBestNumbers, ICanvas, IDamageData, IEventParams, IRun, IRunConfig, IRunItemData, ProgressBarIndexes } from "../interfaces";
+import { formatNumber } from "../utils/General";
+import { getBestNumbers, setBestNumbers } from "../utils/LocalStorage";
 import { Cell } from "./Cell";
 import { Color } from "./Color";
-import { DefaultDialogOption, Dialog, DialogController, DialogType, ItemDialogOption, NavigationDialogOption } from "./Dialog";
+import { DefaultDialogOption, Dialog, DialogOption, ItemDialogOption, NavigationDialogOption, PassiveDialogOption } from "./Dialog";
 import { Effect } from "./Effect";
 import { BossEnemy, Enemy, MiniBossEnemy } from "./Enemy";
-import { ConfigureListeners, EventEmitter, EventParams } from "./EventEmitter";
 import { Floor } from "./Floor";
 import { Item, ItemPools } from "./Item";
 import { Map } from "./Map";
 import { Piece } from "./Piece";
-import { DamageData, Player } from "./Player";
+import { Player } from "./Player";
 import { Position } from "./Position";
-import { ProgressBar } from "./ProgressBar";
 import { Shape } from "./Shape";
 import { EnemyStage } from "./Stage";
-import { TextAnimationController } from "./TextAnimation";
 
-export class Run extends EventEmitter implements ConfigureListeners {
-    p5: P5;
+export class Run extends EventEmitter implements IRun {
     player: Player;
-    maxMoves: number;
     costMultiplier: number;
-
-    textAnimationController: TextAnimationController;
-    dialogController: DialogController;
-    canvas: CanvasInfo;
+    canvas: Canvas;
     map: Map;
-    possibleShapes: Shape[];
-    progressBars: ProgressBar[];
+    difficulty: Difficulty;
 
     score: number = 0;
     combo: number = 0;
     damage: number = 0;
     dots: number = 0;
+
     itemOptions: number = 3;
     defeatedEnemies: number = 0;
     consecutiveCombo: number = 0;
+    possibleShapes: Shape[] = [];
     possibleEffects: Effect[] = [];
-    lastShapeIds: string[] = [];
     inAnimation: boolean = false;
     stackCombo: boolean = false;
     enemyDetailsOpen: boolean = false;
 
     sounds: { [key: string]: P5.SoundFile };
-    //controls: { [key: string]: HTMLElement };
 
-    itemData: any = {
-        bonusMoves: 0
+    itemData: IRunItemData = {
+        lastShapeIds: [],
+        wasDiagonalMove: false
     }
 
-    constructor(p5: P5, player: Player, config: RunConfig, sounds: { [key: string]: P5.SoundFile }, controls: { [key: string]: HTMLElement }) {
+    constructor(config: RunConfig, sounds: { [key: string]: P5.SoundFile }) {
         super('Run');
 
-        this.p5 = p5;
-        this.player = player;
-        this.maxMoves = config.moves;
-        this.costMultiplier = config.costMultiplier;
-        this.player.moves = config.moves;
         this.sounds = sounds;
-        //this.controls = controls;
+        this.player = Player.defaultPlayerWith(config.item);
+        this.difficulty = config.difficulty;
+        this.costMultiplier = config.costMultiplier;
 
-        this.textAnimationController = TextAnimationController.getInstance();
-        this.dialogController = DialogController.getInstance();
-        this.canvas = CanvasInfo.getInstance();
-
-        this.map = new Map(config, 1, this);
         this.possibleShapes = Shape.defaultShapes();
-        this.progressBars = this.generateInitialProgressBars();
+        this.canvas = Canvas.getInstance();
+        this.map = new Map(config, this);
 
         this.configureListeners();
         this.newInitialItemDialog();
+
+        ProgressBarController.getInstance().initialize(this);
     }
 
     get hasDialogOpen(): boolean {
-        return !!this.dialogController.currentDialog;
+        return !!DialogController.getInstance().currentDialog;
     }
 
     configureListeners(): void {
         this.on('Player:AddedGold', (gold: number) => {
-            this.textAnimationController.goldAnimation(gold);
+            TextController.getInstance().goldAnimation(gold);
         })
 
-        this.on('Main:MouseClicked:Click', (click: Position) => {
-            if (this.hasDialogOpen, this.player.hasInventoryOpen) {
-                return;
-            }
-
-            this.progressBars.forEach((progressBar: ProgressBar, index: number) => {
-                if (checkPositionInLimit(click, ...progressBar.limits) && index === 2) {
-                    this.enemyDetailsOpen = !this.enemyDetailsOpen;
-                }
-            })
+        this.on('Player:PlayerDied', () => {
+            this.updateHealth(0)
         });
 
         this.on('Main:KeyPressed', (event: KeyboardEvent, run: Run) => {
             if ((event.key === 'e' || event.key === 'E') && !run.hasDialogOpen) {
                 this.enemyDetailsOpen = !this.enemyDetailsOpen;
             }
+        });
+
+        this.on('Grid:DiscountDiagonals', () => {
+            this.itemData.wasDiagonalMove = true;
         });
 
         this.on('Piece:StartedAnimation', () => {
@@ -119,15 +108,17 @@ export class Run extends EventEmitter implements ConfigureListeners {
         this.on('Map:NextStageReached', () => {
             if (!this.map.winState) {
                 this.consecutiveCombo = 0;
-                this.lastShapeIds = [];
-                this.player.updateMoves(this.maxMoves + this.itemData.bonusMoves);
+                this.itemData.lastShapeIds = [];
+                this.player.updateMoves(this.player.totalMoves);
+                this.updateMoves();
                 this.newNavigationDialog();
             }
         });
 
         this.on('Map:NextFloorReached', () => {
             if (!this.map.winState) {
-                this.player.updateMoves(this.maxMoves + this.itemData.bonusMoves);
+                this.player.updateMoves(this.player.totalMoves);
+                this.updateMoves();
                 this.emit('InitGrid', this);
             }
         });
@@ -136,7 +127,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             this.updateTopProgressBars();
             this.updateMoves();
 
-            this.player.updateMoves(this.maxMoves + this.itemData.bonusMoves);
+            this.player.updateMoves(this.player.totalMoves);
             this.emit('InitGrid', this);
         });
 
@@ -152,8 +143,8 @@ export class Run extends EventEmitter implements ConfigureListeners {
             this.emit('InitGrid', this);
         });
 
-        this.on('ProgressBar:ProgressBarUpdated:DamagePlayer', (data: DamageData) => {
-            this.player.damage(data);
+        this.on('ProgressBar:ProgressBarUpdated:DamagePlayer', (data: any) => {
+            this.player.damage(data.damage);
         });
 
         // Grid events
@@ -163,7 +154,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             this.player.addGold(enemy.gold)
 
             if (this.map.findNextEnemy() instanceof BossEnemy) {
-                this.textAnimationController.bossFightAnimation();
+                TextController.getInstance().bossFightAnimation();
             }
 
             if (!enemy.isLast) {
@@ -189,7 +180,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
 
         this.on('Grid:MoveDone', () => {
             if (this.combo > 0) {
-                this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCritical : 0));
+                this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
             } else {
                 this.map.grid.isUnstable = false;
             }
@@ -216,7 +207,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
         });
 
         this.on('Grid:GridStabilized:Init', () => {
-            this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCritical : 0));
+            this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
             this.updateTopProgressBars();
         });
 
@@ -257,7 +248,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
                     this.updateHealth();
                     this.updateMoves();
 
-                    this.dialogController.close();
+                    DialogController.getInstance().close();
                     this.emit('AllowNextFloor');
                 });
             });
@@ -289,7 +280,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
         this.on('Run:Item:ColorDamageBoost', (id: string, bonus: number) => {
             this.possibleShapes.forEach((shape: Shape) => {
                 if (shape.id === id) {
-                    shape.bonusDmg += bonus;
+                    shape.itemData.bonusDamage += bonus;
                 }
             });
         });
@@ -306,116 +297,59 @@ export class Run extends EventEmitter implements ConfigureListeners {
         this.on('DialogController:ItemPurchased', (price: number) => {
             this.player.addGold(-price);
         });
-
-    }
-
-    generateInitialProgressBars(): ProgressBar[] {
-        let enemy: Enemy = this.map.enemy;
-        let stage: EnemyStage = this.map.stage;
-        let floor: Floor = this.map.floor;
-
-        return [
-            new ProgressBar(
-                this.map.floors.length,
-                floor.number,
-                'Floor',
-                new Color(244, 208, 63),
-                true
-            ),
-            new ProgressBar(
-                this.map.floor.stages.length,
-                stage.number,
-                'Stage',
-                new Color(46, 134, 193),
-                true
-            ),
-            new ProgressBar(
-                enemy.health,
-                enemy.currentHealth,
-                `${enemy.name} Health (${enemy.number}/${this.map.stage.enemies.length})`,
-                enemy.color,
-                true
-            ),
-            new ProgressBar(
-                this.player.health,
-                this.player.currentHealth,
-                'Your Health',
-                new Color(231, 76, 60),
-                false
-            ),
-            new ProgressBar(
-                this.player.moves,
-                this.maxMoves + this.itemData.bonusMoves,
-                'Your Moves',
-                new Color(46, 204, 113),
-                false
-            )
-        ];
     }
 
     updateTopProgressBars(): void {
-        this.updateProgressBar(ProgressBarIndexes.FLOOR, ProgressBar.floorBar(this));
-        this.updateProgressBar(ProgressBarIndexes.STAGE, ProgressBar.stageBar(this));
+        this.emit('UpdateProgressBar', ProgressBarIndexes.FLOOR, ProgressBarController.floorBar(this))
+        this.emit('UpdateProgressBar', ProgressBarIndexes.STAGE, ProgressBarController.stageBar(this))
 
         let enemy: Enemy = this.map.enemy;
 
         if (enemy) {
-            this.updateProgressBar(ProgressBarIndexes.ENEMY, ProgressBar.enemyHealthBar(enemy, enemy.currentHealth, this.map.stage.enemies.length));
+            this.emit('UpdateProgressBar', ProgressBarIndexes.ENEMY, ProgressBarController.enemyHealthBar(this, enemy.health))
         }
     }
 
-    updateHealth(): void {
-        this.updateProgressBar(ProgressBarIndexes.HEALTH, ProgressBar.yourHealthBar(this.player.health, this.player.currentHealth));
+    updateEnemy(newHealth?: number, params?: IEventParams): void {
+        this.emit('UpdateProgressBar', ProgressBarIndexes.ENEMY, ProgressBarController.enemyHealthBar(this, !isNaN(newHealth) ? newHealth : this.map.enemy.health), params)
+    }
+
+
+    updateHealth(newHealth?: number, params?: IEventParams): void {
+        this.emit('UpdateProgressBar', ProgressBarIndexes.HEALTH, ProgressBarController.yourHealthBar(this.player.maxHealth, !isNaN(newHealth) ? newHealth : this.player.health), params);
     }
 
     updateMoves(): void {
         if (this.player.hasItem('Moves as you Crits')) {
-            this.itemData.bonusMoves = this.player.critical
+            this.player.itemData.bonusMoves = this.player.critical
         }
-        this.updateProgressBar(ProgressBarIndexes.MOVES, ProgressBar.yourMovesBar(this.maxMoves + this.itemData.bonusMoves, this.player.moves));
-    }
-
-    updateProgressBar(index: ProgressBarIndexes, newProgressBar: ProgressBar, params?: EventParams): void {
-        let difference: number = this.progressBars[index].value - newProgressBar.value;
-        if (difference !== 0) {
-            this.inAnimation = true;
-            this.progressBars[index] = newProgressBar;
-            this.progressBars[index].animate(difference, params);
-        } else {
-            if (params) {
-                this.events.emit('ProgressBar:ProgressBarUpdated:' + params.useCase, params.data);
-            }
-        }
+        this.emit('UpdateProgressBar', ProgressBarIndexes.MOVES, ProgressBarController.yourMovesBar(this.player.totalMoves, this.player.moves));
     }
 
     draw(): void {
-        this.progressBars.forEach((element: ProgressBar, index: number) => {
-            element.drawBar(index, this.canvas);
-        });
-        this.map.grid.draw(!!this.dialogController.currentDialog);
+        this.map.grid.draw(!!DialogController.getInstance().currentDialog);
         this.map.grid.drawPieces();
-        this.drawNumbers(this.canvas);
-        this.drawEnemyDetails(this.canvas)
-        this.player.draw(this.canvas)
+        this.drawNumbers();
+        this.drawEnemyDetails()
+        this.player.draw()
     }
 
-    drawNumbers(canvas: CanvasInfo): void {
+    drawNumbers(): void {
+        const canvas: ICanvas = Canvas.getInstance();
         const p5: P5 = canvas.p5
 
         let height: number = canvas.itemSideSize / 4
-
-
-        let horizontalCenterPadding: number = canvas.canvasSize.x - canvas.margin - ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridInfo.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
+        let horizontalCenterPadding: number = canvas.windowSize.x - canvas.margin - ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridData.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
 
         let numbersSlotX: number = horizontalCenterPadding
-        let numbersSlotY: number = canvas.canvasSize.y / 2;
+        let numbersSlotY: number = canvas.windowSize.y / 2;
 
-        let bests: BestNumbers = getBestNumbers();
+        let bests: IBestNumbers = getBestNumbers();
 
         if (canvas.horizontalLayout) {
             // score
-            p5.noStroke()
-            p5.fill(60);
+            p5.noStroke();
+            p5.fill(Color.GRAY_3.value);
             p5.rect(
                 numbersSlotX,
                 numbersSlotY - height * 2 - canvas.margin * 1.5,
@@ -424,9 +358,9 @@ export class Run extends EventEmitter implements ConfigureListeners {
                 canvas.radius
             );
 
-            p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.fill(255);
-            p5.stroke(0);
+            p5.textAlign(p5.LEFT, p5.CENTER);
+            p5.fill(Color.WHITE.value);
+            p5.stroke(Color.BLACK.value);
             p5.strokeWeight(3);
             p5.textSize(24)
             p5.text(
@@ -443,7 +377,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             );
 
             p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.fill(200);
+            p5.fill(Color.WHITE_1.value);
             p5.textSize(16)
             p5.text(
                 'Best',
@@ -461,7 +395,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
 
             // damage
             p5.noStroke()
-            p5.fill(60);
+            p5.fill(Color.GRAY_3.value);
             p5.rect(
                 numbersSlotX,
                 numbersSlotY - height - canvas.margin / 2,
@@ -471,8 +405,8 @@ export class Run extends EventEmitter implements ConfigureListeners {
             );
 
             p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.fill(255);
-            p5.stroke(0);
+            p5.fill(Color.WHITE.value);
+            p5.stroke(Color.BLACK.value);
             p5.strokeWeight(3);
             p5.textSize(24)
             p5.text(
@@ -489,7 +423,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             );
 
             p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.fill(200);
+            p5.fill(Color.WHITE_1.value);
             p5.textSize(16)
             p5.text(
                 'Best',
@@ -506,7 +440,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
 
             // combo
             p5.noStroke()
-            p5.fill(60);
+            p5.fill(Color.GRAY_3.value);
             p5.rect(
                 numbersSlotX,
                 numbersSlotY + canvas.margin / 2,
@@ -516,8 +450,8 @@ export class Run extends EventEmitter implements ConfigureListeners {
             );
 
             p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.fill(255);
-            p5.stroke(0);
+            p5.fill(Color.WHITE.value);
+            p5.stroke(Color.BLACK.value);
             p5.strokeWeight(3);
             p5.textSize(24)
             p5.text(
@@ -534,7 +468,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             );
 
             p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.fill(200);
+            p5.fill(Color.WHITE_1.value);
             p5.textSize(16)
             p5.text(
                 'Best',
@@ -552,7 +486,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             // gold
 
             p5.noStroke()
-            p5.fill(60);
+            p5.fill(Color.GRAY_3.value);
             p5.rect(
                 numbersSlotX,
                 numbersSlotY + height + canvas.margin * 1.5,
@@ -562,8 +496,8 @@ export class Run extends EventEmitter implements ConfigureListeners {
             );
 
             p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.fill(...Color.YELLOW.value, 255);
-            p5.stroke(0);
+            p5.fill(Color.YELLOW.value);
+            p5.stroke(Color.BLACK.value);
             p5.strokeWeight(3);
             p5.textSize(24)
             p5.text(
@@ -573,7 +507,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             );
 
             p5.textAlign(p5.RIGHT, p5.CENTER)
-            p5.fill(...Color.YELLOW.value, 255);
+            p5.fill(Color.YELLOW.value);
             p5.textSize(24)
             p5.text(
                 `$ ${this.player.gold}`,
@@ -590,8 +524,8 @@ export class Run extends EventEmitter implements ConfigureListeners {
         p5.textSize(20)
         p5.text(
             '(S)tats',
-            canvas.canvasSize.x / 2 - canvas.itemSideSize / 2,
-            canvas.canvasSize.y - canvas.bottomUiSize
+            canvas.windowSize.x / 2 - canvas.itemSideSize / 2,
+            canvas.windowSize.y - canvas.uiData.bottomUiSize
         );
 
         p5.textAlign(p5.CENTER, p5.CENTER)
@@ -599,19 +533,20 @@ export class Run extends EventEmitter implements ConfigureListeners {
         p5.textSize(20)
         p5.text(
             '(I)nventory',
-            canvas.canvasSize.x / 2 + canvas.itemSideSize / 2,
-            canvas.canvasSize.y - canvas.bottomUiSize
+            canvas.windowSize.x / 2 + canvas.itemSideSize / 2,
+            canvas.windowSize.y - canvas.uiData.bottomUiSize
         );
         p5.textStyle(p5.NORMAL)
     }
 
-    drawEnemyDetails(canvas: CanvasInfo) {
+    drawEnemyDetails() {
+        const canvas: ICanvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
 
         if (this.enemyDetailsOpen) {
 
-            let slotX: number = canvas.canvasSize.x - canvas.margin - ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridInfo.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
-            let slotY: number = canvas.topUiSize + canvas.margin * 2 + canvas.padding;
+            let slotX: number = canvas.windowSize.x - canvas.margin - ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridData.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
+            let slotY: number = canvas.uiData.topUiSize + canvas.margin * 2 + canvas.padding;
 
             p5.noStroke()
             p5.fill(60, 200);
@@ -663,6 +598,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
 
         }
     }
+
     processMacthList(matches: Piece[][]): void {
         if (this.combo === 0) {
             let shapeIds: string[] = [];
@@ -671,7 +607,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             matches.forEach((match: Piece[]) => {
                 let firstShapeId: string = match[0].shape.id;
                 if (match.every((piece: Piece) => piece.shape.id === firstShapeId)) {
-                    if (this.lastShapeIds.includes(firstShapeId)) {
+                    if (this.itemData.lastShapeIds.includes(firstShapeId)) {
                         keep = true
                     }
                     shapeIds.push(firstShapeId);
@@ -679,7 +615,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
             });
 
             this.consecutiveCombo = keep ? this.consecutiveCombo + 1 : 0;
-            this.lastShapeIds = shapeIds;
+            this.itemData.lastShapeIds = shapeIds;
         }
 
         if (this.player.hasItem('4+ Match Regeneration')) {
@@ -689,7 +625,7 @@ export class Run extends EventEmitter implements ConfigureListeners {
                     let heal: number = itemStack * 0.01 * this.player.health
                     this.player.heal(heal);
                     this.updateHealth();
-                    this.textAnimationController.playerHealedAnimaiton(heal);
+                    TextController.getInstance().playerHealedAnimaiton(heal);
                 }
             });
         }
@@ -700,15 +636,12 @@ export class Run extends EventEmitter implements ConfigureListeners {
         matches.forEach((match: Piece[]) => {
             totalDamage += this.updateScore(match);
         });
-        if (this.map.enemy) {
-            this.damageEnemy(totalDamage);
-        }
+        this.damageEnemy(totalDamage);
     }
 
     updateCombo(matches: Piece[][]): void {
         if (matches.length === 0) {
             this.combo = 0;
-            //this.controls['comboCounter'].setAttribute('style', 'font-size: 1em');
         }
 
         if (this.stackCombo) {
@@ -718,21 +651,17 @@ export class Run extends EventEmitter implements ConfigureListeners {
                 this.player.addGold(goldAmount);
             }
         }
-        //this.controls['comboCounter'].innerHTML = formatNumber(this.combo);
 
-        let bests: BestNumbers = getBestNumbers();
+        let bests: IBestNumbers = getBestNumbers();
         bests.bestCombo = bests.bestCombo > this.combo ? bests.bestCombo : this.combo;
-        //this.controls['bestComboCounter'].innerHTML = formatNumber(bests.bestCombo);
         setBestNumbers(bests);
 
-        let fontSize: number = this.combo > 0 ? ((this.combo / bests.bestCombo) * 2 >= 1 ? (this.combo / bests.bestCombo) * 2 : 1) : 1;
-        //this.controls['comboCounter'].setAttribute('style', 'font-size: ' + fontSize + 'em; ' + (bests.bestCombo === this.combo && this.combo !== 0 ? 'color: red' : 'color: white'));
     }
 
     updateScore(match: Piece[]): number {
-        let bonusDmg: number = 0;
+        let bonusDamage: number = 0;
         if (match[0]?.shape) {
-            bonusDmg = match[0].shape.bonusDmg;
+            bonusDamage = match[0].shape.itemData.bonusDamage;
             this.sounds['match'].play();
         }
 
@@ -740,27 +669,52 @@ export class Run extends EventEmitter implements ConfigureListeners {
 
         let lengthMultiplier = match.length;
         if (this.player.hasItem('Hit Streak')) {
-            lengthMultiplier += (this.consecutiveCombo + 1);
+            lengthMultiplier += (this.consecutiveCombo);
         }
 
-        let additiveScore: number = (this.player.attack + bonusDmg) * lengthMultiplier * this.player.damageMultiplier;
+        let damageMultiplier = this.player.damageMultiplier;
+
+        if (this.itemData?.wasDiagonalMove) {
+            damageMultiplier = damageMultiplier * 0.9;
+            this.itemData.wasDiagonalMove = false;
+        }
+
+        if (Math.random() < this.player.itemData.criticalChance) {
+            criticalInMatch = true;
+            damageMultiplier = damageMultiplier * 1.1;
+        }
+
+        if (this.player?.passive?.name === 'Midas Touched') {
+            let borderPieces: boolean = false
+            match.forEach((piece: Piece) => {
+                borderPieces = (
+                    piece.gridPosition.x === 0 ||
+                    piece.gridPosition.x === this.map.grid.width - 1 ||
+                    piece.gridPosition.y === 0 ||
+                    piece.gridPosition.y === this.map.grid.height - 1
+                );
+            })
+            this.emit('MidasTouched', (criticalInMatch ? 2 : 1) * (borderPieces ? 1 : 0));
+
+        }
+
+
+        let additiveScore: number = (this.player.attack + bonusDamage) * lengthMultiplier * damageMultiplier;
         additiveScore *= this.player.hasItem('Combos multiply DMG') ? this.combo : 1;
         additiveScore *= criticalInMatch ? this.player.criticalMultiplier : 1;
 
         this.score += additiveScore;
-        //this.controls['scoreCounter'].innerHTML = formatNumber(this.score);
 
-        let bests: BestNumbers = getBestNumbers();
+        let bests: IBestNumbers = getBestNumbers();
         bests.bestScore = bests.bestScore > this.score ? bests.bestScore : this.score;
-        //this.controls['bestScoreCounter'].innerHTML = formatNumber(bests.bestScore);
         setBestNumbers(bests);
 
         if (match?.length) {
-            let cell1: Cell = this.map.grid.getCellbyPosition(match[0].position);
-            let cell2: Cell = this.map.grid.getCellbyPosition(match[match.length - 1].position);
+            let cell1: Cell = this.map.grid.getCellbyPosition(match[0].gridPosition);
+            let cell2: Cell = this.map.grid.getCellbyPosition(match[match.length - 1].gridPosition);
             let position: Position = cell1.canvasPosition.average(cell2.canvasPosition);
 
-            this.textAnimationController.damageAnimation(additiveScore, criticalInMatch, position, match[0]?.shape);
+            TextController.getInstance().damageAnimation(additiveScore, criticalInMatch, position, match[0]?.shape);
             this.updateDamage(additiveScore);
             this.player.xp += match.length * (criticalInMatch ? 2 : 1);
         }
@@ -771,48 +725,40 @@ export class Run extends EventEmitter implements ConfigureListeners {
     updateDamage(damageDealt: number): void {
         if (damageDealt === 0) {
             this.damage = 0;
-            //this.controls['damageCounter'].setAttribute('style', 'font-size: 1em');
         }
 
         this.damage += damageDealt;
-        //this.controls['damageCounter'].innerHTML = formatNumber(this.damage);
 
-        let bests: BestNumbers = getBestNumbers();
+        let bests: IBestNumbers = getBestNumbers();
         bests.bestDamage = bests.bestDamage > this.damage ? bests.bestDamage : this.damage;
-        //this.controls['bestDamageCounter'].innerHTML = formatNumber(bests.bestDamage);
         setBestNumbers(bests);
-
-        let fontSize: number = this.damage > 0 ? ((this.damage / bests.bestDamage) * 2 >= 1 ? (this.damage / bests.bestDamage) * 2 : 1) : 1;
-        //this.controls['damageCounter'].setAttribute('style', 'font-size: ' + fontSize + 'em; ' + (bests.bestDamage === this.damage && this.damage !== 0 ? 'color: red' : 'color: white'));
     }
 
     damageEnemy(damage: number): void {
         damage = damage * this.player.damageMultiplier;
-        let enemy: Enemy = this.map.enemy;
-        let finalDamage: number = enemy.simulateDamage(damage);
-        this.updateProgressBar(ProgressBarIndexes.ENEMY, ProgressBar.enemyHealthBar(enemy, enemy.currentHealth - finalDamage, this.map.stage.enemies.length), { useCase: 'DamageEnemy', data: { damage: finalDamage, player: this.player } });
+        const enemy: Enemy = this.map.enemy;
+        const finalDamage: number = enemy.simulateDamage(damage);
+        this.updateEnemy(enemy.health - finalDamage, { useCase: 'DamageEnemy', data: { damage: finalDamage } });
     }
-
 
     updatePlayerMoves(): void {
         this.inAnimation = true;
         let movesLeft: number = this.player.moves - 1;
-        if (Math.random() < this.player.itemData.moveSaver) {
+        if (Math.random() < this.player.itemData.moveSaverChance) {
             movesLeft = this.player.moves;
-            this.textAnimationController.moveSavedAnimation();
+            TextController.getInstance().moveSavedAnimation();
         }
         this.player.updateMoves(movesLeft);
         this.updateMoves();
     }
 
     reload(): void {
-        this.player.updateMoves(this.maxMoves + this.itemData.bonusMoves);
-        let damage: DamageData = this.player.simulateDamage(this.map.enemy.attack);
+        this.player.updateMoves(this.player.maxMoves + this.player.itemData.bonusMoves);
+        let damage: IDamageData = this.player.simulateDamage(this.map.enemy);
 
         this.sounds['defeat'].play();
-        this.textAnimationController.damagePlayerAnimation(damage);
-
-        this.updateProgressBar(ProgressBarIndexes.HEALTH, ProgressBar.yourHealthBar(this.player.health, this.player.currentHealth - damage.damage), { useCase: 'DamagePlayer', data: damage });
+        TextController.getInstance().damagePlayerAnimation(damage);
+        this.updateHealth(this.player.health - damage.damage, { useCase: 'DamagePlayer', data: { damage: damage } })
     }
 
     newNavigationDialog(callback?: (index: number) => void): void {
@@ -835,11 +781,16 @@ export class Run extends EventEmitter implements ConfigureListeners {
             DialogType.NAVIGATION
         );
 
-        this.dialogController.dialogs.push(dialog);
+        DialogController.getInstance().dialogs.push(dialog);
     }
 
     newRandomDropDialog(rarities: string[], callback: () => void): void {
-        let itemList: Item[] = Item.generateItemsBasedOnRarity(1, ItemPools.defaultPool(this), rarities, this.player);
+        let itemList: Item[] = Item.generateItemsBasedOnRarity(
+            1,
+            ItemPools.defaultPool(this),
+            rarities,
+            this.player
+        );
 
         let dialog: Dialog = new Dialog(
             'This Enemy Dropped Something',
@@ -849,14 +800,14 @@ export class Run extends EventEmitter implements ConfigureListeners {
             callback
         );
 
-        this.dialogController.dialogs.unshift(dialog);
+        DialogController.getInstance().dialogs.unshift(dialog);
     }
 
     newPercDialog(callback: () => void): void {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(
             this.itemOptions,
             ItemPools.defaultPool(this),
-            ['Rare', 'Epic'],
+            ['Common', 'Rare', 'Epic'],
             this.player
         );
 
@@ -868,11 +819,17 @@ export class Run extends EventEmitter implements ConfigureListeners {
             undefined,
         );
 
-        this.dialogController.dialogs.unshift(dialog);
+        DialogController.getInstance().dialogs.unshift(dialog);
     }
 
     newShopDialog(selectCallback: () => void, closeCallback?: () => void): void {
-        let itemList: Item[] = Item.generateItemsBasedOnRarity(2, ItemPools.shopPool(this), ['Common', 'Rare', 'Epic'], this.player, true);
+        let itemList: Item[] = Item.generateItemsBasedOnRarity(
+            2,
+            ItemPools.shopPool(this),
+            ['Common', 'Rare', 'Epic'],
+            this.player,
+            true
+        );
 
         itemList = [ItemPools.fullHealthShopItem(this), ...itemList];
 
@@ -884,13 +841,18 @@ export class Run extends EventEmitter implements ConfigureListeners {
             closeCallback
         );
 
-        this.dialogController.dialogs.unshift(dialog);
+        DialogController.getInstance().dialogs.unshift(dialog);
     }
 
     newInitialItemDialog(): void {
-        let itemList: Item[] = Item.generateItemsBasedOnRarity(3, ItemPools.defaultPool(this).filter((item: Item) => {
-            return item.name !== 'Instant Health';
-        }), ['Common'], this.player);
+        let itemList: Item[] = Item.generateItemsBasedOnRarity(
+            this.itemOptions,
+            ItemPools.defaultPool(this).filter((item: Item) => {
+                return item.name !== 'Instant Health';
+            }),
+            ['Common'],
+            this.player
+        );
 
         let dialog: Dialog = new Dialog(
             'Pick a starting item',
@@ -900,23 +862,49 @@ export class Run extends EventEmitter implements ConfigureListeners {
             () => this.emit('InitialItemSelected')
         );
 
-        this.dialogController.dialogs.push(dialog);
+        DialogController.getInstance().dialogs.push(dialog);
     }
 
-    static newGameDialog(status?: string, score?: number, color?: Color): Dialog {
+    static passiveSelectorDialog(): Dialog {
+        let dialogController = DialogController.getInstance();
+        let itemList: Item[] = ItemPools.passivePool();
+
+        let options: ItemDialogOption[] = itemList.map((item: Item) => {
+            return new ItemDialogOption(
+                () => {
+                    dialogController.emit('PassiveChosen', item);
+                },
+                Item.rarityColors[item.rarity].color,
+                item
+            );
+        });
+
+        return new Dialog(
+            'Select a passive ability to build arround',
+            'You can switch freely before starting the run',
+            options,
+            DialogType.SKIPPABLE_ITEM,
+            () => { dialogController.emit('PassiveChosen', undefined) },
+        );
+
+    }
+
+    static newGameDialog(status?: string, score?: number, color?: Color, item?: Item): Dialog {
         let dialogController = DialogController.getInstance();
 
-        let options: DefaultDialogOption[] = [
+        let options: DialogOption[] = [
             new DefaultDialogOption(
                 () => {
                     dialogController.emit('DifficultyChosen', {
                         enemies: 5,
                         stages: 3,
                         floors: 3,
-                        moves: 10,
                         gridX: 12,
                         gridY: 8,
-                        costMultiplier: 1
+                        costMultiplier: 1,
+                        difficulty: Difficulty.EASY,
+                        item
+
                     })
                 },
                 new Color(46, 204, 113),
@@ -930,10 +918,11 @@ export class Run extends EventEmitter implements ConfigureListeners {
                         enemies: 8,
                         stages: 5,
                         floors: 5,
-                        moves: 12,
                         gridX: 10,
                         gridY: 8,
-                        costMultiplier: 1.5
+                        costMultiplier: 1.5,
+                        difficulty: Difficulty.MEDIUM,
+                        item
                     })
                 },
                 new Color(244, 208, 63),
@@ -947,10 +936,11 @@ export class Run extends EventEmitter implements ConfigureListeners {
                         enemies: 10,
                         stages: 8,
                         floors: 8,
-                        moves: 15,
                         gridX: 8,
                         gridY: 6,
-                        costMultiplier: 2
+                        costMultiplier: 2,
+                        difficulty: Difficulty.HARD,
+                        item
                     })
                 },
                 new Color(231, 76, 60),
@@ -967,10 +957,11 @@ export class Run extends EventEmitter implements ConfigureListeners {
                         enemies: 1,
                         stages: 1,
                         floors: 3,
-                        moves: 10,
                         gridX: 10,
                         gridY: 8,
-                        costMultiplier: 1
+                        costMultiplier: 1,
+                        difficulty: Difficulty.DEBUG,
+                        item
                     });
                 },
                 new Color(224, 224, 224),
@@ -978,40 +969,27 @@ export class Run extends EventEmitter implements ConfigureListeners {
             ));
         }
 
+        options.push(new PassiveDialogOption(
+            () => {
+                dialogController.emit('SelectPassive')
+            },
+            Color.GRAY_3,
+            item
+        ));
+
         let subtext: string = !isNaN(score) ? `With a score of ${formatNumber(score)}. Go again?` : 'Select difficulty'
 
         return new Dialog(
             status ?? 'New Run',
             subtext,
             options,
-            DialogType.CHOICE,
+            DialogType.INITIAL,
             undefined,
             color
         );
     }
-
 }
 
-export interface RunConfig {
-    enemies: number;
-    stages: number;
-    floors: number;
-    moves: number;
-    gridX: number;
-    gridY: number
-    costMultiplier: number;
-}
-
-export interface BestNumbers {
-    bestCombo: number;
-    bestScore: number;
-    bestDamage: number;
-}
-
-export enum ProgressBarIndexes {
-    FLOOR,
-    STAGE,
-    ENEMY,
-    HEALTH,
-    MOVES
+export interface RunConfig extends IRunConfig {
+    item: Item
 }

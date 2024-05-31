@@ -1,37 +1,32 @@
-import * as P5 from "p5";
-import { canReach, checkPositionInLimit, hasConsecutive, polygon, stripesWithBorderRadius } from "../utils/Functions";
-import { CanvasInfo, GridInfo } from "./CanvasInfo";
+import { Canvas } from "../controllers/Canvas";
+import { EventEmitter } from "../controllers/EventEmitter";
+import { ICanvas, IGrid, IPosition, IRemovePieceAnimationData, ISwapData } from "../interfaces";
+import { rectWithStripes } from "../utils/Draw";
+import { hasConsecutive } from "../utils/General";
 import { Cell } from "./Cell";
 import { Color } from "./Color";
 import { EffectParams } from "./Effect";
-import { EventEmitter } from "./EventEmitter";
 import { Item } from "./Item";
-import { Piece } from "./Piece";
-import { FallPieceAnimationParams, RemovePieceAnimationData, RemovePieceAnimationParams, SwapPieceAnimationParams } from "./PieceAnimation";
+import { Limits } from "./Limits";
+import { FallPieceAnimationParams, Piece, RemovePieceAnimationData, RemovePieceAnimationParams } from "./Piece";
 import { Position } from "./Position";
 import { Run } from "./Run";
 import { Stage } from "./Stage";
 
-export class Grid extends EventEmitter {
+export class Grid extends EventEmitter implements IGrid {
     width: number;
     height: number;
-    canvas: CanvasInfo;
+    sideSize: number;
     cells: Cell[][];
     selectedCellPosition: Position;
     runSnapshot: Run;
-    stage: Stage;
 
-    verticalCenterPadding: number = 0;
-    horizontalCenterPadding: number = 0;
-    sideSize: number = 0;
     isUnstable: boolean = false;
 
     constructor(width: number, height: number, stage: Stage) {
         super('Grid');
         this.width = width;
         this.height = height;
-        this.stage = stage;
-        this.canvas = CanvasInfo.getInstance();
 
         this.generateEmptyCells();
         this.calculateSpacing();
@@ -56,14 +51,16 @@ export class Grid extends EventEmitter {
 
             let distance: number = (newPosition.y - position.y) * 0.3;
 
-            let params: FallPieceAnimationParams = new FallPieceAnimationParams(useCase,
-                {
+            const params: FallPieceAnimationParams = {
+                baseAction: 'FallAnimationEnded',
+                useCase,
+                data: {
                     callNextAction: index === positionsToApplyGravity.length - 1,
                     position,
                     newPosition,
                     allowMatches: allowMatches
                 }
-            );
+            }
 
             piece.renewPosition(newPosition);
             piece.setupFallAnimation(10 * distance, relativeEndPosition, params);
@@ -77,7 +74,7 @@ export class Grid extends EventEmitter {
         for (let y = this.height - 1; y >= 0; y--) {
             for (let x = 0; x < this.width; x++) {
                 if (y < this.height - 1 && this.cells[x][y].piece && !this.cells[x][y + 1].piece) {
-                    positions.push(this.cells[x][y].position);
+                    positions.push(this.cells[x][y].gridPosition);
                     canBringRowDown = true;
                 }
             }
@@ -137,7 +134,7 @@ export class Grid extends EventEmitter {
         this.iterateXtoY((position: Position) => {
             let piece: Piece = this.getPieceByPosition(position);
 
-            if (chosenCriticalsCheck.includes(piece?.position?.checksum)) {
+            if (chosenCriticalsCheck.includes(piece?.gridPosition?.checksum)) {
                 piece.critical = true;
             } else {
                 piece.critical = false;
@@ -166,39 +163,45 @@ export class Grid extends EventEmitter {
     }
 
     calculateSpacing(): void {
-        this.verticalCenterPadding = 0;
-        this.verticalCenterPadding = 0;
+        const canvas: ICanvas = Canvas.getInstance();
+
+        let horizontalCenterPadding: number = 0;
+        let verticalCenterPadding: number = 0;
         this.sideSize = 0;
 
         do {
             this.sideSize++;
-            this.horizontalCenterPadding = this.canvas.playfield.x - (this.width * this.sideSize) - (this.width * this.canvas.padding) - this.canvas.padding;
-            this.verticalCenterPadding = this.canvas.playfield.y - this.canvas.topUiSize - this.canvas.bottomUiSize - (this.height * this.sideSize) - (this.height * this.canvas.padding) - this.canvas.padding;
+            horizontalCenterPadding = canvas.playfield.x - (this.width * this.sideSize) - (this.width * canvas.padding) - canvas.padding;
+            verticalCenterPadding = canvas.playfield.y - canvas.uiData.topUiSize - canvas.uiData.bottomUiSize - (this.height * this.sideSize) - (this.height * canvas.padding) - canvas.padding;
 
-            if (this.canvas.horizontalLayout) {
-                this.horizontalCenterPadding -= (this.canvas.itemSideSize + this.canvas.margin) * 2
+            if (canvas.horizontalLayout) {
+                horizontalCenterPadding -= (canvas.itemSideSize + canvas.margin) * 2
             } else {
-                this.verticalCenterPadding -= (this.canvas.itemSideSize + this.canvas.margin) * 2
+                verticalCenterPadding -= (canvas.itemSideSize + canvas.margin) * 2
             }
 
-        } while (this.horizontalCenterPadding - this.width >= 0 && this.verticalCenterPadding - this.height >= 0);
+        } while (horizontalCenterPadding - this.width >= 0 && verticalCenterPadding - this.height >= 0);
 
         this.iterateXtoY((position: Position) => {
 
-            let currentXMargin = (this.horizontalCenterPadding / 2) + (position.x * this.sideSize) + ((position.x + 1) * this.canvas.padding) + this.canvas.margin;
-            let currentYMargin = this.canvas.topUiSize + (this.verticalCenterPadding / 2) + (position.y * this.sideSize) + ((position.y + 1) * this.canvas.padding) + this.canvas.margin;
+            let currentXMargin = (horizontalCenterPadding / 2) + (position.x * this.sideSize) + ((position.x + 1) * canvas.padding) + canvas.margin;
+            let currentYMargin = canvas.uiData.topUiSize + (verticalCenterPadding / 2) + (position.y * this.sideSize) + ((position.y + 1) * canvas.padding) + canvas.margin;
 
-            if (this.canvas.horizontalLayout) {
-                currentXMargin += this.canvas.itemSideSize + this.canvas.margin;
+            if (canvas.horizontalLayout) {
+                currentXMargin += canvas.itemSideSize + canvas.margin;
             } else {
-                currentYMargin += this.canvas.itemSideSize + this.canvas.margin;
+                currentYMargin += canvas.itemSideSize + canvas.margin;
             }
 
             this.getCellbyPosition(position).canvasPosition = new Position(currentXMargin, currentYMargin);
         });
 
-
-        this.canvas.gridInfo = new GridInfo(this.sideSize, this.verticalCenterPadding + (this.height * (this.sideSize + this.canvas.padding)) + this.canvas.padding, this.horizontalCenterPadding, this.verticalCenterPadding);
+        Canvas.getInstance().gridData = {
+            cellSideSize: this.sideSize,
+            totalGridHeight: verticalCenterPadding + (this.height * (this.sideSize + canvas.padding)) + canvas.padding,
+            horizontalCenterPadding: horizontalCenterPadding,
+            verticalCenterPadding: verticalCenterPadding
+        };
     }
 
     setRunSnapshot(run: Run): void {
@@ -212,8 +215,8 @@ export class Grid extends EventEmitter {
     reapplyPositionsToPieces(): void {
         this.cells.forEach((cells: Cell[], x: number) => {
             cells.forEach((cell: Cell, y: number) => {
-                cell.position = new Position(x, y);
-                cell.piece?.renewPosition(cell.position);
+                cell.gridPosition = new Position(x, y);
+                cell.piece?.renewPosition(cell.gridPosition);
                 this.calculateSpacing();
             })
         })
@@ -221,6 +224,7 @@ export class Grid extends EventEmitter {
 
     findMatches(useCase: string, validate?: boolean): void {
         let matches: Piece[][] = [];
+        let has4x4: boolean = this.runSnapshot?.player?.passive?.name === '4x4';
 
         this.iterateYtoX((position: Position) => {
             let cell = this.getCellbyPosition(position);
@@ -254,7 +258,9 @@ export class Grid extends EventEmitter {
                     }
                 }
 
-                let omniMatch: Piece[] = [...(horizontalMatch.length > 2 ? horizontalMatch : []), ...(verticalMatch.length > 2 ? verticalMatch : [])];
+                const minSize: number = has4x4 ? 3 : 2;
+
+                let omniMatch: Piece[] = [...(horizontalMatch.length > minSize ? horizontalMatch : []), ...(verticalMatch.length > minSize ? verticalMatch : [])];
 
                 if (omniMatch.length) {
                     matches.push(omniMatch);
@@ -270,7 +276,7 @@ export class Grid extends EventEmitter {
                 let chance: number = 0.10 * itemStack;
 
                 if (Math.random() < chance) {
-                    let piecesSameColor: Piece[] = this.cells.flat().map((cell: Cell) => cell.piece).filter((piece: Piece) => piece?.shape?.id === match[0].shape.id && match.findIndex((matchPiece: Piece) => matchPiece.position.checksum === piece.position.checksum) === -1);
+                    let piecesSameColor: Piece[] = this.cells.flat().map((cell: Cell) => cell.piece).filter((piece: Piece) => piece?.shape?.id === match[0].shape.id && match.findIndex((matchPiece: Piece) => matchPiece.gridPosition.checksum === piece.gridPosition.checksum) === -1);
                     let randomChoice: number = Math.floor(Math.random() * piecesSameColor.length);
 
                     match.push(piecesSameColor[randomChoice]);
@@ -313,7 +319,7 @@ export class Grid extends EventEmitter {
         }
 
         let sort: (a: Piece, b: Piece) => number = (a: Piece, b: Piece) => {
-            return a.position.checksum > b.position.checksum ? -1 : 1;
+            return a.gridPosition.checksum > b.gridPosition.checksum ? -1 : 1;
         };
 
         matches.forEach((match: Piece[]) => {
@@ -334,7 +340,7 @@ export class Grid extends EventEmitter {
     }
 
     getMatchChecksum(match: Piece[]): string {
-        return match.map((piece: Piece) => piece.position.checksum).join('-');
+        return match.map((piece: Piece) => piece.gridPosition.checksum).join('-');
     }
 
     generatePieces(allowMatches: boolean = true): boolean {
@@ -344,7 +350,7 @@ export class Grid extends EventEmitter {
                 let position: Position = new Position(x, 0)
                 if (this.getPieceByPosition(position) === undefined) {
                     generated = true;
-                    this.setCellPiece(position, Piece.generateRandomPiece(position, this.sideSize, this.runSnapshot));
+                    this.setCellPiece(position, Piece.generateRandomPiece(position, this.runSnapshot));
                 }
             }
         } else {
@@ -364,12 +370,12 @@ export class Grid extends EventEmitter {
 
                         do {
                             isVerticalValid = true;
-                            generatedPiece = Piece.generateRandomPiece(this.cells[x][0].position, this.sideSize, this.runSnapshot);
+                            generatedPiece = Piece.generateRandomPiece(this.cells[x][0].gridPosition, this.runSnapshot);
 
-                            let lowerMostPosition: Position = this.getNextAvailablePosition(generatedPiece.position);
+                            let lowerMostPosition: Position = this.getNextAvailablePosition(generatedPiece.gridPosition);
                             let nextCell: Cell = this.getCellbyPosition(lowerMostPosition.addY(1));
                             if (nextCell?.piece?.shape?.id === generatedPiece.shape.id) {
-                                nextCell = this.getCellbyPosition(nextCell.position.addY(1));
+                                nextCell = this.getCellbyPosition(nextCell.gridPosition.addY(1));
                                 if (nextCell?.piece?.shape?.id === generatedPiece.shape.id) {
                                     isVerticalValid = false;
                                 }
@@ -388,7 +394,7 @@ export class Grid extends EventEmitter {
 
             row.forEach((piece: Piece) => {
                 generated = true;
-                this.setCellPiece(piece.position, piece);
+                this.setCellPiece(piece.gridPosition, piece);
             })
 
         }
@@ -401,12 +407,19 @@ export class Grid extends EventEmitter {
             return false;
         }
 
-        if(this.runSnapshot.player.itemData.omniMoves > 0) {
+        if (this.runSnapshot.player.itemData.omniMoves > 0) {
             this.emit('OmniMoveDone')
         } else {
-            if (!canReach(position1, position2, this.runSnapshot.player.itemData.reach, this.runSnapshot.player.hasItem('Reach Expansion'))) {
+            if (!this.canReach(position1, position2, this.runSnapshot.player.itemData.reach, this.runSnapshot.player.itemData.diagonals)) {
                 return false;
             }
+        }
+
+        if (this.canReachDiagonal(position1).map((position: Position) => position.checksum).includes(position2.checksum) &&
+            this.runSnapshot.player?.passive?.name === 'Flexible' &&
+            !this.runSnapshot.player.hasItem('Diagonal Reach')
+        ) {
+            this.emit('DiscountDiagonals');
         }
 
         let piece1: Piece | undefined = this.getPieceByPosition(position1);
@@ -419,6 +432,35 @@ export class Grid extends EventEmitter {
         return true;
     }
 
+    canReach(pos1: Position, pos2: Position, reach: number, extended: boolean = false): boolean {
+        let possibleMoves: Position[] = [];
+
+        for (let currentReach: number = 1; currentReach <= reach; currentReach++) {
+            possibleMoves.push(...[
+                new Position(pos1.x - currentReach, pos1.y),
+                new Position(pos1.x + currentReach, pos1.y),
+                new Position(pos1.x, pos1.y - currentReach),
+                new Position(pos1.x, pos1.y + currentReach)
+            ]);
+        }
+
+        if (extended) {
+            possibleMoves.push(...this.canReachDiagonal(pos1));
+        }
+
+        return possibleMoves.map((position: Position) => position.checksum).includes(pos2.checksum);
+    }
+
+    canReachDiagonal(pos1: Position): Position[] {
+        return [
+            new Position(pos1.x - 1, pos1.y - 1),
+            new Position(pos1.x - 1, pos1.y + 1),
+            new Position(pos1.x + 1, pos1.y - 1),
+            new Position(pos1.x + 1, pos1.y + 1),
+        ];
+    }
+
+
     getSwapDataFromPositions(position1: Position, position2: Position): SwapData {
         let cell1: Cell = this.getCellbyPosition(position1);
         let cell2: Cell = this.getCellbyPosition(position2);
@@ -428,8 +470,8 @@ export class Grid extends EventEmitter {
     }
 
     swap(swapData: SwapData): void {
-        this.setCellPiece(swapData.cell1.position, swapData.piece2);
-        this.setCellPiece(swapData.cell2.position, swapData.piece1);
+        this.setCellPiece(swapData.cell1.gridPosition, swapData.piece2);
+        this.setCellPiece(swapData.cell2.gridPosition, swapData.piece1);
 
         this.emit('SwapDone');
 
@@ -473,11 +515,13 @@ export class Grid extends EventEmitter {
 
         matches.forEach((matchToRemove: Piece[], matchIndex: number) => {
             matchToRemove.forEach((pieceToRemove: Piece, pieceIndex: number) => {
-                let params: RemovePieceAnimationParams = new RemovePieceAnimationParams(useCase, {
-                    callNextAction: pieceIndex === matchToRemove.length - 1 && matchIndex === matches.length - 1,
-                    position: pieceToRemove.position,
-                    matches: matches
-                });
+                let params: RemovePieceAnimationParams = {
+                    baseAction: 'RemoveAnimationEnded', useCase, data: {
+                        callNextAction: pieceIndex === matchToRemove.length - 1 && matchIndex === matches.length - 1,
+                        position: pieceToRemove.gridPosition,
+                        matches: matches
+                    }
+                }
                 this.animateRemove(pieceToRemove, params);
             })
         });
@@ -512,7 +556,7 @@ export class Grid extends EventEmitter {
         let newMatches: Piece[][] = params.matches;
         let newMatch: Piece[] = [];
         this.iterateXtoY((position: Position) => {
-            if (position.y === params.piece.position.y) {
+            if (position.y === params.piece.gridPosition.y) {
                 newMatch.push(this.getPieceByPosition(position));
             }
         })
@@ -520,7 +564,7 @@ export class Grid extends EventEmitter {
         newMatch = this.mergeMatches(newMatch, params.match);
 
         newMatch.forEach((piece: Piece) => {
-            if (piece.position.checksum === params.piece.position.checksum) {
+            if (piece.gridPosition.checksum === params.piece.gridPosition.checksum) {
                 piece.effect = undefined;
             }
         });
@@ -536,7 +580,7 @@ export class Grid extends EventEmitter {
         let newMatches: Piece[][] = params.matches;
         let newMatch: Piece[] = [];
         this.iterateXtoY((position: Position) => {
-            if (position.x === params.piece.position.x) {
+            if (position.x === params.piece.gridPosition.x) {
                 newMatch.push(this.getPieceByPosition(position));
             }
         })
@@ -544,7 +588,7 @@ export class Grid extends EventEmitter {
         newMatch = this.mergeMatches(newMatch, params.match);
 
         newMatch.forEach((piece: Piece) => {
-            if (piece.position.checksum === params.piece.position.checksum) {
+            if (piece.gridPosition.checksum === params.piece.gridPosition.checksum) {
                 piece.effect = undefined;
             }
         });
@@ -559,14 +603,16 @@ export class Grid extends EventEmitter {
         this.iterateXtoY((position: Position) => {
             let numericPosition: number = (position.x + 1) * (position.y + 1);
             setTimeout(() => {
-                let params: RemovePieceAnimationParams = new RemovePieceAnimationParams(
+                let params: RemovePieceAnimationParams = {
+                    baseAction: 'RemoveAnimationEnded',
                     useCase,
-                    {
+                    data: {
                         callNextAction: position.x === this.width - 1 && position.y === this.height - 1,
                         position: position,
                         matches: []
-                    },
-                );
+                    }
+                }
+
                 this.animateRemove(this.getPieceByPosition(position), params);
             }, numericPosition * 15);
         });
@@ -601,29 +647,25 @@ export class Grid extends EventEmitter {
     }
 
     draw(hasDialogOpen: boolean = false): void {
-        let p5: P5 = this.canvas.p5;
+        const canvas: ICanvas = Canvas.getInstance();
+        const p5 = canvas.p5;
+
         this.cells.flat().forEach((cell: Cell) => {
             p5.noStroke();
-            let limits: number[] = [
-                cell.canvasPosition.x,
-                cell.canvasPosition.x + this.sideSize,
-                cell.canvasPosition.y,
-                cell.canvasPosition.y + this.sideSize,
-            ];
 
-            let critical: boolean = this.getPieceByPosition(cell.position)?.critical;
+            const limits: Limits = new Limits(new Position(cell.canvasPosition.x, cell.canvasPosition.y), new Position(cell.canvasPosition.x + this.sideSize, cell.canvasPosition.y + this.sideSize));
+            const highlight: boolean = (!hasDialogOpen && limits.contains(canvas.mousePosition)) || (this.selectedCellPosition ? cell.gridPosition.checksum === this.selectedCellPosition.checksum : false);
 
-            let color1: Color = critical ? new Color(203, 67, 53) : new Color(136, 78, 160);
-            let color2: Color = critical ? new Color(236, 112, 99) : new Color(175, 122, 197);
-
-            let highlight: boolean = (!hasDialogOpen && checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...limits)) || (this.selectedCellPosition ? cell.position.checksum === this.selectedCellPosition.checksum : false);
+            const critical: boolean = this.getPieceByPosition(cell.gridPosition)?.critical;
+            const color1: Color = critical ? new Color(203, 67, 53) : new Color(136, 78, 160);
+            const color2: Color = critical ? new Color(236, 112, 99) : new Color(175, 122, 197);
 
             if (cell?.piece?.effect) {
                 if (['Vertical AOE', 'Horizontal AOE'].includes(cell.piece.effect.id)) {
-                    stripesWithBorderRadius(
+                    rectWithStripes(
                         cell.canvasPosition,
                         new Position(this.sideSize, this.sideSize),
-                        this.canvas.radius,
+                        canvas.radius,
                         6,
                         cell.piece.effect.id === 'Horizontal AOE',
                         color1,
@@ -634,34 +676,34 @@ export class Grid extends EventEmitter {
                 }
 
                 if (cell.piece.effect.id === 'Money') {
-                    p5.fill([...color1.value, highlight ? 200 : 255]);
+                    p5.fill(color1.alpha(highlight ? 200 : 255).value);
                     p5.rect(
                         cell.canvasPosition.x,
                         cell.canvasPosition.y,
                         this.sideSize,
                         this.sideSize,
-                        this.canvas.radius
+                        canvas.radius
                     );
 
                     p5.textAlign(p5.LEFT, p5.TOP);
-                    p5.fill(...Color.YELLOW.value, 255);
-                    p5.stroke(0, 0, 0, 255);
+                    p5.fill(Color.YELLOW.value);
+                    p5.stroke(Color.BLACK.value);
                     p5.strokeWeight(3);
                     p5.textSize(24);
                     p5.text(
                         '$',
-                        cell.canvasPosition.x + this.canvas.padding,
-                        cell.canvasPosition.y + this.canvas.padding
+                        cell.canvasPosition.x + canvas.padding,
+                        cell.canvasPosition.y + canvas.padding
                     );
                 }
             } else {
-                p5.fill([...color1.value, highlight ? 200 : 255]);
+                p5.fill(color1.alpha(highlight ? 200 : 255).value);
                 p5.rect(
                     cell.canvasPosition.x,
                     cell.canvasPosition.y,
                     this.sideSize,
                     this.sideSize,
-                    this.canvas.radius
+                    canvas.radius
                 );
 
             }
@@ -669,34 +711,11 @@ export class Grid extends EventEmitter {
     }
 
     drawPieces(): void {
-        let p5: P5 = this.canvas.p5;
-        this.cells.flat().map((cell: Cell) => cell.piece).forEach((piece: Piece) => {
-            if (piece) {
-                piece.sideSize = this.sideSize / 3
-                let cellRef: Cell = this.getCellbyPosition(piece.position);
-                p5.strokeWeight(3);
-                p5.stroke(0, 0, 0, 255 - piece.additiveFade);
-                p5.fill(piece.shape.color.r, piece.shape.color.g, piece.shape.color.b, 255 - piece.additiveFade);
-                polygon(
-                    cellRef.canvasPosition.x + (this.sideSize / 2) + piece.relativeEndPosition.x,
-                    cellRef.canvasPosition.y + (this.sideSize / 2) + piece.relativeEndPosition.y,
-                    piece.sideSize,
-                    piece.shape.sides,
-                    p5
-                );
-                piece.updatePosition();
-
-                if (piece.critical) {
-                    p5.textAlign(p5.CENTER, p5.CENTER);
-                    p5.noStroke();
-                    p5.fill(0);
-                    p5.textSize(25);
-                    p5.text(
-                        '!',
-                        cellRef.canvasPosition.x + (this.sideSize / 2) + piece.relativeEndPosition.x,
-                        cellRef.canvasPosition.y + (this.sideSize / 2) + piece.relativeEndPosition.y,
-                    );
-                }
+        this.cells.flat().forEach((cell: Cell) => {
+            if (cell.piece) {
+                cell.piece.cellSideSize = this.sideSize;
+                cell.piece.initialPosition = cell.canvasPosition
+                cell.piece.draw();
             }
         });
     }
@@ -713,11 +732,11 @@ export class Grid extends EventEmitter {
         return undefined;
     }
 
-    setCellPiece(position: Position, piece: Piece | undefined): void {
+    setCellPiece(position: IPosition, piece: Piece | undefined): void {
         this.cells[position.x][position.y].piece = piece;
     }
 
-    getPieceByPosition(position: Position): Piece | undefined {
+    getPieceByPosition(position: IPosition): Piece | undefined {
         if (
             position &&
             position.x >= 0 &&
@@ -731,8 +750,8 @@ export class Grid extends EventEmitter {
     }
 
     getNeighbourCell(cell: Cell, xOffset: number = 0, yOffset: number = 0): Cell {
-        let absoluteX: number = cell.position.x + xOffset;
-        let absoluteY: number = cell.position.y + yOffset;
+        let absoluteX: number = cell.gridPosition.x + xOffset;
+        let absoluteY: number = cell.gridPosition.y + yOffset;
 
         if (absoluteX >= 0 && absoluteX < this.width && absoluteY >= 0 && absoluteY < this.height) {
             return this.cells[absoluteX][absoluteY];
@@ -749,17 +768,18 @@ export class Grid extends EventEmitter {
             let swapData: SwapData = this.getSwapDataFromPositions(position1, position2);
 
             if (swapData.piece1) {
-                swapData.piece1.setupSwapAnimation(10, swapData.cell2.canvasPosition.difference(swapData.cell1.canvasPosition), new SwapPieceAnimationParams({ callNextAction: true, swapData }));
+                swapData.piece1.setupSwapAnimation(10, swapData.cell2.canvasPosition.difference(swapData.cell1.canvasPosition), { baseAction: 'SwapAnimationEnded', useCase: '', data: { callNextAction: true, swapData } });
             }
 
             if (swapData.piece2) {
-                swapData.piece2.setupSwapAnimation(10, swapData.cell2.canvasPosition.minus(swapData.cell1.canvasPosition), new SwapPieceAnimationParams({ callNextAction: false }));
+                swapData.piece2.setupSwapAnimation(10, swapData.cell2.canvasPosition.minus(swapData.cell1.canvasPosition), { baseAction: 'SwapAnimationEnded', useCase: '', data: { callNextAction: false } });
             }
         }
     }
 
 }
-export interface SwapData {
+
+export interface SwapData extends ISwapData {
     piece1: Piece;
     piece2: Piece;
     cell1: Cell;

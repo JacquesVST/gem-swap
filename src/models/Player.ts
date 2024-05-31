@@ -1,53 +1,99 @@
 import * as P5 from "p5";
-import { checkPositionInLimit, drawItem, formatNumber, insertLineBreaks } from "../utils/Functions";
-import { CanvasInfo } from "./CanvasInfo";
+import { Canvas } from "../controllers/Canvas";
+import { DialogController } from "../controllers/DialogController";
+import { EventEmitter } from "../controllers/EventEmitter";
+import { Frequency, ICanvas, IDamageData, IPlayer, IPlayerItemData } from "../interfaces";
+import { drawItem } from "../utils/Draw";
+import { formatNumber, insertLineBreaks } from "../utils/General";
 import { Color } from "./Color";
-import { ConfigureListeners, EventEmitter } from "./EventEmitter";
+import { Enemy } from "./Enemy";
 import { Item } from "./Item";
+import { Limits } from "./Limits";
 import { Position } from "./Position";
 import { Run } from "./Run";
 
-export class Player extends EventEmitter implements ConfigureListeners {
+export class Player extends EventEmitter implements IPlayer {
     health: number;
+    maxHealth: number;
+    moves: number;
+    maxMoves: number;
     attack: number;
     defense: number;
-    moves: number;
-    currentHealth: number;
 
-    items: Item[] = [];
-    
-    critical: number = 3;
     damageMultiplier: number = 1;
     criticalMultiplier: number = 1.5;
+    critical: number = 1;
     gold: number = 0;
     xp: number = 0;
-    
+
     hasInventoryOpen: boolean = false;
     hasStatsOpen: boolean = false;
 
-    itemData: any = {
+    passive: Item;
+    items: Item[] = [];
+    itemData: PlayerItemData = {
         activeItem: undefined,
-        activeItemLimits: [],
+        activeItemLimits: undefined,
         activeItem2: undefined,
-        activeItem2Limits: [],
-        bossCritical: 0,
+        activeItem2Limits: undefined,
+        passiveLimits: undefined,
+        bonusMoves: 0,
+        bossCrits: 0,
+        diagonals: false,
         goldAddCount: 0,
-        hasShield:  false,
-        usedShield: false,
-        moveSaver: 0,
+        hasShield: false,
+        hasUsedShield: false,
+        moveSaverChance: 0,
         omniMoves: 0,
-        reach:  1,
+        reach: 1,
+        criticalChance: 0,
+        rerolls: 0
     }
 
-    constructor(health: number, attack: number, defense: number, moves: number) {
+    constructor(health: number, moves: number, attack: number, defense: number, passive?: Item) {
         super('Player');
-        this.health = health;
+        this.maxHealth = health;
+        this.maxMoves = moves;
         this.attack = attack;
         this.defense = defense;
-        this.moves = moves;
-        this.currentHealth = health;
 
+        this.passive = passive;
+        this.moves = moves;
+        this.health = health;
+
+        this.configurePassive();
         this.configureListeners();
+    }
+
+    static defaultPlayerWith(item: Item): Player {
+        return new Player(100, 10, 100, 0, item);
+    }
+
+    get totalMoves(): number {
+        return this.maxMoves + this.itemData.bonusMoves;
+    }
+
+    configurePassive(): void {
+        switch (this.passive?.name) {
+            case 'Natural Crit':
+                this.criticalMultiplier = 2;
+                this.itemData.criticalChance = 0.05;
+                break;
+            case '4x4':
+                this.damageMultiplier = 3;
+                break;
+            case 'Flexible':
+                this.itemData.diagonals = true;
+                break;
+            case 'Gambler':
+                this.itemData.rerolls = 1
+                break;
+            case 'Tank':
+                this.defense = 10;
+                this.maxMoves -= 2;
+                this.moves -= 2;
+                break;
+        }
     }
 
     configureListeners(): void {
@@ -73,36 +119,50 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
         this.on('Main:MouseClicked:Click', (position: Position, run?: Run) => {
             setTimeout(() => {
-                if (run.dialogController.currentDialog) {
+                if (DialogController.getInstance().currentDialog) {
                     return;
                 }
 
-                if (this.itemData.activeItem && this.itemData.activeItemLimits) {
-                    if (checkPositionInLimit(position, ...this.itemData.activeItemLimits)) {
+                if (this.itemData.activeItem) {
+                    if (this.itemData.activeItemLimits.contains(position)) {
                         this.useActiveItem(run);
                     }
                 }
 
-                if (this.itemData.activeItem2 && this.itemData.activeItem2Limits) {
-                    if (checkPositionInLimit(position, ...this.itemData.activeItem2Limits)) {
+                if (this.itemData.activeItem2) {
+                    if (this.itemData.activeItem2Limits.contains(position)) {
                         this.useActiveItem2(run);
                     }
                 }
             }, 0);
         });
 
-        
         this.on('Run:Item:AddOmniMove', () => {
             this.itemData.omniMoves++;
+        });
+
+        this.on('Grid:GridStabilized:Init', () => {
+            if (this.itemData.activeItem && this.itemData.activeItem.frequency === Frequency.EVERY_STAGE) {
+                this.itemData.activeItem.disabled = false;
+            }
+
+            if (this.itemData.activeItem2 && this.itemData.activeItem2.frequency === Frequency.EVERY_STAGE) {
+                this.itemData.activeItem2.disabled = false;
+            }
+
+            if (this.passive?.name === 'Gambler') {
+                this.itemData.rerolls = 1;
+            }
         });
 
         this.on('Grid:OmniMoveDone', () => {
             this.itemData.omniMoves--;
         });
-    }
 
-    static defaultPlayer(): Player {
-        return new Player(100, 100, 0, 0);
+        this.on('Run:MidasTouched', (gold: number) => {
+            this.addGold(gold)
+        });
+
     }
 
     get movesEnded(): boolean {
@@ -110,17 +170,25 @@ export class Player extends EventEmitter implements ConfigureListeners {
     }
 
     useActiveItem(run: Run): void {
-        if (this.itemData.activeItem) {
+        if (this.itemData.activeItem && !this.itemData.activeItem.disabled) {
             this.itemData.activeItem.effect();
-            this.itemData.activeItem = undefined;
+            if (this.itemData.activeItem.frequency === Frequency.SINGLE_USE) {
+                this.itemData.activeItem = undefined;
+            } else {
+                this.itemData.activeItem.disabled = true
+            }
             run.sounds['item'].play();
         }
     }
 
     useActiveItem2(run: Run): void {
-        if (this.itemData.activeItem2 && 'Extra Active Item') {
+        if (this.hasItem('Extra Active Item') && this.itemData.activeItem2 && !this.itemData.activeItem2.disabled) {
             this.itemData.activeItem2.effect();
-            this.itemData.activeItem2 = undefined;
+            if (this.itemData.activeItem2.frequency === Frequency.SINGLE_USE) {
+                this.itemData.activeItem2 = undefined;
+            } else {
+                this.itemData.activeItem2.disabled = true
+            }
             run.sounds['item'].play();
         }
     }
@@ -131,20 +199,20 @@ export class Player extends EventEmitter implements ConfigureListeners {
     }
 
     heal(heal: number): void {
-        if (this.currentHealth + heal > this.health) {
-            heal = this.health - this.currentHealth;
+        if (this.health + heal > this.maxHealth) {
+            heal = this.maxHealth - this.health;
         }
 
-        this.currentHealth += heal;
+        this.health += heal;
     }
 
     addGold(gold: number): void {
         if (gold !== 0) {
-            if (gold > 0){
+            if (gold > 0) {
                 this.itemData.goldAddCount++;
-                if (this.hasItem('Gold Fees') && this.itemData.goldAddCount % 3===0) {
+                if (this.hasItem('Gold Fees') && this.itemData.goldAddCount % 3 === 0) {
                     this.itemData.goldAddCount = 0;
-                    gold *=2;
+                    gold *= 2;
                 }
             }
             this.gold = Math.floor(this.gold + gold);
@@ -152,7 +220,9 @@ export class Player extends EventEmitter implements ConfigureListeners {
         }
     }
 
-    simulateDamage(damage: number): DamageData {
+    simulateDamage(enemy: Enemy): IDamageData {
+        let damage: number = enemy.health > 0 ? enemy.attack : 0;
+
         if (!damage || !parseInt(damage + '', 10)) {
             damage = 0;
         }
@@ -160,72 +230,68 @@ export class Player extends EventEmitter implements ConfigureListeners {
         let shielded = false;
         damage = (damage - this.defense < 0) ? 0 : (damage - this.defense);
 
-        if (this.itemData.hasShield && !this.itemData.usedShield) {
-            if (damage >= this.currentHealth) {
+        if (this.itemData.hasShield && !this.itemData.hasUsedShield) {
+            if (damage >= this.health) {
                 damage = 0;
-                this.itemData.usedShield = true;
+                this.itemData.hasUsedShield = true;
                 this.items = this.items.filter((item: Item) => item.name !== 'Shield');
-                shielded = true
+                shielded = true;
             }
         } else {
-            if (damage > this.currentHealth) {
-                damage = this.currentHealth
+            if (damage > this.health) {
+                damage = this.health;
             }
         }
 
         return { damage, shielded };
     }
 
-    damage(damage: DamageData): void {
-        this.currentHealth -= damage.damage;
+    damage(damage: IDamageData): void {
+        this.health -= damage.damage;
 
         this.emit('PlayerDamaged', this);
 
-        if (this.currentHealth <= 0) {
+        if (this.health <= 0) {
             this.emit('PlayerDied');
         }
     }
 
     updateMoves(newMoves: number): void {
         this.moves = newMoves;
-        
+
         this.emit('MovesUpdated', this)
     }
 
-    draw(canvas: CanvasInfo): void {
+    draw(): void {
+        const canvas: ICanvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
 
-        let itemMarginX: number = canvas.margin + ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridInfo.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
+        const itemMarginX: number = canvas.margin + ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridData.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
 
         if (canvas.horizontalLayout) {
             // active item slots
             if (!this.hasStatsOpen) {
 
-                let activeSlotX: number = itemMarginX
-                let activeSlotX2: number = itemMarginX + canvas.itemSideSize / 4;
-                let activeSlotY: number = (canvas.canvasSize.y / 2) - (canvas.itemSideSize / 2);
-                let activeSlotY2: number = activeSlotY - canvas.margin * 1.5 - canvas.itemSideSize / 2
+                const activeSlotX: number = itemMarginX
+                const activeSlotY: number = (canvas.windowSize.y / 2) - (canvas.itemSideSize / 2);
 
-                this.itemData.activeItemLimits = [
-                    activeSlotX,
-                    activeSlotX + canvas.itemSideSize,
-                    activeSlotY,
-                    activeSlotY + canvas.itemSideSize
-                ];
+                const activeSlotX2: number = itemMarginX + canvas.itemSideSize / 4;
+                const activeSlotY2: number = activeSlotY - canvas.margin * 1.5 - canvas.itemSideSize / 2
 
-                this.itemData.activeItem2Limits = [
-                    activeSlotX,
-                    activeSlotX2 + canvas.itemSideSize / 2,
-                    activeSlotY2,
-                    activeSlotY2 + canvas.itemSideSize / 2
-                ];
+                const passiveSlotX: number = itemMarginX + canvas.itemSideSize / 4;
+                const passiveSlotY: number = activeSlotY + canvas.itemSideSize + canvas.margin * 1.5
 
-                let highlight: boolean = (checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...this.itemData.activeItemLimits));
-                let highlight2: boolean = (checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...this.itemData.activeItem2Limits));
+                this.itemData.activeItemLimits = new Limits(new Position(activeSlotX, activeSlotY), new Position(activeSlotX + canvas.itemSideSize, activeSlotY + canvas.itemSideSize))
+                this.itemData.activeItem2Limits = new Limits(new Position(activeSlotX2, activeSlotY2), new Position(activeSlotX2 + canvas.itemSideSize / 2, activeSlotY2 + canvas.itemSideSize / 2))
+                this.itemData.passiveLimits = new Limits(new Position(passiveSlotX, passiveSlotY), new Position(passiveSlotX + canvas.itemSideSize / 2, passiveSlotY + canvas.itemSideSize / 2))
+
+                const opacity1: number = this.itemData.activeItemLimits.contains(canvas.mousePosition) ? 200 : 255;
+                const opacity2: number = this.itemData.activeItem2Limits.contains(canvas.mousePosition) ? 200 : 255;
+                const opacity3: number = this.itemData.passiveLimits.contains(canvas.mousePosition) ? 200 : 255;
 
 
                 (p5.drawingContext as CanvasRenderingContext2D).setLineDash([10, 10]);
-                p5.fill([...new Color(60, 60, 60).value, highlight ? 200 : 255]);
+                p5.fill(Color.GRAY_3.alpha(opacity1).value);
                 p5.rect(
                     activeSlotX,
                     activeSlotY,
@@ -235,8 +301,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 );
 
                 if (this.hasItem('Extra Active Item')) {
-
-                    p5.fill([...new Color(60, 60, 60).value, highlight2 ? 200 : 255]);
+                    p5.fill(Color.GRAY_3.alpha(opacity2).value);
                     p5.rect(
                         activeSlotX2,
                         activeSlotY2,
@@ -245,10 +310,23 @@ export class Player extends EventEmitter implements ConfigureListeners {
                         canvas.radius
                     );
                 }
+
+                p5.fill(Color.GRAY_3.alpha(opacity3).value);
+                p5.rect(
+                    passiveSlotX,
+                    passiveSlotY,
+                    canvas.itemSideSize / 2,
+                    canvas.itemSideSize / 2,
+                    canvas.radius
+                );
+
                 (p5.drawingContext as CanvasRenderingContext2D).setLineDash([]);
 
+                // slot 1
                 if (this.itemData.activeItem) {
-                    p5.fill([...Item.rarityColors()[this.itemData.activeItem.rarity].color.value, highlight ? 200 : 255]);
+                    const color: Color = this.itemData.activeItem.disabled ? Color.GRAY_3 : Item.rarityColors[this.itemData.activeItem.rarity].color.alpha(opacity1);
+
+                    p5.fill(color.value);
                     p5.rect(
                         activeSlotX,
                         activeSlotY,
@@ -261,17 +339,17 @@ export class Player extends EventEmitter implements ConfigureListeners {
                     p5.textSize(20)
                     let name: string = insertLineBreaks(this.itemData.activeItem.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.itemData.activeItem.name), 0, this.itemData.activeItem.name.length));
 
-                    p5.fill(255);
-                    p5.stroke(0);
+                    p5.fill(Color.WHITE.value);
+                    p5.stroke(Color.BLACK.value);
                     p5.strokeWeight(3);
                     p5.text(
                         name,
                         activeSlotX + canvas.itemSideSize / 2,
-                        canvas.canvasSize.y / 2,
+                        canvas.windowSize.y / 2,
                     );
 
                     p5.textAlign(p5.CENTER, p5.BOTTOM)
-                    p5.fill(200);
+                    p5.fill(Color.WHITE_1.value);
                     p5.strokeWeight(2);
                     p5.textSize(16)
                     p5.text(
@@ -282,9 +360,11 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
                 }
 
+                // slot 2
                 if (this.hasItem('Extra Active Item') && this.itemData.activeItem2) {
+                    const color: Color = this.itemData.activeItem2.disabled ? Color.GRAY_3 : Item.rarityColors[this.itemData.activeItem2.rarity].color.alpha(opacity2);
 
-                    p5.fill([...Item.rarityColors()[this.itemData.activeItem2.rarity].color.value, highlight2 ? 200 : 255]);
+                    p5.fill(color.value);
                     p5.rect(
                         activeSlotX2,
                         activeSlotY2,
@@ -297,8 +377,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                     p5.textSize(20)
                     let name: string = insertLineBreaks(this.itemData.activeItem2.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.itemData.activeItem2.name), 0, this.itemData.activeItem2.name.length));
 
-                    p5.fill(255);
-                    p5.stroke(0);
+                    p5.fill(Color.WHITE.value);
+                    p5.stroke(Color.BLACK.value);
                     p5.strokeWeight(3);
                     p5.text(
                         name,
@@ -307,7 +387,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                     );
 
                     p5.textAlign(p5.CENTER, p5.BOTTOM)
-                    p5.fill(200);
+                    p5.fill(Color.WHITE_1.value);
                     p5.strokeWeight(2);
                     p5.textSize(16)
                     p5.text(
@@ -317,16 +397,55 @@ export class Player extends EventEmitter implements ConfigureListeners {
                     );
 
                 }
+
+                //passive
+                if (this.passive) {
+                    const color: Color = this.passive?.disabled ? Color.GRAY_3 : Item.rarityColors[this.passive.rarity].color.alpha(opacity3);
+
+                    p5.fill(color.value);
+                    p5.rect(
+                        passiveSlotX,
+                        passiveSlotY,
+                        canvas.itemSideSize / 2,
+                        canvas.itemSideSize / 2,
+                        canvas.radius
+                    );
+
+                    p5.textAlign(p5.CENTER, p5.CENTER)
+                    p5.textSize(20)
+
+                    let name: string = insertLineBreaks(this.passive.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.passive.name), 0, this.passive.name.length));
+
+                    p5.fill(Color.WHITE.value);
+                    p5.stroke(Color.BLACK.value);
+                    p5.strokeWeight(3);
+                    p5.text(
+                        name,
+                        passiveSlotX + canvas.itemSideSize / 4,
+                        passiveSlotY + canvas.itemSideSize / 4,
+                    );
+
+                    p5.textAlign(p5.CENTER, p5.BOTTOM)
+                    p5.fill(Color.WHITE_1.value);
+                    p5.strokeWeight(2);
+                    p5.textSize(16)
+                    p5.text(
+                        'Passive',
+                        passiveSlotX + canvas.itemSideSize / 4,
+                        passiveSlotY + canvas.itemSideSize / 2 - canvas.padding
+                    );
+
+                }
             }
 
             if (this.hasStatsOpen) {
                 let height: number = canvas.itemSideSize / 4;
-                let marginY: number = canvas.canvasSize.y / 2;
+                let marginY: number = canvas.windowSize.y / 2;
 
                 let marginX: number = itemMarginX + canvas.padding;
 
                 p5.noStroke()
-                p5.fill(60);
+                p5.fill(Color.GRAY_3.value);
                 p5.rect(
                     itemMarginX,
                     marginY - (height * 3),
@@ -335,11 +454,12 @@ export class Player extends EventEmitter implements ConfigureListeners {
                     canvas.radius
                 );
 
+                p5.fill(Color.WHITE.value);
+                p5.stroke(Color.BLACK.value);
+                p5.strokeWeight(3);
+
                 // attack
                 p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.fill(255);
-                p5.stroke(0);
-                p5.strokeWeight(3);
                 p5.textSize(16)
                 p5.text(
                     'Attack',
@@ -348,7 +468,6 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
-                p5.fill(255);
                 p5.textSize(20)
                 p5.text(
                     `${formatNumber(this.attack)}`,
@@ -358,9 +477,6 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
                 // defense
                 p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.fill(255);
-                p5.stroke(0);
-                p5.strokeWeight(3);
                 p5.textSize(16)
                 p5.text(
                     'Defense',
@@ -369,8 +485,6 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
-                p5.fill(255);
-                p5.textSize(20)
                 p5.text(
                     `${formatNumber(this.defense)}`,
                     marginX + canvas.itemSideSize - canvas.padding * 2,
@@ -379,9 +493,6 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
                 // crit count
                 p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.fill(255);
-                p5.stroke(0);
-                p5.strokeWeight(3);
                 p5.textSize(16)
                 p5.text(
                     'Crit Count',
@@ -390,8 +501,6 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
-                p5.fill(255);
-                p5.textSize(20)
                 p5.text(
                     `${formatNumber(this.critical)}`,
                     marginX + canvas.itemSideSize - canvas.padding * 2,
@@ -400,9 +509,6 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
                 // crit damage
                 p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.fill(255);
-                p5.stroke(0);
-                p5.strokeWeight(3);
                 p5.textSize(16)
                 p5.text(
                     'Crit Damage',
@@ -411,7 +517,6 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
-                p5.fill(255);
                 p5.textSize(20)
                 p5.text(
                     `${Math.floor((this.criticalMultiplier - 1) * 100)}%`,
@@ -421,9 +526,6 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
                 // damage multiplier
                 p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.fill(255);
-                p5.stroke(0);
-                p5.strokeWeight(3);
                 p5.textSize(16)
                 p5.text(
                     'Multiplier',
@@ -432,7 +534,6 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
-                p5.fill(255);
                 p5.textSize(20)
                 p5.text(
                     `${Math.floor((this.damageMultiplier) * 100)}%`,
@@ -442,9 +543,6 @@ export class Player extends EventEmitter implements ConfigureListeners {
 
                 // xp
                 p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.fill(255);
-                p5.stroke(0);
-                p5.strokeWeight(3);
                 p5.textSize(16)
                 p5.text(
                     'XP',
@@ -453,7 +551,6 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 );
 
                 p5.textAlign(p5.RIGHT, p5.CENTER)
-                p5.fill(255);
                 p5.textSize(20)
                 p5.text(
                     `${Math.floor(this.xp)}`,
@@ -471,8 +568,8 @@ export class Player extends EventEmitter implements ConfigureListeners {
                 p5.rect(
                     0,
                     0,
-                    canvas.canvasSize.x,
-                    canvas.canvasSize.y,
+                    canvas.windowSize.x,
+                    canvas.windowSize.y,
                 );
 
                 let sideSize: number = canvas.itemSideSize / Math.ceil(this.items.length / 20);
@@ -498,8 +595,6 @@ export class Player extends EventEmitter implements ConfigureListeners {
                     dimension.y,
                     canvas.radius * 4
                 );
-
-
 
                 p5.textAlign(p5.CENTER, p5.CENTER)
 
@@ -533,7 +628,7 @@ export class Player extends EventEmitter implements ConfigureListeners {
                     let cumulativeMarginX: number = margin.x + ((index % lengthOffSet) * (sideSize + canvas.margin)) + canvas.margin;
                     let cumulativeMarginY: number = margin.y + (Math.floor(index / lengthOffSet) * (sideSize + canvas.margin)) + (canvas.margin * textMarginCount);
 
-                    drawItem(item, cumulativeMarginX, cumulativeMarginY, sideSize, canvas)
+                    drawItem(item, cumulativeMarginX, cumulativeMarginY, sideSize, sideSize, canvas)
                 })
 
             }
@@ -541,7 +636,10 @@ export class Player extends EventEmitter implements ConfigureListeners {
     }
 }
 
-export interface DamageData {
-    damage: number;
-    shielded: boolean;
+export interface PlayerItemData extends IPlayerItemData {
+    activeItem: Item;
+    activeItemLimits: Limits;
+    activeItem2: Item;
+    activeItem2Limits: Limits;
+    passiveLimits: Limits;
 }

@@ -1,43 +1,52 @@
+import { Frequency, IItem } from "../interfaces";
 import { Color } from "./Color";
 import { Effect, EffectParams } from "./Effect";
 import { Player } from "./Player";
 import { Run } from "./Run";
 import { Shape } from "./Shape";
 
-export class Item {
+export class Item implements IItem {
     rarity: string;
     name: string;
     description: string;
     effect: () => void;
     price: number;
 
-    isActive: boolean;
+    frequency: Frequency;
     unique: boolean;
+    disabled: boolean;
 
-    constructor(rarity: string, name: string, description: string, effect: () => void, price?: number, isActive?: boolean, unique?: boolean) {
+    constructor(rarity: string, name: string, description: string, effect: () => void, frequency: Frequency = Frequency.PASSIVE, price?: number, unique?: boolean) {
         this.rarity = rarity;
         this.name = name;
         this.description = description;
         this.effect = effect;
         this.price = price;
-        this.isActive = isActive;
+        this.frequency = frequency;
         this.unique = unique;
+
+        this.disabled = false;
     }
 
-    static rarityColors(): { [key: string]: { color: Color, chance: number, chanceShop: number } } {
+    static get rarityColors(): { [key: string]: { color: Color, chance: number, chanceShop: number } } {
         return {
             'Common': {
-                color: new Color(224, 224, 224),
+                color: Color.WHITE_1,
                 chance: 0.75,
                 chanceShop: 0.50
             },
             'Rare': {
-                color: new Color(101, 206, 80),
+                color: Color.GREEN,
                 chance: 0.95,
                 chanceShop: 0.80
             },
             'Epic': {
-                color: new Color(84, 80, 206),
+                color: Color.PURPLE,
+                chance: 1,
+                chanceShop: 1
+            },
+            'Passive': {
+                color: Color.ORANGE,
                 chance: 1,
                 chanceShop: 1
             }
@@ -56,7 +65,7 @@ export class Item {
             let chosenRarity: string;
 
             for (let index = 0; index < rarities.length; index++) {
-                if (chance < (shop ? Item.rarityColors()[rarities[index]].chanceShop : Item.rarityColors()[rarities[index]].chance) || index === rarities.length - 1) {
+                if (chance < (shop ? Item.rarityColors[rarities[index]].chanceShop : Item.rarityColors[rarities[index]].chance) || index === rarities.length - 1) {
                     chosenRarity = rarities[index];
                     chosenPool = pool.filter((item: Item) => item.rarity === rarities[index]);
                     break;
@@ -90,6 +99,55 @@ export class Item {
 }
 
 export class ItemPools {
+
+    static passivePool(): Item[] {
+        let passivePool: Item[] = [
+            new Item(
+                'Passive',
+                'Natural Crit',
+                'Has an inate 5% critical chance on every match, crit damage starts at 100%',
+                () => {}
+            ),
+            new Item(
+                'Passive',
+                '4x4',
+                'Can only make matches of 4 pieces or more, but damage is tripled',
+                () => {}
+            ),
+            new Item(
+                'Passive',
+                'Flexible',
+                'Can match diagonals from the start, and they deal -10% damage',
+                () => {}
+            ),
+            // new Item(
+            //     'Passive',
+            //     'Gambler',
+            //     'Can reroll once every stage',
+            //     () => {}
+            // ),
+            new Item(
+                'Passive',
+                'No barriers',
+                'Grids are 1 column and 1 row larger by default',
+                () => {}
+            ),
+            new Item(
+                'Passive',
+                'Tank',
+                'Start with +10 defense and -2 moves',
+                () => {}
+            ),
+            new Item(
+                'Passive',
+                'Midas Touched',
+                '+1 Gold for matches with pieces on the extremities, 2 on crit',
+                () => {}
+            ),
+        ]
+        return passivePool;
+    }
+
     static fullHealthShopItem(run: Run): Item {
         let price: number = 20;
         let name: string = 'Max Instant health';
@@ -100,8 +158,9 @@ export class ItemPools {
             name,
             'Full heal',
             (() => {
-                run.player.heal(run.player.health);
+                run.player.heal(run.player.maxHealth);
             }).bind(run),
+            Frequency.PASSIVE,
             price,
         );
     }
@@ -118,8 +177,9 @@ export class ItemPools {
                     name,
                     '+1 Crit piece on a boss fight',
                     (() => {
-                        run.player.itemData.bossCritical += 1;
+                        run.player.itemData.bossCrits += 1;
                     }).bind(run),
+                    Frequency.PASSIVE,
                     price,
                 );
             })(),
@@ -133,8 +193,9 @@ export class ItemPools {
                     name,
                     '+3 moves',
                     (() => {
-                        run.maxMoves += 3;
+                        run.player.maxMoves += 3;
                     }).bind(run),
+                    Frequency.PASSIVE,
                     price,
                 );
             })(),
@@ -150,6 +211,7 @@ export class ItemPools {
                     (() => {
                         run.map.gridX++;
                     }).bind(run),
+                    Frequency.PASSIVE,
                     price,
                 );
             })(),
@@ -165,6 +227,7 @@ export class ItemPools {
                     (() => {
                         run.map.gridY++;
                     }).bind(run),
+                    Frequency.PASSIVE,
                     price,
                 );
             })(),
@@ -180,6 +243,7 @@ export class ItemPools {
                     (() => {
                         run.itemOptions++;
                     }).bind(run),
+                    Frequency.PASSIVE,
                     price,
                 );
             })(),
@@ -199,6 +263,7 @@ export class ItemPools {
                     (() => {
                         run.emit('Item:BanShape', shape.id);
                     }).bind(run),
+                    Frequency.PASSIVE,
                     price
                 ));
             });
@@ -216,6 +281,7 @@ export class ItemPools {
                 (() => {
                     run.player.itemData.reach++;
                 }).bind(run),
+                Frequency.PASSIVE,
                 price
             ));
         }
@@ -231,9 +297,9 @@ export class ItemPools {
                     name,
                     'One more slot for actives',
                     (() => { }).bind(run),
+                    Frequency.PASSIVE,
                     price,
-                    undefined,
-                    true
+                    true,
                 );
             })(),
             (() => {
@@ -245,14 +311,13 @@ export class ItemPools {
                     'Epic',
                     name,
                     'Can match diagonals',
-                    (() => { }).bind(run),
+                    (() => { run.player.itemData.diagonals = true}).bind(run),
+                    Frequency.PASSIVE,
                     price,
-                    undefined,
-                    true
+                    true,
                 );
             })()
         ];
-
 
         return shopPool.concat(uniqueItems.filter((item: Item) => !run.player.hasItem(item.name)));
     }
@@ -321,24 +386,24 @@ export class ItemPools {
                 'Common',
                 'Extra Piece',
                 'Matches can remove a random piece',
-                (() => { }).bind(run)
+                (() => { }).bind(run),
             ),
             new Item(
                 'Common',
                 'Teleport',
                 'Make a match anywhere',
-                (() => { 
+                (() => {
                     run.emit('Item:AddOmniMove');
                 }).bind(run),
-                undefined,
-                true
+                Frequency.EVERY_STAGE,
+                undefined
             ),
             new Item(
                 'Common',
                 'Extra Move',
                 '+1 move',
                 (() => {
-                    run.maxMoves += 1;
+                    run.player.maxMoves += 1;
                     run.player.moves += 1;
                 }).bind(run)
             ),
@@ -361,10 +426,11 @@ export class ItemPools {
             new Item(
                 'Common',
                 'Max Health Gain',
-                '+5 HP Max',
+                '+5% HP Max',
                 (() => {
-                    run.player.health += 5;
-                    run.player.heal(5);
+                    const health: number = (run.player.maxHealth / 20)
+                    run.player.maxHealth += health;
+                    run.player.heal(health);
                 }).bind(run)
             ),
             new Item(
@@ -381,7 +447,7 @@ export class ItemPools {
                 'Instant Health',
                 '+10% HP',
                 (() => {
-                    run.player.heal(run.player.health / 10);
+                    run.player.heal(run.player.maxHealth / 10);
                 }).bind(run)
             ),
             new Item(
@@ -403,7 +469,7 @@ export class ItemPools {
                 'Move Saver',
                 '10% chance of not consuming moves',
                 (() => {
-                    run.player.itemData.moveSaver += 0.10;
+                    run.player.itemData.moveSaverChance += 0.10;
                 }).bind(run)
             ),
             new Item(
@@ -412,19 +478,20 @@ export class ItemPools {
                 'Block one letal hit',
                 (() => {
                     run.player.itemData.hasShield = true;
-                    run.player.itemData.usedShield = false;
+                    run.player.itemData.hasUsedShield = false;
                 }).bind(run),
-                undefined,
+                Frequency.PASSIVE,
                 undefined,
                 true
             ),
             new Item(
                 'Rare',
                 'Big Max Health Gain',
-                '+20 HP Max',
+                '+20% HP Max',
                 (() => {
-                    run.player.health += 20;
-                    run.player.heal(20);
+                    const health: number = (run.player.maxHealth / 5)
+                    run.player.maxHealth += health;
+                    run.player.heal(health);
                 }).bind(run)
             ),
             new Item(
@@ -463,8 +530,7 @@ export class ItemPools {
                     run.stackCombo = true;
                     run.emit('Item:EliminateShape', shape.id);
                 }).bind(run),
-                undefined,
-                true
+                Frequency.SINGLE_USE
             ));
             defaultPool.push(new Item(
                 'Common',
@@ -489,11 +555,11 @@ export class ItemPools {
             ),
             new Item(
                 'Epic',
-                'Moves as you Crits',
+                'Crits are Moves',
                 'Extra move for every Crit you have currently',
-                (() => { 
+                (() => {
                     run.player.moves += run.player.critical;
-                    run.itemData.bonusMoves = run.player.critical;
+                    run.player.itemData.bonusMoves = run.player.critical;
                     run.updateMoves();
                 }).bind(run),
                 undefined,

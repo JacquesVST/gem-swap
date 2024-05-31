@@ -1,15 +1,16 @@
 import * as P5 from "p5";
-import { checkPositionInLimit, drawItem, generateId, insertLineBreaks } from "../utils/Functions";
-import { CanvasInfo } from "./CanvasInfo";
+import { Canvas } from "../controllers/Canvas";
+import { AnimationStatus, DialogType, Frequency, ICanvas, IDialog, IDialogOption } from "../interfaces";
+import { drawItem } from "../utils/Draw";
+import { generateId, insertLineBreaks } from "../utils/General";
 import { Color } from "./Color";
-import { ConfigureListeners, EventEmitter } from "./EventEmitter";
 import { Item } from "./Item";
-import { AnimationStatus } from "./PieceAnimation";
+import { Limits } from "./Limits";
 import { Position } from "./Position";
 import { Run } from "./Run";
 import { BossStage, EnemyStage, MiniBossStage } from "./Stage";
 
-export class Dialog extends EventEmitter {
+export class Dialog implements IDialog {
     id: string;
     title: string;
     message: string;
@@ -19,11 +20,13 @@ export class Dialog extends EventEmitter {
 
     animationStatus: AnimationStatus = AnimationStatus.NOT_STARTED;
     frames: number = 0;
-    velocityFade: number = 0;
-    relativeFade: number = 0;
+
+    initialOpacity?: number = 0;
+    relativeOpacity?: number = 0;
+    relativeOpacitySpeed?: number = 0;
+
 
     constructor(title: string, message: string, options: DialogOption[], type: DialogType, closeCallback?: () => void, textColor?: Color) {
-        super('Dialog');
         this.title = title;
         this.message = message;
         this.options = options;
@@ -35,7 +38,7 @@ export class Dialog extends EventEmitter {
     }
 
     get hasAdditionalButton(): boolean {
-        return this.type === DialogType.SHOP || this.type === DialogType.SKIPPABLE_ITEM;
+        return this.type === DialogType.SHOP || this.type === DialogType.SKIPPABLE_ITEM || this.type === DialogType.INITIAL;
     }
 
     setupAdditionalOptions(closeCallback: () => void): void {
@@ -46,7 +49,7 @@ export class Dialog extends EventEmitter {
                         closeCallback();
                     }
                 },
-                new Color(86, 101, 115),
+                Color.DISABLED,
                 'Close'
             ));
         }
@@ -58,25 +61,26 @@ export class Dialog extends EventEmitter {
                         closeCallback();
                     }
                 },
-                new Color(86, 101, 115),
+                Color.DISABLED,
                 'Skip'
             ));
         }
+
     }
 
-    draw(canvas: CanvasInfo, run?: Run): void {
+    draw(run?: Run): void {
+        const canvas: ICanvas = Canvas.getInstance();
         if (this.animationStatus === AnimationStatus.NOT_STARTED) {
-            this.setupAnimation();
+            this.calculateSpeed();
         }
 
-        let dimension: Position = new Position(0, 0);
-        let margin: Position = new Position(0, 0);
+        const dimension: Position = new Position(0, 0);
+        const margin: Position = new Position(0, 0);
+        const textMarginCount: number = 8;
+        const lengthOffSet: number = 5;
 
-        let textOffset: number = 0;
 
-        let textMarginCount: number = 8;
         let optionsLength: number = this.hasAdditionalButton ? this.options.length - 1 : this.options.length;
-        let lengthOffSet: number = 5;
 
         optionsLength = optionsLength === 1 ? 2 : optionsLength;
 
@@ -86,18 +90,26 @@ export class Dialog extends EventEmitter {
         dimension.y = (Math.ceil(optionsLength / lengthOffSet) * canvas.itemSideSize) + ((Math.ceil(optionsLength / lengthOffSet) + textMarginCount) * canvas.margin) + (this.hasAdditionalButton ? canvas.margin + (canvas.itemSideSize / 4) : 0);
         margin.y = (canvas.playfield.y / 2) - (dimension.y / 2);
 
-        textOffset = margin.y + (textMarginCount * canvas.margin / 2);
+        if (this.type === DialogType.INITIAL) {
+            dimension.y += canvas.itemSideSize / 4
+            margin.y = (canvas.playfield.y / 2) - (dimension.y / 2);
+        }
 
-        this.drawDialogBackground(dimension, margin, textOffset, canvas);
-        this.drawOptions(lengthOffSet, dimension, margin, canvas, run);
+        const textOffset: number = margin.y + (textMarginCount * canvas.margin / 2);
+
+        this.drawDialogBackground(dimension, margin, textOffset);
+        this.drawOptions(lengthOffSet, dimension, margin, run);
     }
 
 
-    drawDialogBackground(dimension: Position, margin: Position, textOffset: number, canvas: CanvasInfo): void {
+    drawDialogBackground(dimension: Position, margin: Position, textOffset: number): void {
+        const canvas: ICanvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
 
+        const opacity: number = this.initialOpacity + this.relativeOpacity;
+
         p5.noStroke();
-        p5.fill([...new Color(40, 40, 40).value, 255 + this.relativeFade]);
+        p5.fill(Color.GRAY_2.alpha(opacity).value);
         p5.rect(
             margin.x,
             margin.y,
@@ -106,10 +118,10 @@ export class Dialog extends EventEmitter {
             canvas.radius * 4
         );
 
-        p5.textAlign(p5.CENTER, p5.CENTER)
+        p5.textAlign(p5.CENTER, p5.CENTER);
 
-        p5.fill([...this.textColor.value, 255 + this.relativeFade]);
-        p5.stroke(0, 0, 0, 255 + this.relativeFade);
+        p5.fill(this.textColor.alpha(opacity).value);
+        p5.stroke(Color.BLACK.alpha(opacity).value);
         p5.strokeWeight(3);
         p5.textSize(24)
         p5.text(
@@ -118,7 +130,7 @@ export class Dialog extends EventEmitter {
             textOffset - canvas.margin
         );
 
-        p5.fill(200, 200, 200, 255 + this.relativeFade);
+        p5.fill(Color.WHITE_1.alpha(opacity).value);
         p5.textSize(16)
         p5.strokeWeight(2);
         p5.text(
@@ -128,7 +140,8 @@ export class Dialog extends EventEmitter {
         );
     }
 
-    drawOptions(lengthOffSet: number, dimension: Position, margin: Position, canvas: CanvasInfo, run?: Run): void {
+    drawOptions(lengthOffSet: number, dimension: Position, margin: Position, run?: Run): void {
+        const canvas: ICanvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
 
         this.options.forEach((option: DialogOption, index: number) => {
@@ -148,24 +161,25 @@ export class Dialog extends EventEmitter {
 
                 cumulativeMarginX = canvas.playfield.x / 2 - (optionWidth / 2);
                 cumulativeMarginY = margin.y + dimension.y - canvas.margin - optionHeight;
+
+                if (this.type === DialogType.INITIAL) {
+                    optionWidth = canvas.itemSideSize
+                    optionHeight = canvas.itemSideSize / 2;
+
+                    cumulativeMarginX = canvas.playfield.x / 2 - optionWidth / 2;
+                    cumulativeMarginY = margin.y + dimension.y - canvas.margin - optionHeight;
+                }
             }
 
-            let limits: number[] = [
-                cumulativeMarginX,
-                cumulativeMarginX + optionWidth,
-                cumulativeMarginY,
-                cumulativeMarginY + optionHeight
-            ];
+            option.limits = new Limits(new Position(cumulativeMarginX, cumulativeMarginY), new Position(cumulativeMarginX + optionWidth, cumulativeMarginY + optionHeight));
 
-            option.limits = limits;
+            const isMouseOver: boolean = option.limits.contains(canvas.mousePosition)
 
-            let isMouseOver: boolean = checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...limits)
+            const opacityHightlight: number = (isMouseOver ? 255 : 200) + this.relativeOpacity
 
-            let opacity: number = (isMouseOver ? 255 : 200) + this.relativeFade
-
-            if (!(option instanceof ItemDialogOption)) {
+            if (!(option instanceof ItemDialogOption) && !(option instanceof PassiveDialogOption)) {
                 p5.noStroke();
-                p5.fill(...(option.disabled ? new Color(86, 101, 115).value : option.color.value), opacity <= 0 ? 0 : opacity);
+                p5.fill((option.disabled ? new Color(86, 101, 115) : option.color).alpha(opacityHightlight <= 0 ? 0 : opacityHightlight).value);
                 p5.rect(
                     cumulativeMarginX,
                     cumulativeMarginY,
@@ -175,15 +189,17 @@ export class Dialog extends EventEmitter {
                 );
             }
 
+            const opacity: number = this.initialOpacity + this.relativeOpacity;
+
             // option content
             if (option instanceof DefaultDialogOption) {
                 p5.textAlign(p5.CENTER, p5.CENTER)
 
-                let textMargin: number = cumulativeMarginY + (optionHeight / 2);
-                let mainOffset: number = (option.subsubtext ? -2 : option.subtext ? -1 : 0) * canvas.margin;
+                const textMargin: number = cumulativeMarginY + (optionHeight / 2);
+                const mainOffset: number = (option.subsubtext ? -2 : option.subtext ? -1 : 0) * canvas.margin;
 
-                p5.fill(255, 255, 255, 255 + this.relativeFade);
-                p5.stroke(0, 0, 0, 255 + this.relativeFade);
+                p5.fill(Color.WHITE.alpha(opacity).value);
+                p5.stroke(Color.BLACK.alpha(opacity).value);
                 p5.strokeWeight(3);
                 p5.textSize(20)
                 p5.text(
@@ -195,7 +211,7 @@ export class Dialog extends EventEmitter {
                 if (option.subtext) {
                     let subOffset: number = (option.subsubtext ? 0 : 1) * canvas.margin;
 
-                    p5.fill(200, 200, 200, 255 + this.relativeFade);
+                    p5.fill(Color.WHITE_1.alpha(opacity).value);
                     p5.strokeWeight(2);
                     p5.textSize(16)
                     p5.text(
@@ -206,7 +222,7 @@ export class Dialog extends EventEmitter {
                 }
 
                 if (option.subsubtext) {
-                    p5.fill(200, 200, 200, 255 + this.relativeFade);
+                    p5.fill(Color.WHITE_1.alpha(opacity).value);
                     p5.strokeWeight(2);
                     p5.textSize(16)
                     p5.text(
@@ -233,9 +249,9 @@ export class Dialog extends EventEmitter {
                     subtext = `${option.stage.enemies.length} Strong Enemies`;
                 }
 
-                let textMargin: number = cumulativeMarginY + (optionHeight / 2);
-                p5.fill(255, 255, 255, 255 + this.relativeFade);
-                p5.stroke(0, 0, 0, 255 + this.relativeFade);
+                const textMargin: number = cumulativeMarginY + (optionHeight / 2);
+                p5.fill(Color.WHITE.alpha(opacity).value);
+                p5.stroke(Color.BLACK.alpha(opacity).value);
                 p5.strokeWeight(3);
                 p5.textSize(20)
                 p5.text(
@@ -245,7 +261,7 @@ export class Dialog extends EventEmitter {
                 );
 
                 if (subtext) {
-                    p5.fill(200, 200, 200, 255 + this.relativeFade);
+                    p5.fill(Color.WHITE_1.alpha(opacity).value);
                     p5.strokeWeight(2);
                     p5.textSize(16)
                     p5.text(
@@ -257,50 +273,76 @@ export class Dialog extends EventEmitter {
             }
 
             if (option instanceof ItemDialogOption) {
-                drawItem(option.item, cumulativeMarginX, cumulativeMarginY, canvas.itemSideSize, canvas, this.relativeFade, run, option);
+                drawItem(option.item, cumulativeMarginX, cumulativeMarginY, canvas.itemSideSize, canvas.itemSideSize, canvas, this.relativeOpacity, run, option);
+            }
+
+            if (option instanceof PassiveDialogOption) {
+                (p5.drawingContext as CanvasRenderingContext2D).setLineDash([10, 10]);
+
+                p5.fill(Color.GRAY_3.alpha(opacityHightlight).value);
+                p5.rect(
+                    cumulativeMarginX,
+                    cumulativeMarginY,
+                    canvas.itemSideSize,
+                    canvas.itemSideSize / 2,
+                    canvas.radius
+                );
+
+                (p5.drawingContext as CanvasRenderingContext2D).setLineDash([]);
+
+                if (!option.item) {
+                    p5.fill(Color.WHITE.alpha(opacity).value);
+                    p5.stroke(Color.BLACK.alpha(opacity).value);
+                    p5.strokeWeight(3);
+                    p5.textSize(20)
+                    p5.text(
+                        'Select passive',
+                        cumulativeMarginX + (optionWidth / 2),
+                        cumulativeMarginY + (optionHeight / 2),
+                    );
+                }
+
+
+                if (option.item) {
+                    drawItem(option.item, cumulativeMarginX, cumulativeMarginY, canvas.itemSideSize, canvas.itemSideSize / 2, canvas, this.relativeOpacity, run, option, true);
+                }
             }
 
         });
 
         if (this.animationStatus === AnimationStatus.IN_PROGRESS) {
-            this.updateAnimationDeltas();
+            this.updateAnimation();
         }
     }
 
-    setupAnimation(): void {
+    calculateSpeed(): void {
         this.animationStatus = AnimationStatus.IN_PROGRESS;
         this.frames = 15;
-        this.relativeFade = -255;
-        this.velocityFade = this.relativeFade / this.frames;
+
+        this.initialOpacity = 255;
+        this.relativeOpacitySpeed = 255 / this.frames;
+        this.relativeOpacity = -255;
     }
 
-    updateAnimationDeltas(): void {
+    updateAnimation(): void {
         if (this.frames) {
-            this.relativeFade -= this.velocityFade;
+            this.relativeOpacity += this.relativeOpacitySpeed;
 
             this.frames--;
             if (this.frames === 0) {
-                this.relativeFade = 0;
-                this.velocityFade = 0;
+                this.relativeOpacity = 0;
+                this.relativeOpacitySpeed = 0;
                 this.animationStatus = AnimationStatus.FINISHED;
             }
         }
     }
 }
 
-export enum DialogType {
-    CHOICE,
-    ITEM,
-    NAVIGATION,
-    SHOP,
-    SKIPPABLE_ITEM,
-}
-
-export class DialogOption {
+export class DialogOption implements IDialogOption {
     action: () => void;
     color: Color;
     disabled: boolean;
-    limits: number[];
+    limits: Limits;
 
     constructor(action: () => void, color: Color) {
         this.action = action;
@@ -321,16 +363,14 @@ export class ItemDialogOption extends DialogOption {
             (item: Item) => {
                 return new ItemDialogOption(
                     () => {
-                        if (item.isActive) {
-
+                        if (item.frequency !== Frequency.PASSIVE) {
                             if (run.player.hasItem('Extra Active Item')) {
                                 if (run.player.itemData.activeItem === undefined) {
                                     run.player.itemData.activeItem = item;
                                 } else if (run.player.itemData.activeItem2 === undefined) {
                                     run.player.itemData.activeItem2 = item;
                                 } else {
-                                    let aux: Item;
-                                    aux = run.player.itemData.activeItem2;
+                                    const aux: Item = run.player.itemData.activeItem2;
                                     run.player.itemData.activeItem2 = item;
                                     run.player.itemData.activeItem = aux;
                                 }
@@ -345,7 +385,7 @@ export class ItemDialogOption extends DialogOption {
                             callback();
                         }
                     },
-                    Item.rarityColors()[item.rarity].color,
+                    Item.rarityColors[item.rarity].color,
                     item,
                 )
             });
@@ -365,6 +405,15 @@ export class DefaultDialogOption extends DialogOption {
     }
 }
 
+export class PassiveDialogOption extends DialogOption {
+    item: Item
+
+    constructor(action: () => void, color: Color, item?: Item) {
+        super(action, color)
+        this.item = item;
+    }
+}
+
 export class NavigationDialogOption extends DialogOption {
     stage: EnemyStage;
     index: number;
@@ -374,82 +423,4 @@ export class NavigationDialogOption extends DialogOption {
         this.stage = stage;
         this.index = index;
     }
-}
-
-export class DialogController extends EventEmitter implements ConfigureListeners {
-    private static instance: DialogController;
-    canvas: CanvasInfo;
-    dialogs: Dialog[];
-
-    private constructor() {
-        super('DialogController');
-        this.dialogs = [];
-        this.canvas = CanvasInfo.getInstance();
-    }
-
-    static getInstance(): DialogController {
-        if (!DialogController.instance) {
-            DialogController.instance = new DialogController();
-        }
-        return DialogController.instance;
-    }
-
-    get currentDialog(): Dialog {
-        return this.dialogs[0] ?? undefined;
-    }
-
-    configureListeners(): void {
-        this.on('Main:MouseClicked:Click', (position: Position, run?: Run) => {
-            setTimeout(() => {
-
-                if (!this.currentDialog) {
-                    return;
-                }
-
-                let selected: boolean = false;
-
-                this.currentDialog.options.forEach((option: DialogOption) => {
-                    if (option?.limits && checkPositionInLimit(position, ...option.limits)) {
-
-                        selected = true;
-                        if (!option.disabled) {
-                            option.action();
-                            if (option instanceof ItemDialogOption && option?.item?.price) {
-                                this.emit('ItemPurchased', option.item.price);
-                                option.item.price = Math.floor(option.item.price * 1.25);
-                            }
-                            this.emit('OptionSelected', option);
-                        }
-                    }
-                })
-
-                if (selected) {
-
-                    if (this.currentDialog && this.currentDialog.type !== DialogType.SHOP) {
-                        this.close();
-                        this.emit('DialogClosed');
-                    }
-                }
-            }, 0);
-        });
-    }
-
-    draw(run?: Run): void {
-        if (this.currentDialog) {
-            this.dialogs[0].draw(this.canvas, run);
-        }
-    }
-
-    add(dialog: Dialog): void {
-        this.dialogs.push(dialog);
-    }
-
-    close(): void {
-        this.dialogs.shift();
-    }
-
-    clear(): void {
-        this.dialogs = [];
-    }
-
 }

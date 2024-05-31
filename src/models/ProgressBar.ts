@@ -1,90 +1,94 @@
 import * as P5 from "p5";
-import { checkPositionInLimit, formatNumber } from "../utils/Functions";
-import { CanvasInfo } from "./CanvasInfo";
+import { Canvas } from "../controllers/Canvas";
+import { EventEmitter } from "../controllers/EventEmitter";
+import { ICanvas, IEventParams, IProgressBar } from "../interfaces";
+import { formatNumber } from "../utils/General";
 import { Color } from "./Color";
-import { Enemy } from "./Enemy";
-import { EventEmitter, EventParams } from "./EventEmitter";
-import { Run } from "./Run";
+import { Limits } from "./Limits";
 import { Position } from "./Position";
+import { Run } from "./Run";
 
-export class ProgressBar extends EventEmitter {
+export class ProgressBar extends EventEmitter implements IProgressBar {
     maxValue: number;
     value: number;
     title: string;
     color: Color;
+
+    index: number;
     top: boolean;
-    limits: number[];
+    limits: Limits;
 
     frames: number = 0;
-    velocity: number = 0;
-    delta: number = 0;
-    velocityFade: number = 0;
-    fade: number = 255;
+    relativeLinearSizeSpeed: number = 0;
+    relativeLinearSize: number = 0;
+    initialLinearSize: number = 0;
 
-    constructor(maxValue: number, value: number, title: string, color: Color, top: boolean) {
+    constructor(maxValue: number, value: number, title: string, color: Color, top: boolean, index: number) {
         super('ProgressBar');
         this.maxValue = maxValue;
         this.value = value;
         this.title = title;
         this.color = color;
         this.top = top;
+        this.index = index;
+
+        this.calculateSpeed()
     }
 
-    animate(difference: number, params: EventParams): void {
+    calculateSpeed(): void {
+
+    }
+
+    animate(relativeLinearSize: number, params: IEventParams): void {
         this.frames = 10;
-        this.velocity = difference / this.frames;
-        this.delta = difference;
+        this.relativeLinearSize = relativeLinearSize;
+        this.relativeLinearSizeSpeed = relativeLinearSize / this.frames;
         this.params = params;
+        this.calculateSpeed();
     }
 
-    drawBar(index: number, canvas: CanvasInfo): void {
+    draw(run?: Run): void {
+        const canvas: ICanvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
-        let percentageOfBar: number = (this.value + this.delta) / this.maxValue;
 
         let commonMargin: number;
         if (this.top) {
-            commonMargin = (canvas.margin * (index + 2)) + (canvas.uiBarSize * index) + canvas.margin / 2;
+            commonMargin = (canvas.margin * (this.index + 2)) + (canvas.uiData.uiBarSize * this.index) + canvas.margin / 2;
         } else {
-            let bottomIndex: number = index - 2;
-            commonMargin = canvas.canvasSize.y - canvas.margin - canvas.bottomUiSize + (canvas.uiBarSize * bottomIndex) + (canvas.margin * bottomIndex) + canvas.margin / 2;
+            let bottomIndex: number = this.index - (canvas.uiData.topBarCount - 1);
+            commonMargin = canvas.windowSize.y - canvas.margin - canvas.uiData.bottomUiSize + (canvas.uiData.uiBarSize * bottomIndex) + (canvas.margin * bottomIndex) + canvas.margin / 2;
         }
-        let maxBarSize: number = (canvas.playfield.x - (2 * canvas.margin));
 
-        let finalElementSize: number = (maxBarSize * percentageOfBar);
-        finalElementSize = finalElementSize > maxBarSize ? maxBarSize : finalElementSize;
+        const percentageOfBar: number = (this.value + this.relativeLinearSize) / this.maxValue;
+        const maxBarSize: number = (canvas.playfield.x - (2 * canvas.margin));
+        const finalElementSize: number = (maxBarSize * percentageOfBar) > maxBarSize ? maxBarSize : (maxBarSize * percentageOfBar);
 
-        this.limits = [
-            canvas.margin * 1.5,
-            canvas.playfield.x - canvas.margin * 1.5,
-            commonMargin - canvas.margin / 2,
-            commonMargin - canvas.margin / 2 + canvas.uiBarSize + canvas.margin
-        ];
+        this.limits = new Limits(new Position(canvas.margin * 1.5, commonMargin - canvas.margin / 2), new Position(canvas.playfield.x - canvas.margin * 1.5, commonMargin - canvas.margin / 2 + canvas.uiData.uiBarSize + canvas.margin))
 
-        let highlight: boolean = checkPositionInLimit(new Position(p5.mouseX, p5.mouseY), ...this.limits);
-        if (highlight && this.top) {
-            p5.fill(60, 200);
+        if (this.limits.contains(canvas.mousePosition) && this.top) {
+            p5.fill(Color.GRAY_3.alpha(200).value);
             p5.noStroke();
             p5.rect(
-                this.limits[0],
-                this.limits[2],
+                canvas.margin * 1.5,
+                commonMargin - canvas.margin / 2,
                 maxBarSize + canvas.margin,
-                canvas.uiBarSize + canvas.margin,
+                canvas.uiData.uiBarSize + canvas.margin,
                 canvas.radius + canvas.padding
             );
         }
 
-        p5.fill(percentageOfBar ? [...this.color.value, this.fade] : [20, 20, 20, this.fade]);
+        p5.fill((percentageOfBar ? this.color : Color.GRAY_1).value);
         p5.noStroke();
         p5.rect(
             canvas.margin * 2,
             commonMargin,
             finalElementSize <= 1 ? 1 : finalElementSize,
-            canvas.uiBarSize,
+            canvas.uiData.uiBarSize,
             canvas.radius + canvas.padding
         );
 
         p5.fill(this.color.value);
-        p5.stroke(0);
+        p5.stroke(Color.BLACK.value);
         p5.strokeWeight(3);
         p5.textSize(20);
 
@@ -106,15 +110,11 @@ export class ProgressBar extends EventEmitter {
 
     updateAnimation(): void {
         this.frames--;
-        this.delta -= this.velocity;
-        this.fade -= this.velocityFade;
+        this.relativeLinearSize -= this.relativeLinearSizeSpeed;
 
         if (this.frames === 0) {
-            this.delta = 0;
-            this.velocity = 0;
-
-            this.fade = 255;
-            this.velocityFade = 0;
+            this.relativeLinearSize = 0;
+            this.relativeLinearSizeSpeed = 0;
 
             if (this.params) {
                 this.emit('ProgressBarUpdated:' + this.params.useCase, this.params.data);
@@ -123,54 +123,6 @@ export class ProgressBar extends EventEmitter {
 
     }
 
-    static yourMovesBar(maxValue: number, value: number): ProgressBar {
-        return new ProgressBar(
-            maxValue,
-            value,
-            'Your Moves',
-            value <= 3 ? new Color(231, 76, 60) : new Color(46, 204, 113),
-            false
-        );
-    }
 
-    static yourHealthBar(maxValue: number, value: number): ProgressBar {
-        return new ProgressBar(
-            maxValue,
-            value,
-            'Your Health',
-            new Color(231, 76, 60),
-            false
-        );
-    }
-
-    static enemyHealthBar(enemy: Enemy, value: number, count: number): ProgressBar {
-        return new ProgressBar(
-            enemy.health,
-            value,
-            enemy.name + ' Health (' + enemy.number + '/' + count + ')',
-            enemy.color,
-            true
-        );
-    }
-
-    static stageBar(run: Run): ProgressBar {
-        return new ProgressBar(
-            run.map.floor.stages.length,
-            run.map.stage.number ?? run.map.stageCount,
-            'Stage',
-            new Color(46, 134, 193),
-            true
-        );
-    }
-
-    static floorBar(run: Run): ProgressBar {
-        return new ProgressBar(
-            run.map.floors.length,
-            run.map.floor.number ?? run.map.floorCount,
-            'Floor',
-            new Color(244, 208, 63),
-            true
-        );
-    }
 
 }

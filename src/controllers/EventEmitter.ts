@@ -1,6 +1,7 @@
 import { EventEmitter as EE } from "events";
+import { IEventEmitter, IEventHandler, IEventParams } from "../interfaces";
 
-export class EventHandler {
+export class EventHandler implements IEventHandler{
     private static instance: EventHandler;
     eventEmitter: EE;
 
@@ -16,9 +17,9 @@ export class EventHandler {
     }
 }
 
-export class EventEmitter {
+export class EventEmitter implements IEventEmitter{
     eventHandler: EventHandler;
-    params: EventParams;
+    params: IEventParams;
     log: boolean;
     className: string;
 
@@ -53,14 +54,3 @@ export class EventEmitter {
     }
 
 }
-
-export interface ConfigureListeners {
-    configureListeners(): void;
-}
-
-export interface EventParams {
-    baseAction?: string;
-    useCase: string;
-    data?: any;
-}
-

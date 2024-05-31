@@ -1,35 +1,29 @@
-import { randomBetween } from "../utils/Functions";
+import { IEnemyStage, IStage } from "../interfaces";
+import { randomBetween } from "../utils/General";
 import { Color } from "./Color";
 import { BossEnemy, CommonEnemy, Enemy, MiniBossEnemy } from "./Enemy";
-import { EventEmitter } from "./EventEmitter";
 import { Floor } from "./Floor";
 import { Grid } from "./Grid";
 
-export interface StageActions {
-    setupBranchedStage(enemyCount: number): void;
-    setupGrid(x: number, y: number): void;
-}
-
-export class Stage extends EventEmitter {
+export class Stage implements IStage {
     number: number;
     floor: Floor;
     grid: Grid;
     isLast: boolean;
+    color: Color;
 
     constructor(number: number, floor: Floor, isLast: boolean = false) {
-        super('Stage');
         this.number = number;
         this.floor = floor;
         this.isLast = isLast;
     }
 }
 
-export class EnemyStage extends Stage implements StageActions {
+export class EnemyStage extends Stage implements IEnemyStage {
     number: number;
     floor: Floor;
     currentEnemyIndex: number = 0;
     enemies: Enemy[] = [];
-    color: Color;
 
     constructor(number: number, floor: Floor, isLast: boolean = false) {
         super(number, floor, isLast);
@@ -65,15 +59,14 @@ export class MiniBossStage extends EnemyStage {
         this.color = new Color(235, 152, 78);
     }
 
-    setupBranchedStage(enemyCount: number): void {
-        let miniBossCount = randomBetween(1, 3);
+    setupBranchedStage(): void {
+        let miniBossCount = randomBetween(0, 4);
         this.enemies = [...Array(miniBossCount)].map(
             (enemy: Enemy, index: number) => {
                 return new MiniBossEnemy(index + 1, { ...this }, index === miniBossCount - 1);
             }
         );
     }
-
 }
 
 export class BossStage extends EnemyStage {

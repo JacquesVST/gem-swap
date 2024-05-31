@@ -1,12 +1,13 @@
+import { ICell } from "../interfaces";
 import { Piece } from "./Piece";
 import { Position } from "./Position";
 
-export class Cell {
-    position: Position;
+export class Cell implements ICell {
     piece: Piece;
-    canvasPosition: Position = new Position(0, 0);
+    gridPosition: Position;
+    canvasPosition: Position = Position.ORIGIN;
 
     constructor(position: Position) {
-        this.position = position;
+        this.gridPosition = position;
     }
 }

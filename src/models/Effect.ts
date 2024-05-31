@@ -1,6 +1,7 @@
+import { IEffect, IEffectParams, IPiece } from "../interfaces";
 import { Piece } from "./Piece";
 
-export class Effect {
+export class Effect implements IEffect{
     id: string
     effect: (params: EffectParams) => void;
     chance: number;
@@ -12,7 +13,7 @@ export class Effect {
     }
 }
 
-export class EffectParams {
+export class EffectParams implements IEffectParams{
     piece: Piece;
     match: Piece[];
     matches: Piece[][];

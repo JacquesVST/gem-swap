@@ -1,8 +1,8 @@
-import { EventEmitter } from "./EventEmitter";
+import { IFloor } from "../interfaces";
 import { Map } from "./Map";
 import { BossStage, CommonEnemyStage, EnemyStage, MiniBossStage } from "./Stage";
 
-export class Floor extends EventEmitter {
+export class Floor implements IFloor {
     number: number;
     map: Map;
 
@@ -11,7 +11,6 @@ export class Floor extends EventEmitter {
     currentStageBranch: number = 0;
 
     constructor(number: number, map: Map) {
-        super('Floor');
         this.number = number;
         this.map = map;
     }

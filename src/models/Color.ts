@@ -1,8 +1,11 @@
-export class Color {
+import { IColor } from "../interfaces";
+
+export class Color implements IColor {
     r: number;
     g: number;
     b: number;
-    checksum: string;
+    a: number;
+    checksum: string
 
     static RED: Color = new Color(231, 76, 60);
     static GREEN: Color = new Color(46, 204, 113);
@@ -11,17 +14,29 @@ export class Color {
     static ORANGE: Color = new Color(243, 156, 18);
     static PINK: Color = new Color(240, 98, 146);
     static PURPLE: Color = new Color(87, 49, 214);
-    static WHITE: Color = new Color(255, 255, 255);
-    static BLACK: Color = new Color(0, 0, 0);
 
-    constructor(r: number, g: number, b: number) {
+    static WHITE: Color = new Color(255, 255, 255);
+    static WHITE_1: Color = new Color(200, 200, 200);
+    static BLACK: Color = new Color(0, 0, 0);
+    static GRAY_1: Color = new Color(20, 20, 20);
+    static GRAY_2: Color = new Color(40, 40, 40);
+    static GRAY_3: Color = new Color(60, 60, 60);
+
+    static DISABLED: Color = new Color(86, 101, 115);
+
+    constructor(r: number, g: number, b: number, a: number = 255) {
         this.r = r;
         this.g = g;
         this.b = b;
-        this.checksum = `R${r}G${g}B${b}`;
+        this.a = a;
+        this.checksum = `R${r}G${g}B${b}A${a}`;
     }
 
-    get value(): [number, number, number] {
-        return [this.r, this.g, this.b];
+    get value(): [number, number, number, number] {
+        return [this.r, this.g, this.b, this.a];
+    }
+
+    alpha(a: number): Color {
+        return new Color(this.r, this.g, this.b, a);
     }
 }
