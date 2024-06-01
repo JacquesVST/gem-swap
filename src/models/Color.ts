@@ -23,6 +23,7 @@ export class Color implements IColor {
     static GRAY_3: Color = new Color(60, 60, 60);
 
     static DISABLED: Color = new Color(86, 101, 115);
+    static DIM: Color = new Color(50, 50, 50, 100);
 
     constructor(r: number, g: number, b: number, a: number = 255) {
         this.r = r;

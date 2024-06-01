@@ -33,7 +33,7 @@ export class Item implements IItem {
             'Common': {
                 color: Color.WHITE_1,
                 chance: 0.75,
-                chanceShop: 0.50
+                chanceShop: 0
             },
             'Rare': {
                 color: Color.GREEN,
@@ -47,8 +47,8 @@ export class Item implements IItem {
             },
             'Passive': {
                 color: Color.ORANGE,
-                chance: 1,
-                chanceShop: 1
+                chance: 0,
+                chanceShop: 0
             }
         };
     }
@@ -106,19 +106,19 @@ export class ItemPools {
                 'Passive',
                 'Natural Crit',
                 'Inate 5% critical chance on every match, +50% critical multiplier',
-                () => {}
+                () => { }
             ),
             new Item(
                 'Passive',
                 '4x4',
                 'Can only match 4 pieces or more, but damage is tripled',
-                () => {}
+                () => { }
             ),
             new Item(
                 'Passive',
                 'Flexible',
                 'Can move diagonals, but they deal -10% damage',
-                () => {}
+                () => { }
             ),
             // new Item(
             //     'Passive',
@@ -130,19 +130,19 @@ export class ItemPools {
                 'Passive',
                 'No barriers',
                 'Grids are 1 column and 1 row larger by default',
-                () => {}
+                () => { }
             ),
             new Item(
                 'Passive',
                 'Tank',
                 'Start with +10 defense and -2 moves',
-                () => {}
+                () => { }
             ),
             new Item(
                 'Passive',
                 'Midas Touched',
                 '+1 Gold for matches with pieces on the extremities, +2 on crit',
-                () => {}
+                () => { }
             ),
         ]
         return passivePool;
@@ -173,11 +173,12 @@ export class ItemPools {
                 price = price * run.costMultiplier;
                 price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
                 return new Item(
-                    'Common',
+                    'Rare',
                     name,
-                    '+1 Crit piece on a boss fight',
+                    '+1 Crit and Move on a boss fight',
                     (() => {
                         run.player.itemData.bossCrits += 1;
+                        run.player.itemData.bossMoves += 1;
                     }).bind(run),
                     Frequency.PASSIVE,
                     price,
@@ -311,7 +312,7 @@ export class ItemPools {
                     'Epic',
                     name,
                     'Can match diagonals',
-                    (() => { run.player.itemData.diagonals = true}).bind(run),
+                    (() => { run.player.itemData.diagonals = true }).bind(run),
                     Frequency.PASSIVE,
                     price,
                     true,

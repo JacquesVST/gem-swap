@@ -13,28 +13,20 @@ export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMargin
     const canvas: Canvas = Canvas.getInstance();
     const p5: P5 = canvas.p5
 
-    let limits: Limits = new Limits(new Position(cumulativeMarginX, cumulativeMarginY), new Position(cumulativeMarginX + itemSideSizeX, cumulativeMarginY + itemSideSizeY));
+    const color: Color = Item.rarityColors[item.rarity].color;
+    const limits: Limits = drawClickableBox(
+        new Position(cumulativeMarginX, cumulativeMarginY),
+        new Position(itemSideSizeX, itemSideSizeY),
+        (option?.disabled ? Color.DISABLED : color).alpha(255 + relativeFade),
+        true
+    );
 
     if (option) {
         option.limits = limits;
     }
 
-    const isMouseOver: boolean = limits.contains(canvas.mousePosition)
-    let opacity: number = (isMouseOver ? 255 : 200) + relativeFade
-    let color: Color = Item.rarityColors[item.rarity].color;
-
-    p5.noStroke();
-    p5.fill((option?.disabled ? Color.DISABLED : color).alpha(opacity <= 0 ? 0 : opacity).value);
-    p5.rect(
-        cumulativeMarginX,
-        cumulativeMarginY,
-        itemSideSizeX,
-        itemSideSizeY,
-        canvas.radius * 2
-    );
-
     p5.textAlign(p5.CENTER, p5.CENTER);
-    p5.textSize(24);
+    p5.textSize(canvas.uiData.fontText);
     let name: string = insertLineBreaks(item.name, p5.map(itemSideSizeX - canvas.margin, 0, p5.textWidth(item.name), 0, item.name.length));
     let textMargin: number = cumulativeMarginY + (itemSideSizeY / 2);
 
@@ -49,12 +41,11 @@ export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMargin
 
     if (!hideDescription) {
 
-        p5.textSize(20);
+        p5.textSize(canvas.uiData.fontDetail);
         let description: string = insertLineBreaks(item.description, p5.map(itemSideSizeX - canvas.margin, 0, p5.textWidth(item.description), 0, item.description.length));
         let subOffset: number = (countOcurrences(name, '\n') + Math.max(1, countOcurrences(description, '\n') - 1)) * canvas.margin;
 
-        p5.fill(200, 200, 200, 255 + relativeFade);
-        p5.strokeWeight(2);
+        fillStroke(Color.WHITE_1, 255 + relativeFade)
         p5.text(
             description,
             cumulativeMarginX + (itemSideSizeX / 2),
@@ -62,11 +53,9 @@ export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMargin
         );
     }
 
+    fillStroke(color, 255 + relativeFade);
     p5.textAlign(p5.LEFT, p5.TOP);
-    p5.fill(color.alpha(255 + relativeFade).value);
-    p5.stroke(0, 0, 0, 255 + relativeFade);
-    p5.strokeWeight(3);
-    p5.textSize(20);
+    p5.textSize(canvas.uiData.fontDetail);
     p5.text(
         item.rarity,
         cumulativeMarginX + canvas.padding,
@@ -92,11 +81,9 @@ export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMargin
         }
 
 
+        fillStroke(item.unique ? Color.YELLOW : Color.ORANGE, 255 + relativeFade);
         p5.textAlign(p5.RIGHT, p5.TOP);
-        p5.fill([...(item.unique ? Color.YELLOW : Color.ORANGE).value, 255 + relativeFade]);
-        p5.stroke(0, 0, 0, 255 + relativeFade);
-        p5.strokeWeight(3);
-        p5.textSize(20);
+        p5.textSize(canvas.uiData.fontDetail);
         p5.text(
             item.unique ? 'Unique' : frequency,
             cumulativeMarginX + itemSideSizeX - canvas.padding,
@@ -111,10 +98,9 @@ export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMargin
             option.disabled = !canAfford;
         }
 
+        fillStroke(canAfford ? Color.YELLOW : Color.RED, 255 + relativeFade);
         p5.textAlign(p5.CENTER, p5.BOTTOM);
-        p5.fill((canAfford ? Color.YELLOW : Color.RED).alpha(255 + relativeFade).value);
-        p5.strokeWeight(2);
-        p5.textSize(24);
+        p5.textSize(canvas.uiData.fontSubText);
         p5.text(
             `$ ${Math.floor(item.price)}`,
             cumulativeMarginX + (itemSideSizeX / 2),
@@ -124,23 +110,72 @@ export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMargin
     }
 }
 
-export function drawClickable(position: Position, size: Position, background: Color, content: () => void, action: () => void, highlight: boolean = false) {
+export function drawClickableBox(position: Position, size: Position, background: Color, highlight: boolean = false, content?: () => void): Limits {
     const canvas: Canvas = Canvas.getInstance();
     const p5: P5 = canvas.p5;
-    /*
-        p5.noStroke();
-        p5.fill(background.alpha().value);
-        p5.rect(
-            cumulativeMarginX,
-            cumulativeMarginY,
-            itemSideSizeX,
-            itemSideSizeY,
-            canvas.radius * 2
-        );
-        */
+
+    const limits: Limits = position.toLimits(size);
+
+    if (highlight) {
+        background = background.alpha(limits.contains(canvas.mousePosition) ? background.a : p5.max(background.a - 55, 0));
+    }
+
+    const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
+
+    startShadow(drawingContext);
+
+    fillFlat(background)
+    p5.rect(
+        position.x,
+        position.y,
+        size.x,
+        size.y,
+        canvas.radius * 2
+    );
+
+    endShadow(drawingContext);
+
+    if (content) {
+        content();
+    }
+
+    return limits;
 }
 
-export function rectWithStripes(drawingPos: Position, drawingSize: Position, radius: number, stripeCount: number, isHorizontal: boolean, color1: Color, color2: Color, opacity: number, p5: P5): void {
+export function startShadow(drawingContext: CanvasRenderingContext2D): void {
+    drawingContext.shadowOffsetX = 5;
+    drawingContext.shadowOffsetY = 5;
+    drawingContext.shadowBlur = 10;
+    drawingContext.shadowColor = 'rgba(0, 0, 0, 0.5)';
+}
+
+export function endShadow(drawingContext: CanvasRenderingContext2D): void {
+    drawingContext.shadowOffsetX = 0;
+    drawingContext.shadowOffsetY = 0;
+    drawingContext.shadowBlur = 0;
+    drawingContext.shadowColor = 'rgba(0, 0, 0, 0)';
+}
+
+export function fillFlat(color: Color = Color.GRAY_3): void {
+    const canvas: Canvas = Canvas.getInstance();
+
+    canvas.p5.noStroke();
+    canvas.p5.fill(color.value)
+}
+
+export function fillStroke(color: Color = Color.WHITE, opacity?: number): void {
+    const canvas: Canvas = Canvas.getInstance();
+
+    opacity = !isNaN(opacity) ? opacity : color.a;
+
+    canvas.p5.strokeWeight(canvas.stroke);
+    canvas.p5.stroke(Color.BLACK.alpha(opacity).value);
+    canvas.p5.fill(color.alpha(opacity).value);
+}
+
+export function rectWithStripes(drawingPos: Position, drawingSize: Position, stripeCount: number, isHorizontal: boolean, color1: Color, color2: Color, opacity: number = 255): void {
+    const canvas: Canvas = Canvas.getInstance();
+
     if (isHorizontal) {
         let stripeSize: number = drawingSize.y / stripeCount;
         for (let i = 0; i < stripeCount; i++) {
@@ -151,15 +186,15 @@ export function rectWithStripes(drawingPos: Position, drawingSize: Position, rad
 
             let allRadius: number[] = [0, 0, 0, 0];
             if (i === 0) {
-                allRadius = [radius, radius, 0, 0];
+                allRadius = [canvas.radius, canvas.radius, 0, 0];
             }
 
             if (i === stripeCount - 1) {
-                allRadius = [0, 0, radius, radius];
+                allRadius = [0, 0, canvas.radius, canvas.radius];
             }
 
-            p5.fill(color.alpha(opacity).value)
-            p5.rect(
+            fillFlat(color.alpha(opacity))
+            canvas.p5.rect(
                 drawingPos.x,
                 drawingPos.y + (i * stripeSize),
                 drawingSize.x,
@@ -180,15 +215,15 @@ export function rectWithStripes(drawingPos: Position, drawingSize: Position, rad
 
             let allRadius: number[] = [0, 0, 0, 0];
             if (i === 0) {
-                allRadius = [radius, 0, 0, radius];
+                allRadius = [canvas.radius, 0, 0, canvas.radius];
             }
 
             if (i === stripeCount - 1) {
-                allRadius = [0, radius, radius, 0];
+                allRadius = [0, canvas.radius, canvas.radius, 0];
             }
 
-            p5.fill(color.alpha(opacity).value);
-            p5.rect(
+            fillFlat(color.alpha(opacity))
+            canvas.p5.rect(
                 drawingPos.x + (i * stripeSize),
                 drawingPos.y,
                 stripeSize,

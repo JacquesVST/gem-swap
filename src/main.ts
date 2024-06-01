@@ -7,13 +7,11 @@ import { DragController } from './controllers/DragController';
 import { EventEmitter } from './controllers/EventEmitter';
 import { ProgressBarController } from './controllers/ProgressBarController';
 import { TextController } from './controllers/TextController';
-import { IRunConfig } from './interfaces/Run';
 import { Color } from './models/Color';
 import { DragAnimation } from './models/DragAnimation';
-import { Player } from './models/Player';
+import { Item } from './models/Item.js';
 import { Position } from './models/Position';
 import { Run, RunConfig } from './models/Run';
-import { Item } from './models/Item.js';
 
 const sketch = (p5Instance: p5) => {
     let run: Run;
@@ -49,7 +47,7 @@ const sketch = (p5Instance: p5) => {
     p5Instance.setup = () => {
         p5Instance.textFont('Open Sans');
 
-        canvas = Canvas.getInstance(p5Instance, 16, 4, 4, 20, 3, 3);
+        canvas = Canvas.getInstance(p5Instance);
         eventEmitter = new EventEmitter('Main');
 
         dragController = DragController.getInstance();
@@ -62,9 +60,9 @@ const sketch = (p5Instance: p5) => {
 
     p5Instance.draw = () => {
         canvas.draw();
+        progressBarController.draw(run);
         run?.draw();
 
-        progressBarController.draw(run);
         dialogController.draw(run);
         dragController.draw(run);
         textController.draw();

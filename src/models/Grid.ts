@@ -1,6 +1,6 @@
 import { Canvas } from "../controllers/Canvas";
 import { EventEmitter } from "../controllers/EventEmitter";
-import { ICanvas, IGrid, IPosition, IRemovePieceAnimationData, ISwapData } from "../interfaces";
+import { ICanvas, IGrid, IPosition, ISwapData } from "../interfaces";
 import { rectWithStripes } from "../utils/Draw";
 import { hasConsecutive } from "../utils/General";
 import { Cell } from "./Cell";
@@ -167,6 +167,12 @@ export class Grid extends EventEmitter implements IGrid {
 
         let horizontalCenterPadding: number = 0;
         let verticalCenterPadding: number = 0;
+
+        let marginLeft: number = 0;
+        let marginRight: number = 0;
+        let marginTop: number = 0;
+        let marginBottom: number = 0;
+
         this.sideSize = 0;
 
         do {
@@ -174,11 +180,11 @@ export class Grid extends EventEmitter implements IGrid {
             horizontalCenterPadding = canvas.playfield.x - (this.width * this.sideSize) - (this.width * canvas.padding) - canvas.padding;
             verticalCenterPadding = canvas.playfield.y - canvas.uiData.topUiSize - canvas.uiData.bottomUiSize - (this.height * this.sideSize) - (this.height * canvas.padding) - canvas.padding;
 
-            if (canvas.horizontalLayout) {
-                horizontalCenterPadding -= (canvas.itemSideSize + canvas.margin) * 2
-            } else {
-                verticalCenterPadding -= (canvas.itemSideSize + canvas.margin) * 2
-            }
+            //  if (canvas.horizontalLayout) {
+            horizontalCenterPadding -= (canvas.itemSideSize + canvas.margin) * 2
+            /// } else {
+            //verticalCenterPadding -= (canvas.itemSideSize + canvas.margin) * 2
+            //  }
 
         } while (horizontalCenterPadding - this.width >= 0 && verticalCenterPadding - this.height >= 0);
 
@@ -187,10 +193,21 @@ export class Grid extends EventEmitter implements IGrid {
             let currentXMargin = (horizontalCenterPadding / 2) + (position.x * this.sideSize) + ((position.x + 1) * canvas.padding) + canvas.margin;
             let currentYMargin = canvas.uiData.topUiSize + (verticalCenterPadding / 2) + (position.y * this.sideSize) + ((position.y + 1) * canvas.padding) + canvas.margin;
 
-            if (canvas.horizontalLayout) {
-                currentXMargin += canvas.itemSideSize + canvas.margin;
-            } else {
-                currentYMargin += canvas.itemSideSize + canvas.margin;
+
+
+            //if (canvas.horizontalLayout) {
+            currentXMargin += canvas.itemSideSize + canvas.margin;
+            //} else {
+            // currentYMargin += canvas.itemSideSize + canvas.margin;
+            //}
+            if (position.checksum === 'X0Y0') {
+                marginLeft = currentXMargin;
+                marginTop = currentYMargin;
+            }
+
+            if (position.checksum === `X${this.width - 1}Y${this.height - 1}`) {
+                marginRight = currentXMargin + this.sideSize;
+                marginBottom = currentYMargin + this.sideSize;
             }
 
             this.getCellbyPosition(position).canvasPosition = new Position(currentXMargin, currentYMargin);
@@ -199,8 +216,12 @@ export class Grid extends EventEmitter implements IGrid {
         Canvas.getInstance().gridData = {
             cellSideSize: this.sideSize,
             totalGridHeight: verticalCenterPadding + (this.height * (this.sideSize + canvas.padding)) + canvas.padding,
-            horizontalCenterPadding: horizontalCenterPadding,
-            verticalCenterPadding: verticalCenterPadding
+            horizontalCenterPadding,
+            verticalCenterPadding,
+            marginLeft,
+            marginRight,
+            marginTop,
+            marginBottom
         };
     }
 
@@ -666,13 +687,11 @@ export class Grid extends EventEmitter implements IGrid {
                     rectWithStripes(
                         cell.canvasPosition,
                         new Position(this.sideSize, this.sideSize),
-                        canvas.radius,
                         6,
                         cell.piece.effect.id === 'Horizontal AOE',
                         color1,
                         color2,
-                        highlight ? 200 : 255,
-                        p5
+                        highlight ? 200 : 255
                     );
                 }
 
@@ -690,7 +709,7 @@ export class Grid extends EventEmitter implements IGrid {
                     p5.fill(Color.YELLOW.value);
                     p5.stroke(Color.BLACK.value);
                     p5.strokeWeight(3);
-                    p5.textSize(24);
+                    p5.textSize(canvas.uiData.fontTitle);
                     p5.text(
                         '$',
                         cell.canvasPosition.x + canvas.padding,

@@ -1,7 +1,7 @@
 import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
 import { AnimationStatus, DialogType, Frequency, ICanvas, IDialog, IDialogOption } from "../interfaces";
-import { drawItem } from "../utils/Draw";
+import { drawItem, endShadow, fillFlat, startShadow } from "../utils/Draw";
 import { generateId, insertLineBreaks } from "../utils/General";
 import { Color } from "./Color";
 import { Item } from "./Item";
@@ -79,7 +79,6 @@ export class Dialog implements IDialog {
         const textMarginCount: number = 8;
         const lengthOffSet: number = 5;
 
-
         let optionsLength: number = this.hasAdditionalButton ? this.options.length - 1 : this.options.length;
 
         optionsLength = optionsLength === 1 ? 2 : optionsLength;
@@ -108,8 +107,11 @@ export class Dialog implements IDialog {
 
         const opacity: number = this.initialOpacity + this.relativeOpacity;
 
-        p5.noStroke();
-        p5.fill(Color.GRAY_2.alpha(opacity).value);
+        const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
+
+        startShadow(drawingContext)
+
+        fillFlat(Color.GRAY_2.alpha(opacity))
         p5.rect(
             margin.x,
             margin.y,
@@ -118,12 +120,14 @@ export class Dialog implements IDialog {
             canvas.radius * 4
         );
 
+        endShadow(drawingContext)
+
         p5.textAlign(p5.CENTER, p5.CENTER);
 
         p5.fill(this.textColor.alpha(opacity).value);
         p5.stroke(Color.BLACK.alpha(opacity).value);
         p5.strokeWeight(3);
-        p5.textSize(24)
+        p5.textSize(canvas.uiData.fontTitle)
         p5.text(
             this.title,
             canvas.playfield.x / 2,
@@ -131,7 +135,7 @@ export class Dialog implements IDialog {
         );
 
         p5.fill(Color.WHITE_1.alpha(opacity).value);
-        p5.textSize(16)
+        p5.textSize(canvas.uiData.fontSubText)
         p5.strokeWeight(2);
         p5.text(
             this.message,
@@ -178,8 +182,13 @@ export class Dialog implements IDialog {
             const opacityHightlight: number = (isMouseOver ? 255 : 200) + this.relativeOpacity
 
             if (!(option instanceof ItemDialogOption) && !(option instanceof PassiveDialogOption)) {
+
+                const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
+
+                startShadow(drawingContext);
+
                 p5.noStroke();
-                p5.fill((option.disabled ? new Color(86, 101, 115) : option.color).alpha(opacityHightlight <= 0 ? 0 : opacityHightlight).value);
+                fillFlat((option.disabled ? Color.DISABLED : option.color).alpha(opacityHightlight <= 0 ? 0 : opacityHightlight));
                 p5.rect(
                     cumulativeMarginX,
                     cumulativeMarginY,
@@ -187,6 +196,9 @@ export class Dialog implements IDialog {
                     optionHeight,
                     canvas.radius * 2
                 );
+
+                endShadow(drawingContext);
+
             }
 
             const opacity: number = this.initialOpacity + this.relativeOpacity;
@@ -201,7 +213,7 @@ export class Dialog implements IDialog {
                 p5.fill(Color.WHITE.alpha(opacity).value);
                 p5.stroke(Color.BLACK.alpha(opacity).value);
                 p5.strokeWeight(3);
-                p5.textSize(20)
+                p5.textSize(canvas.uiData.fontText)
                 p5.text(
                     option.text,
                     cumulativeMarginX + (optionWidth / 2),
@@ -213,7 +225,7 @@ export class Dialog implements IDialog {
 
                     p5.fill(Color.WHITE_1.alpha(opacity).value);
                     p5.strokeWeight(2);
-                    p5.textSize(16)
+                    p5.textSize(canvas.uiData.fontSubText)
                     p5.text(
                         insertLineBreaks(option.subtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(option.subtext), 0, option.subtext.length)),
                         cumulativeMarginX + (optionWidth / 2),
@@ -224,7 +236,7 @@ export class Dialog implements IDialog {
                 if (option.subsubtext) {
                     p5.fill(Color.WHITE_1.alpha(opacity).value);
                     p5.strokeWeight(2);
-                    p5.textSize(16)
+                    p5.textSize(canvas.uiData.fontSubText)
                     p5.text(
                         insertLineBreaks(option.subsubtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(option.subsubtext), 0, option.subsubtext.length)),
                         cumulativeMarginX + (optionWidth / 2),
@@ -268,7 +280,7 @@ export class Dialog implements IDialog {
                 p5.fill(Color.WHITE.alpha(opacity).value);
                 p5.stroke(Color.BLACK.alpha(opacity).value);
                 p5.strokeWeight(3);
-                p5.textSize(20)
+                p5.textSize(canvas.uiData.fontText)
                 p5.text(
                     text,
                     cumulativeMarginX + (optionWidth / 2),
@@ -278,7 +290,7 @@ export class Dialog implements IDialog {
                 if (subtext) {
                     p5.fill(Color.WHITE_1.alpha(opacity).value);
                     p5.strokeWeight(2);
-                    p5.textSize(16)
+                    p5.textSize(canvas.uiData.fontSubText)
                     p5.text(
                         insertLineBreaks(subtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(subtext), 0, subtext.length)),
                         cumulativeMarginX + (optionWidth / 2),
@@ -309,7 +321,7 @@ export class Dialog implements IDialog {
                     p5.fill(Color.WHITE.alpha(opacity).value);
                     p5.stroke(Color.BLACK.alpha(opacity).value);
                     p5.strokeWeight(3);
-                    p5.textSize(20)
+                    p5.textSize(canvas.uiData.fontText)
                     p5.text(
                         'Select passive',
                         cumulativeMarginX + (optionWidth / 2),
@@ -390,7 +402,7 @@ export class ItemDialogOption extends DialogOption {
                                     run.player.itemData.activeItem = aux;
                                 }
                             } else {
-                                run.player.itemData.activeItem = item;
+                                run.player.itemData.activeItem2 = item;
                             }
                         } else {
                             item.effect();

@@ -14,7 +14,6 @@ export interface ICanvas {
     windowSize: IPosition;
     playfield: IPosition;
     mousePosition: IPosition;
-    horizontalLayout: boolean;
     uiData: IUiData;
     gridData: IGridData;
 
@@ -28,12 +27,20 @@ export interface IGridData {
     totalGridHeight: number;
     horizontalCenterPadding: number;
     verticalCenterPadding: number;
+    marginLeft: number;
+    marginRight: number;
+    marginTop: number;
+    marginBottom: number;
 }
 
 export interface IUiData {
-    uiBarSize: number;
-    topBarCount: number;
     bottomBarCount: number;
-    topUiSize?: number;
     bottomUiSize?: number;
+    fontDetail?: number;
+    fontSubText?: number;
+    fontText?: number;
+    fontTitle?: number;
+    topBarCount: number;
+    topUiSize?: number;
+    uiBarSize: number;
 }

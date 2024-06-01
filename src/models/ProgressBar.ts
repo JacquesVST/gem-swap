@@ -2,6 +2,7 @@ import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
 import { EventEmitter } from "../controllers/EventEmitter";
 import { ICanvas, IEventParams, IProgressBar } from "../interfaces";
+import { endShadow, startShadow } from "../utils/Draw";
 import { formatNumber } from "../utils/General";
 import { Color } from "./Color";
 import { Limits } from "./Limits";
@@ -59,6 +60,11 @@ export class ProgressBar extends EventEmitter implements IProgressBar {
             commonMargin = canvas.windowSize.y - canvas.margin - canvas.uiData.bottomUiSize + (canvas.uiData.uiBarSize * bottomIndex) + (canvas.margin * bottomIndex) + canvas.margin / 2;
         }
 
+
+        const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
+
+        startShadow(drawingContext);
+
         const percentageOfBar: number = (this.value + this.relativeLinearSize) / this.maxValue;
         const maxBarSize: number = (canvas.playfield.x - (2 * canvas.margin));
         const finalElementSize: number = (maxBarSize * percentageOfBar) > maxBarSize ? maxBarSize : (maxBarSize * percentageOfBar);
@@ -90,7 +96,7 @@ export class ProgressBar extends EventEmitter implements IProgressBar {
         p5.fill(this.color.value);
         p5.stroke(Color.BLACK.value);
         p5.strokeWeight(3);
-        p5.textSize(20);
+        p5.textSize(canvas.uiData.fontText);
 
         p5.textAlign(p5.LEFT, p5.CENTER);
         p5.text(
@@ -105,6 +111,9 @@ export class ProgressBar extends EventEmitter implements IProgressBar {
             canvas.margin + maxBarSize,
             commonMargin + canvas.padding,
         );
+
+        endShadow(drawingContext);
+
         this.updateAnimation();
     }
 

@@ -2,7 +2,7 @@ import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
 import { EventEmitter } from "../controllers/EventEmitter";
 import { IEventParams, IPiece, IPosition } from "../interfaces";
-import { polygon } from "../utils/Draw";
+import { fillFlat, fillStroke, polygon } from "../utils/Draw";
 import { Color } from "./Color";
 import { Effect } from "./Effect";
 import { SwapData } from "./Grid";
@@ -18,7 +18,7 @@ export class Piece extends EventEmitter implements IPiece {
     critical: boolean = false;
 
     frames: number = 0;
-    initialPosition: Position = Position.ORIGIN
+    initialPosition: Position = Position.ORIGIN;
     relativePositon: Position = Position.ORIGIN;
     relativePositonSpeed: Position = Position.ORIGIN;
 
@@ -85,11 +85,17 @@ export class Piece extends EventEmitter implements IPiece {
     }
 
     draw(): void {
-        const p5: P5 = Canvas.getInstance().p5;
+        const canvas: Canvas = Canvas.getInstance();
+        const p5: P5 = canvas.p5;
 
-        p5.strokeWeight(3);
-        p5.stroke(Color.BLACK.alpha(255 - this.initialOpacity).value);
-        p5.fill(this.shape.color.alpha(255 - this.initialOpacity).value);
+        const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
+
+        drawingContext.shadowOffsetX = 5;
+        drawingContext.shadowOffsetY = 5;
+        drawingContext.shadowBlur = 10;
+        drawingContext.shadowColor = 'rgba(0, 0, 0, 0.5)';
+
+        fillStroke(this.shape.color, 255 - this.initialOpacity)
         polygon(
             this.initialPosition.x + (this.cellSideSize / 2) + this.relativePositon.x,
             this.initialPosition.y + (this.cellSideSize / 2) + this.relativePositon.y,
@@ -98,17 +104,24 @@ export class Piece extends EventEmitter implements IPiece {
             p5
         );
 
+        drawingContext.shadowOffsetX = 0;
+        drawingContext.shadowOffsetY = 0;
+        drawingContext.shadowBlur = 0;
+        drawingContext.shadowColor = 'rgba(0, 0, 0, 0)'
+
         if (this.critical) {
             p5.textAlign(p5.CENTER, p5.CENTER);
-            p5.noStroke();
-            p5.fill(Color.BLACK.value);
-            p5.textSize(25);
+            fillFlat(Color.BLACK);
+            p5.textSize(canvas.uiData.fontTitle);
             p5.text(
                 '!',
                 this.initialPosition.x + (this.cellSideSize / 2) + this.relativePositon.x,
                 this.initialPosition.y + (this.cellSideSize / 2) + this.relativePositon.y,
             );
         }
+
+
+
         this.updateAnimation();
     }
 

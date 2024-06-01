@@ -5,6 +5,7 @@ import { EventEmitter } from "../controllers/EventEmitter";
 import { ProgressBarController } from "../controllers/ProgressBarController";
 import { TextController } from "../controllers/TextController";
 import { DialogType, Difficulty, IBestNumbers, ICanvas, IDamageData, IEventParams, IRun, IRunConfig, IRunItemData, ProgressBarIndexes } from "../interfaces";
+import { endShadow, fillFlat, fillStroke, startShadow } from "../utils/Draw";
 import { formatNumber } from "../utils/General";
 import { getBestNumbers, setBestNumbers } from "../utils/LocalStorage";
 import { Cell } from "./Cell";
@@ -74,6 +75,11 @@ export class Run extends EventEmitter implements IRun {
     configureListeners(): void {
         this.on('Player:AddedGold', (gold: number) => {
             TextController.getInstance().goldAnimation(gold);
+        })
+
+        this.on('Player:Healed', (heal: number) => {
+            this.updateHealth();
+            TextController.getInstance().playerHealedAnimaiton(heal);
         })
 
         this.on('Player:PlayerDied', () => {
@@ -181,11 +187,22 @@ export class Run extends EventEmitter implements IRun {
 
             if (this.map.findNextEnemy() instanceof BossEnemy) {
                 TextController.getInstance().bossFightAnimation();
+                this.player.itemData.bonusMoves += this.player.itemData.bossMoves;
+                this.player.moves += this.player.itemData.bossMoves;
+                this.updateMoves();
+            }
+
+            if (enemy instanceof BossEnemy) {
+                this.player.itemData.bonusMoves -= this.player.itemData.bossMoves;
+                this.player.maxMoves = this.player.totalMoves;
+                this.player.moves = this.player.totalMoves;
+                this.updateMoves();
             }
 
             if (!enemy.isLast) {
                 this.sounds['enemyDefeat'].play();
             }
+
 
             if (enemy.hasDrop) {
                 let isMiniBoss = enemy instanceof MiniBossEnemy;
@@ -206,6 +223,7 @@ export class Run extends EventEmitter implements IRun {
 
         this.on('Grid:MoveDone', () => {
             if (this.combo > 0) {
+                console.log(this.map.isBoss)
                 this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
             } else {
                 this.map.grid.isUnstable = false;
@@ -334,6 +352,7 @@ export class Run extends EventEmitter implements IRun {
     }
 
     updateMoves(): void {
+        console.log(this.player)
         if (this.player.hasItem('Moves as you Crits')) {
             this.player.itemData.bonusMoves = this.player.critical
         }
@@ -344,213 +363,183 @@ export class Run extends EventEmitter implements IRun {
         this.map.grid?.draw(!!DialogController.getInstance().currentDialog);
         this.map.grid?.drawPieces();
         this.drawNumbers();
-        this.drawEnemyDetails()
-        this.player.draw()
+        this.drawEnemyDetails();
+        this.player.draw();
     }
 
     drawNumbers(): void {
-        const canvas: ICanvas = Canvas.getInstance();
-        const p5: P5 = canvas.p5
+        const canvas: Canvas = Canvas.getInstance();
+        const p5: P5 = canvas.p5;
 
-        let height: number = canvas.itemSideSize / 4
-        let horizontalCenterPadding: number = canvas.windowSize.x - canvas.margin - ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridData.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
+        const rectLeft: number = canvas.gridData.marginRight + canvas.margin;
+        const rectRight: number = canvas.windowSize.x - canvas.margin * 2
+        const referenceY: number = canvas.windowSize.y / 2;
+        const textLeft = rectLeft + canvas.padding;
+        const textRight = rectRight - canvas.padding;
 
-        let numbersSlotX: number = horizontalCenterPadding
-        let numbersSlotY: number = canvas.windowSize.y / 2;
+        const width: number = rectRight - rectLeft;
+        const height: number = canvas.itemSideSize / 2.5;
 
-        let bests: IBestNumbers = getBestNumbers();
+        // Rects
 
-        if (canvas.horizontalLayout) {
-            // score
-            p5.noStroke();
-            p5.fill(Color.GRAY_3.value);
-            p5.rect(
-                numbersSlotX,
-                numbersSlotY - height * 2 - canvas.margin * 1.5,
-                canvas.itemSideSize,
-                height,
-                canvas.radius
-            );
+        const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
 
-            p5.textAlign(p5.LEFT, p5.CENTER);
-            p5.fill(Color.WHITE.value);
-            p5.stroke(Color.BLACK.value);
-            p5.strokeWeight(3);
-            p5.textSize(24)
-            p5.text(
-                'Score',
-                numbersSlotX + canvas.padding,
-                numbersSlotY - height * 1.5 - canvas.margin * 2,
-            );
+        startShadow(drawingContext);
 
-            p5.textAlign(p5.RIGHT, p5.CENTER)
-            p5.text(
-                formatNumber(this.score),
-                numbersSlotX + canvas.itemSideSize - canvas.padding,
-                numbersSlotY - height * 1.5 - canvas.margin * 2,
-            );
+        fillFlat(Color.GRAY_3)
+        p5.rect(
+            rectLeft,
+            referenceY - height * 2 - canvas.margin * 1.5,
+            width,
+            height,
+            canvas.radius
+        );
+        p5.rect(
+            rectLeft,
+            referenceY - height - canvas.margin / 2,
+            width,
+            height,
+            canvas.radius
+        );
+        p5.rect(
+            rectLeft,
+            referenceY + canvas.margin / 2,
+            width,
+            height,
+            canvas.radius
+        );
+        p5.rect(
+            rectLeft,
+            referenceY + height + canvas.margin * 1.5,
+            width,
+            height,
+            canvas.radius
+        );
 
-            p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.fill(Color.WHITE_1.value);
-            p5.textSize(16)
-            p5.text(
-                'Best',
-                numbersSlotX + canvas.padding,
-                numbersSlotY - height * 1.5 - canvas.margin / 2,
-            );
+        endShadow(drawingContext);
 
-            p5.textAlign(p5.RIGHT, p5.CENTER)
-            p5.text(
-                formatNumber(bests.bestScore),
-                numbersSlotX + canvas.itemSideSize - canvas.padding,
-                numbersSlotY - height * 1.5 - canvas.margin / 2,
-            );
+        // Currents
+        fillStroke();
+        p5.textAlign(p5.LEFT, p5.CENTER);
+        p5.textSize(canvas.uiData.fontText);
+        p5.text(
+            'Score',
+            textLeft,
+            referenceY - height * 1.5 - canvas.margin * 2
+        );
 
+        p5.text(
+            'Damage',
+            textLeft,
+            referenceY - height / 2 - canvas.margin
+        );
 
-            // damage
-            p5.noStroke()
-            p5.fill(Color.GRAY_3.value);
-            p5.rect(
-                numbersSlotX,
-                numbersSlotY - height - canvas.margin / 2,
-                canvas.itemSideSize,
-                height,
-                canvas.radius
-            );
+        p5.text(
+            'Combo',
+            textLeft,
+            referenceY + height / 2
+        );
 
-            p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.fill(Color.WHITE.value);
-            p5.stroke(Color.BLACK.value);
-            p5.strokeWeight(3);
-            p5.textSize(24)
-            p5.text(
-                'Damage',
-                numbersSlotX + canvas.padding,
-                numbersSlotY - height / 2 - canvas.margin
-            );
+        p5.textAlign(p5.RIGHT, p5.CENTER);
+        p5.text(
+            formatNumber(this.score),
+            textRight,
+            referenceY - height * 1.5 - canvas.margin * 2
+        );
 
-            p5.textAlign(p5.RIGHT, p5.CENTER)
-            p5.text(
-                formatNumber(this.damage),
-                numbersSlotX + canvas.itemSideSize - canvas.padding,
-                numbersSlotY - height / 2 - canvas.margin
-            );
+        p5.text(
+            formatNumber(this.damage),
+            textRight,
+            referenceY - height / 2 - canvas.margin
+        );
 
-            p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.fill(Color.WHITE_1.value);
-            p5.textSize(16)
-            p5.text(
-                'Best',
-                numbersSlotX + canvas.padding,
-                numbersSlotY - height / 2 + canvas.margin / 2
-            );
+        p5.text(
+            formatNumber(this.combo),
+            textRight,
+            referenceY + height / 2
+        );
 
-            p5.textAlign(p5.RIGHT, p5.CENTER)
-            p5.text(
-                formatNumber(bests.bestDamage),
-                numbersSlotX + canvas.itemSideSize - canvas.padding,
-                numbersSlotY - height / 2 + canvas.margin / 2
-            );
+        // Bests
+        const bests: IBestNumbers = getBestNumbers();
 
-            // combo
-            p5.noStroke()
-            p5.fill(Color.GRAY_3.value);
-            p5.rect(
-                numbersSlotX,
-                numbersSlotY + canvas.margin / 2,
-                canvas.itemSideSize,
-                height,
-                canvas.radius
-            );
+        fillStroke(Color.WHITE_1);
+        p5.textAlign(p5.LEFT, p5.CENTER);
+        p5.textSize(canvas.uiData.fontSubText);
+        p5.text(
+            'Best',
+            textLeft,
+            referenceY - height * 1.5 - canvas.margin / 2
+        );
 
-            p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.fill(Color.WHITE.value);
-            p5.stroke(Color.BLACK.value);
-            p5.strokeWeight(3);
-            p5.textSize(24)
-            p5.text(
-                'Combo',
-                numbersSlotX + canvas.padding,
-                numbersSlotY + height / 2
-            );
+        p5.text(
+            'Best',
+            textLeft,
+            referenceY - height / 2 + canvas.margin / 2
+        );
 
-            p5.textAlign(p5.RIGHT, p5.CENTER)
-            p5.text(
-                formatNumber(this.combo),
-                numbersSlotX + canvas.itemSideSize - canvas.padding,
-                numbersSlotY + height / 2
-            );
+        p5.text(
+            'Best',
+            textLeft,
+            referenceY + height / 2 + canvas.margin * 1.5
+        );
 
-            p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.fill(Color.WHITE_1.value);
-            p5.textSize(16)
-            p5.text(
-                'Best',
-                numbersSlotX + canvas.padding,
-                numbersSlotY + height / 2 + canvas.margin * 1.5,
-            );
+        p5.textAlign(p5.RIGHT, p5.CENTER);
+        p5.text(
+            formatNumber(bests.bestScore),
+            textRight,
+            referenceY - height * 1.5 - canvas.margin / 2
+        );
 
-            p5.textAlign(p5.RIGHT, p5.CENTER)
-            p5.text(
-                formatNumber(bests.bestCombo),
-                numbersSlotX + canvas.itemSideSize - canvas.padding,
-                numbersSlotY + height / 2 + canvas.margin * 1.5,
-            );
+        p5.text(
+            formatNumber(bests.bestDamage),
+            textRight,
+            referenceY - height / 2 + canvas.margin / 2
+        );
 
-            // gold
+        p5.text(
+            formatNumber(bests.bestCombo),
+            textRight,
+            referenceY + height / 2 + canvas.margin * 1.5
+        );
 
-            p5.noStroke()
-            p5.fill(Color.GRAY_3.value);
-            p5.rect(
-                numbersSlotX,
-                numbersSlotY + height + canvas.margin * 1.5,
-                canvas.itemSideSize,
-                height,
-                canvas.radius
-            );
+        // Gold
 
-            p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.fill(Color.YELLOW.value);
-            p5.stroke(Color.BLACK.value);
-            p5.strokeWeight(3);
-            p5.textSize(24)
-            p5.text(
-                'Gold',
-                numbersSlotX + canvas.padding,
-                numbersSlotY + height * 1.5 + canvas.margin * 1.5,
-            );
+        fillStroke(Color.YELLOW)
+        p5.textAlign(p5.LEFT, p5.CENTER)
+        p5.textSize(canvas.uiData.fontText)
+        p5.text(
+            'Gold',
+            textLeft,
+            referenceY + height * 1.5 + canvas.margin * 1.5
+        );
 
-            p5.textAlign(p5.RIGHT, p5.CENTER)
-            p5.fill(Color.YELLOW.value);
-            p5.textSize(24)
-            p5.text(
-                `$ ${this.player.gold}`,
-                numbersSlotX + canvas.itemSideSize - canvas.padding,
-                numbersSlotY + height * 1.5 + canvas.margin * 1.5,
-            );
+        p5.textAlign(p5.RIGHT, p5.CENTER)
+        p5.text(
+            `$ ${this.player.gold}`,
+            textRight,
+            referenceY + height * 1.5 + canvas.margin * 1.5
+        );
 
+        // Info
 
-        }
+        fillStroke();
+        p5.textStyle(p5.ITALIC);
+        p5.textAlign(p5.CENTER, p5.CENTER);
+        p5.textSize(canvas.uiData.fontText);
 
-        p5.textStyle(p5.ITALIC)
-        p5.textAlign(p5.CENTER, p5.CENTER)
-        p5.fill(255);
-        p5.textSize(20)
         p5.text(
             '(S)tats',
             canvas.windowSize.x / 2 - canvas.itemSideSize / 2,
             canvas.windowSize.y - canvas.uiData.bottomUiSize
         );
 
-        p5.textAlign(p5.CENTER, p5.CENTER)
-        p5.fill(255);
-        p5.textSize(20)
         p5.text(
             '(I)nventory',
             canvas.windowSize.x / 2 + canvas.itemSideSize / 2,
             canvas.windowSize.y - canvas.uiData.bottomUiSize
         );
-        p5.textStyle(p5.NORMAL)
+        p5.textStyle(p5.NORMAL);
+
     }
 
     drawEnemyDetails() {
@@ -562,8 +551,7 @@ export class Run extends EventEmitter implements IRun {
             let slotX: number = canvas.windowSize.x - canvas.margin - ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridData.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
             let slotY: number = canvas.uiData.topUiSize + canvas.margin * 2 + canvas.padding;
 
-            p5.noStroke()
-            p5.fill(60, 200);
+            fillFlat(Color.GRAY_3.alpha(200));
             p5.rect(
                 slotX,
                 slotY,
@@ -585,7 +573,7 @@ export class Run extends EventEmitter implements IRun {
             p5.fill(255);
             p5.stroke(0);
             p5.strokeWeight(3);
-            p5.textSize(20)
+            p5.textSize(canvas.uiData.fontText)
             p5.text(
                 this.map.enemy.name,
                 slotX + canvas.itemSideSize / 2,
@@ -596,7 +584,7 @@ export class Run extends EventEmitter implements IRun {
             p5.fill(200);
             p5.stroke(0);
             p5.strokeWeight(3);
-            p5.textSize(20)
+            p5.textSize(canvas.uiData.fontText)
             p5.text(
                 'Attack',
                 slotX + canvas.padding,
@@ -826,7 +814,7 @@ export class Run extends EventEmitter implements IRun {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(
             this.itemOptions,
             ItemPools.defaultPool(this),
-            ['Common', 'Rare', 'Epic'],
+            ['Common', 'Rare'],
             this.player
         );
 

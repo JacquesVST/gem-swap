@@ -45,7 +45,7 @@ export class CommonEnemy extends Enemy {
 
         this.name = 'Enemy';
         this.color = new Color(86, 101, 115);
-        this.hasDrop = Math.random() > 0.98;
+        this.hasDrop = Math.random() > 0.99;
 
         this.calculateStats(stage);
     }

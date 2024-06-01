@@ -40,6 +40,7 @@ export interface IPlayerItemData {
     reach: number;
     criticalChance: number;
     rerolls: number;
+    bossMoves: number;
 }
 
 export interface IDamageData {

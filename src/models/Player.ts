@@ -2,8 +2,8 @@ import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
 import { DialogController } from "../controllers/DialogController";
 import { EventEmitter } from "../controllers/EventEmitter";
-import { Frequency, ICanvas, IDamageData, IPlayer, IPlayerItemData } from "../interfaces";
-import { drawItem } from "../utils/Draw";
+import { Frequency, IDamageData, IPlayer, IPlayerItemData } from "../interfaces";
+import { drawItem, endShadow, fillFlat, fillStroke, rectWithStripes, startShadow } from "../utils/Draw";
 import { formatNumber, insertLineBreaks } from "../utils/General";
 import { Color } from "./Color";
 import { Enemy } from "./Enemy";
@@ -31,23 +31,25 @@ export class Player extends EventEmitter implements IPlayer {
 
     passive: Item;
     items: Item[] = [];
+
     itemData: PlayerItemData = {
         activeItem: undefined,
-        activeItemLimits: undefined,
         activeItem2: undefined,
         activeItem2Limits: undefined,
-        passiveLimits: undefined,
+        activeItemLimits: undefined,
         bonusMoves: 0,
         bossCrits: 0,
+        bossMoves: 0,
+        criticalChance: 0,
         diagonals: false,
         goldAddCount: 0,
         hasShield: false,
         hasUsedShield: false,
         moveSaverChance: 0,
         omniMoves: 0,
+        passiveLimits: undefined,
         reach: 1,
-        criticalChance: 0,
-        rerolls: 0
+        rerolls: 0,
     }
 
     constructor(health: number, moves: number, attack: number, defense: number, passive?: Item) {
@@ -100,6 +102,10 @@ export class Player extends EventEmitter implements IPlayer {
         this.on('Main:KeyPressed', (event: KeyboardEvent, run: Run) => {
             if ((event.key === 'i' || event.key === 'I') && !run.hasDialogOpen) {
                 this.hasInventoryOpen = !this.hasInventoryOpen;
+            }
+
+            if (this.hasInventoryOpen && event.key === 'Escape') {
+                this.hasInventoryOpen = false;
             }
 
             if ((event.key === 's' || event.key === 'S') && !run.hasDialogOpen) {
@@ -204,6 +210,7 @@ export class Player extends EventEmitter implements IPlayer {
         }
 
         this.health += heal;
+        this.emit('Healed', heal);
     }
 
     addGold(gold: number): void {
@@ -264,35 +271,78 @@ export class Player extends EventEmitter implements IPlayer {
     }
 
     draw(): void {
-        const canvas: ICanvas = Canvas.getInstance();
+        const canvas: Canvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
+        const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
 
-        const itemMarginX: number = canvas.margin + ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridData.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
+        const rectLeft: number = canvas.margin * 2;
+        const rectRight: number = canvas.gridData.marginLeft - canvas.margin;
+        const referenceY: number = canvas.windowSize.y / 2;
 
-        if (canvas.horizontalLayout) {
-            // active item slots
-            if (!this.hasStatsOpen) {
+        const itemLeft: number = ((canvas.gridData.marginLeft - canvas.margin) / 2) + canvas.margin - canvas.itemSideSize / 2
 
-                const activeSlotX: number = itemMarginX
-                const activeSlotY: number = (canvas.windowSize.y / 2) - (canvas.itemSideSize / 2);
+        if (!this.hasStatsOpen) {
 
-                const activeSlotX2: number = itemMarginX + canvas.itemSideSize / 4;
-                const activeSlotY2: number = activeSlotY - canvas.margin * 1.5 - canvas.itemSideSize / 2
+            const compactItemSideSize: number = canvas.itemSideSize / 6 * 4;
 
-                const passiveSlotX: number = itemMarginX + canvas.itemSideSize / 4;
-                const passiveSlotY: number = activeSlotY + canvas.itemSideSize + canvas.margin * 1.5
+            const activeSlotX: number = itemLeft
+            const activeSlotY: number = (canvas.windowSize.y / 2) - (canvas.itemSideSize / 2);
 
-                this.itemData.activeItemLimits = new Limits(new Position(activeSlotX, activeSlotY), new Position(activeSlotX + canvas.itemSideSize, activeSlotY + canvas.itemSideSize))
-                this.itemData.activeItem2Limits = new Limits(new Position(activeSlotX2, activeSlotY2), new Position(activeSlotX2 + canvas.itemSideSize / 2, activeSlotY2 + canvas.itemSideSize / 2))
-                this.itemData.passiveLimits = new Limits(new Position(passiveSlotX, passiveSlotY), new Position(passiveSlotX + canvas.itemSideSize / 2, passiveSlotY + canvas.itemSideSize / 2))
+            const activeSlotX2: number = itemLeft + canvas.itemSideSize / 6;
+            const activeSlotY2: number = activeSlotY - canvas.margin - (canvas.itemSideSize / 6 * 4)
 
-                const opacity1: number = this.itemData.activeItemLimits.contains(canvas.mousePosition) ? 200 : 255;
-                const opacity2: number = this.itemData.activeItem2Limits.contains(canvas.mousePosition) ? 200 : 255;
-                const opacity3: number = this.itemData.passiveLimits.contains(canvas.mousePosition) ? 200 : 255;
+            const passiveSlotX: number = itemLeft + canvas.itemSideSize / 6;
+            const passiveSlotY: number = activeSlotY + canvas.itemSideSize + canvas.margin;
 
+            this.itemData.activeItemLimits = new Position(activeSlotX, activeSlotY).toLimits(new Position(canvas.itemSideSize, canvas.itemSideSize));
+            this.itemData.activeItem2Limits = new Position(activeSlotX2, activeSlotY2).toLimits(new Position(compactItemSideSize, compactItemSideSize));
+            this.itemData.passiveLimits = new Position(passiveSlotX, passiveSlotY).toLimits(new Position(compactItemSideSize, compactItemSideSize));
 
-                (p5.drawingContext as CanvasRenderingContext2D).setLineDash([10, 10]);
-                p5.fill(Color.GRAY_3.alpha(opacity1).value);
+            const opacity1: number = this.itemData.activeItemLimits.contains(canvas.mousePosition) ? 200 : 255;
+            const opacity2: number = this.itemData.activeItem2Limits.contains(canvas.mousePosition) ? 200 : 255;
+            const opacity3: number = this.itemData.passiveLimits.contains(canvas.mousePosition) ? 200 : 255;
+
+            drawingContext.setLineDash([10, 10])
+            startShadow(drawingContext);
+
+            p5.fill(Color.GRAY_3.alpha(opacity1).value);
+            p5.rect(
+                activeSlotX,
+                activeSlotY,
+                canvas.itemSideSize,
+                canvas.itemSideSize,
+                canvas.radius
+            );
+
+            p5.fill(Color.GRAY_3.alpha(opacity3).value);
+            p5.rect(
+                passiveSlotX,
+                passiveSlotY,
+                compactItemSideSize,
+                compactItemSideSize,
+                canvas.radius
+            );
+
+            if (this.hasItem('Extra Active Item')) {
+                p5.fill(Color.GRAY_3.alpha(opacity2).value);
+                p5.rect(
+                    activeSlotX2,
+                    activeSlotY2,
+                    compactItemSideSize,
+                    compactItemSideSize,
+                    canvas.radius
+                );
+            }
+
+            drawingContext.setLineDash([])
+            endShadow(drawingContext);
+
+            // slot 1
+            if (this.itemData.activeItem) {
+                const color: Color = this.itemData.activeItem.disabled ? Color.GRAY_3 : Item.rarityColors[this.itemData.activeItem.rarity].color.alpha(opacity1);
+
+                startShadow(drawingContext);
+                fillFlat(color)
                 p5.rect(
                     activeSlotX,
                     activeSlotY,
@@ -300,339 +350,277 @@ export class Player extends EventEmitter implements IPlayer {
                     canvas.itemSideSize,
                     canvas.radius
                 );
+                endShadow(drawingContext)
 
-                if (this.hasItem('Extra Active Item')) {
-                    p5.fill(Color.GRAY_3.alpha(opacity2).value);
-                    p5.rect(
-                        activeSlotX2,
-                        activeSlotY2,
-                        canvas.itemSideSize / 2,
-                        canvas.itemSideSize / 2,
-                        canvas.radius
-                    );
-                }
+                p5.textAlign(p5.CENTER, p5.CENTER)
+                p5.textSize(canvas.uiData.fontText)
+                let name: string = insertLineBreaks(this.itemData.activeItem.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.itemData.activeItem.name), 0, this.itemData.activeItem.name.length));
 
-                p5.fill(Color.GRAY_3.alpha(opacity3).value);
+                fillStroke();
+                p5.text(
+                    name,
+                    activeSlotX + canvas.itemSideSize / 2,
+                    canvas.windowSize.y / 2,
+                );
+
+                p5.textAlign(p5.CENTER, p5.BOTTOM)
+                fillStroke(Color.WHITE_1)
+                p5.textSize(canvas.uiData.fontSubText)
+                p5.text(
+                    'Space',
+                    activeSlotX + canvas.itemSideSize / 2,
+                    activeSlotY + canvas.itemSideSize + - canvas.padding
+                );
+
+            }
+
+            // slot 2
+            if (this.hasItem('Extra Active Item') && this.itemData.activeItem2) {
+                const color: Color = this.itemData.activeItem2.disabled ? Color.GRAY_3 : Item.rarityColors[this.itemData.activeItem2.rarity].color.alpha(opacity2);
+
+                startShadow(drawingContext);
+                p5.fill(color.value);
+                p5.rect(
+                    activeSlotX2,
+                    activeSlotY2,
+                    compactItemSideSize,
+                    compactItemSideSize,
+                    canvas.radius
+                );
+                endShadow(drawingContext);
+
+                p5.textAlign(p5.CENTER, p5.CENTER);
+                p5.textSize(canvas.uiData.fontSubText);
+                let name: string = insertLineBreaks(this.itemData.activeItem2.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.itemData.activeItem2.name), 0, this.itemData.activeItem2.name.length));
+
+                fillStroke();
+                p5.text(
+                    name,
+                    activeSlotX2 + compactItemSideSize / 2,
+                    activeSlotY2 + compactItemSideSize / 2,
+                );
+
+                p5.textAlign(p5.CENTER, p5.BOTTOM);
+                fillStroke(Color.WHITE_1);
+                p5.textSize(canvas.uiData.fontDetail);
+                p5.text(
+                    'Enter',
+                    activeSlotX2 + compactItemSideSize / 2,
+                    activeSlotY2 + compactItemSideSize - canvas.padding
+                );
+
+            }
+
+            //passive
+            if (this.passive) {
+                const color: Color = this.passive?.disabled ? Color.GRAY_3 : Item.rarityColors[this.passive.rarity].color.alpha(opacity3);
+
+                startShadow(drawingContext)
+                fillFlat(color);
                 p5.rect(
                     passiveSlotX,
                     passiveSlotY,
-                    canvas.itemSideSize / 2,
-                    canvas.itemSideSize / 2,
+                    compactItemSideSize,
+                    compactItemSideSize,
                     canvas.radius
                 );
+                endShadow(drawingContext)
 
-                (p5.drawingContext as CanvasRenderingContext2D).setLineDash([]);
+                p5.textAlign(p5.CENTER, p5.CENTER);
+                p5.textSize(canvas.uiData.fontSubText);
 
-                // slot 1
-                if (this.itemData.activeItem) {
-                    const color: Color = this.itemData.activeItem.disabled ? Color.GRAY_3 : Item.rarityColors[this.itemData.activeItem.rarity].color.alpha(opacity1);
+                let name: string = insertLineBreaks(this.passive.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.passive.name), 0, this.passive.name.length));
 
-                    p5.fill(color.value);
-                    p5.rect(
-                        activeSlotX,
-                        activeSlotY,
-                        canvas.itemSideSize,
-                        canvas.itemSideSize,
-                        canvas.radius
-                    );
-
-                    p5.textAlign(p5.CENTER, p5.CENTER)
-                    p5.textSize(20)
-                    let name: string = insertLineBreaks(this.itemData.activeItem.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.itemData.activeItem.name), 0, this.itemData.activeItem.name.length));
-
-                    p5.fill(Color.WHITE.value);
-                    p5.stroke(Color.BLACK.value);
-                    p5.strokeWeight(3);
-                    p5.text(
-                        name,
-                        activeSlotX + canvas.itemSideSize / 2,
-                        canvas.windowSize.y / 2,
-                    );
-
-                    p5.textAlign(p5.CENTER, p5.BOTTOM)
-                    p5.fill(Color.WHITE_1.value);
-                    p5.strokeWeight(2);
-                    p5.textSize(16)
-                    p5.text(
-                        'Space',
-                        activeSlotX + canvas.itemSideSize / 2,
-                        activeSlotY + canvas.itemSideSize + - canvas.padding
-                    );
-
-                }
-
-                // slot 2
-                if (this.hasItem('Extra Active Item') && this.itemData.activeItem2) {
-                    const color: Color = this.itemData.activeItem2.disabled ? Color.GRAY_3 : Item.rarityColors[this.itemData.activeItem2.rarity].color.alpha(opacity2);
-
-                    p5.fill(color.value);
-                    p5.rect(
-                        activeSlotX2,
-                        activeSlotY2,
-                        canvas.itemSideSize / 2,
-                        canvas.itemSideSize / 2,
-                        canvas.radius
-                    );
-
-                    p5.textAlign(p5.CENTER, p5.CENTER)
-                    p5.textSize(20)
-                    let name: string = insertLineBreaks(this.itemData.activeItem2.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.itemData.activeItem2.name), 0, this.itemData.activeItem2.name.length));
-
-                    p5.fill(Color.WHITE.value);
-                    p5.stroke(Color.BLACK.value);
-                    p5.strokeWeight(3);
-                    p5.text(
-                        name,
-                        activeSlotX2 + canvas.itemSideSize / 4,
-                        activeSlotY2 + canvas.itemSideSize / 4,
-                    );
-
-                    p5.textAlign(p5.CENTER, p5.BOTTOM)
-                    p5.fill(Color.WHITE_1.value);
-                    p5.strokeWeight(2);
-                    p5.textSize(16)
-                    p5.text(
-                        'Enter',
-                        activeSlotX2 + canvas.itemSideSize / 4,
-                        activeSlotY2 + canvas.itemSideSize / 2 - canvas.padding
-                    );
-
-                }
-
-                //passive
-                if (this.passive) {
-                    const color: Color = this.passive?.disabled ? Color.GRAY_3 : Item.rarityColors[this.passive.rarity].color.alpha(opacity3);
-
-                    p5.fill(color.value);
-                    p5.rect(
-                        passiveSlotX,
-                        passiveSlotY,
-                        canvas.itemSideSize / 2,
-                        canvas.itemSideSize / 2,
-                        canvas.radius
-                    );
-
-                    p5.textAlign(p5.CENTER, p5.CENTER)
-                    p5.textSize(20)
-
-                    let name: string = insertLineBreaks(this.passive.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.passive.name), 0, this.passive.name.length));
-
-                    p5.fill(Color.WHITE.value);
-                    p5.stroke(Color.BLACK.value);
-                    p5.strokeWeight(3);
-                    p5.text(
-                        name,
-                        passiveSlotX + canvas.itemSideSize / 4,
-                        passiveSlotY + canvas.itemSideSize / 4,
-                    );
-
-                    p5.textAlign(p5.CENTER, p5.BOTTOM)
-                    p5.fill(Color.WHITE_1.value);
-                    p5.strokeWeight(2);
-                    p5.textSize(16)
-                    p5.text(
-                        'Passive',
-                        passiveSlotX + canvas.itemSideSize / 4,
-                        passiveSlotY + canvas.itemSideSize / 2 - canvas.padding
-                    );
-
-                }
-            }
-
-            if (this.hasStatsOpen) {
-                let height: number = canvas.itemSideSize / 4;
-                let marginY: number = canvas.windowSize.y / 2;
-
-                let marginX: number = itemMarginX + canvas.padding;
-
-                p5.noStroke()
-                p5.fill(Color.GRAY_3.value);
-                p5.rect(
-                    itemMarginX,
-                    marginY - (height * 3),
-                    canvas.itemSideSize,
-                    height * 6,
-                    canvas.radius
+                fillStroke();
+                p5.text(
+                    name,
+                    passiveSlotX + compactItemSideSize / 2,
+                    passiveSlotY + compactItemSideSize / 2,
                 );
 
-                p5.fill(Color.WHITE.value);
-                p5.stroke(Color.BLACK.value);
-                p5.strokeWeight(3);
-
-                // attack
-                p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.textSize(16)
+                p5.textAlign(p5.CENTER, p5.BOTTOM)
+                fillStroke(Color.WHITE_1);
+                p5.textSize(canvas.uiData.fontDetail)
                 p5.text(
-                    'Attack',
-                    marginX,
-                    marginY - height * 2.5
-                );
-
-                p5.textAlign(p5.RIGHT, p5.CENTER)
-                p5.textSize(20)
-                p5.text(
-                    `${formatNumber(this.attack)}`,
-                    marginX + canvas.itemSideSize - canvas.padding * 2,
-                    marginY - height * 2.5
-                );
-
-                // defense
-                p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.textSize(16)
-                p5.text(
-                    'Defense',
-                    marginX,
-                    marginY - height * 1.5
-                );
-
-                p5.textAlign(p5.RIGHT, p5.CENTER)
-                p5.text(
-                    `${formatNumber(this.defense)}`,
-                    marginX + canvas.itemSideSize - canvas.padding * 2,
-                    marginY - height * 1.5
-                );
-
-                // crit count
-                p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.textSize(16)
-                p5.text(
-                    'Crit Count',
-                    marginX,
-                    marginY - height * 0.5
-                );
-
-                p5.textAlign(p5.RIGHT, p5.CENTER)
-                p5.text(
-                    `${formatNumber(this.critical)}`,
-                    marginX + canvas.itemSideSize - canvas.padding * 2,
-                    marginY - height * 0.5
-                );
-
-                // crit damage
-                p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.textSize(16)
-                p5.text(
-                    'Crit Damage',
-                    marginX,
-                    marginY + height * 0.5
-                );
-
-                p5.textAlign(p5.RIGHT, p5.CENTER)
-                p5.textSize(20)
-                p5.text(
-                    `${Math.floor((this.criticalMultiplier - 1) * 100)}%`,
-                    marginX + canvas.itemSideSize - canvas.padding * 2,
-                    marginY + height * 0.5
-                );
-
-                // damage multiplier
-                p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.textSize(16)
-                p5.text(
-                    'Multiplier',
-                    marginX,
-                    marginY + height * 1.5
-                );
-
-                p5.textAlign(p5.RIGHT, p5.CENTER)
-                p5.textSize(20)
-                p5.text(
-                    `${Math.floor((this.damageMultiplier) * 100)}%`,
-                    marginX + canvas.itemSideSize - canvas.padding * 2,
-                    marginY + height * 1.5
-                );
-
-                // xp
-                p5.textAlign(p5.LEFT, p5.CENTER)
-                p5.textSize(16)
-                p5.text(
-                    'XP',
-                    marginX,
-                    marginY + height * 2.5
-                );
-
-                p5.textAlign(p5.RIGHT, p5.CENTER)
-                p5.textSize(20)
-                p5.text(
-                    `${Math.floor(this.xp)}`,
-                    marginX + canvas.itemSideSize - canvas.padding * 2,
-                    marginY + height * 2.5
+                    'Passive',
+                    passiveSlotX + compactItemSideSize / 2,
+                    passiveSlotY + compactItemSideSize - canvas.padding
                 );
 
             }
+        }
 
+        if (this.hasStatsOpen) {
 
-            if (this.hasInventoryOpen && this.items.length) {
+            const textLeft = rectLeft + canvas.padding;
+            const textRight = rectRight - canvas.padding;
 
-                p5.noStroke();
-                p5.fill(50, 50, 50, 100);
-                p5.rect(
-                    0,
-                    0,
-                    canvas.windowSize.x,
-                    canvas.windowSize.y,
-                );
+            const width: number = rectRight - rectLeft;
+            const height: number = canvas.itemSideSize / 4;
 
-                let sideSize: number = canvas.itemSideSize / Math.ceil(this.items.length / 20);
-                let dimension: Position = new Position(0, 0);
-                let margin: Position = new Position(0, 0);
+            startShadow(drawingContext);
+            rectWithStripes(
+                new Position(rectLeft, referenceY - (height * 3)),
+                new Position(width, height * 6),
+                6,
+                true,
+                Color.GRAY_3,
+                Color.GRAY_2
+            );
+            endShadow(drawingContext);
 
-                let textMarginCount: number = 3;
-                let lengthOffSet: number = 4 + Math.ceil(this.items.length / 20);
-                let maxLength: number = this.items.length > lengthOffSet ? lengthOffSet : this.items.length
+            // Titles
+            fillStroke(Color.WHITE_1)
+            p5.textAlign(p5.LEFT, p5.CENTER)
+            p5.textSize(canvas.uiData.fontSubText)
+            p5.text(
+                'Attack',
+                textLeft,
+                referenceY - height * 2.5
+            );
 
-                dimension.x = maxLength * sideSize + ((maxLength + 1) * canvas.margin);
-                margin.x = (canvas.playfield.x / 2) - (dimension.x / 2);
+            p5.text(
+                'Defense',
+                textLeft,
+                referenceY - height * 1.5
+            );
 
-                dimension.y = (Math.ceil(this.items.length / lengthOffSet) * sideSize) + ((Math.ceil(this.items.length / lengthOffSet) + textMarginCount) * canvas.margin);
-                margin.y = (canvas.playfield.y / 2) - (dimension.y / 2);
+            p5.text(
+                'Crit Count',
+                textLeft,
+                referenceY - height * 0.5
+            );
 
-                p5.noStroke();
-                p5.fill(40);
-                p5.rect(
-                    margin.x,
-                    margin.y,
-                    dimension.x,
-                    dimension.y,
-                    canvas.radius * 4
-                );
+            p5.text(
+                'Crit Damage',
+                textLeft,
+                referenceY + height * 0.5
+            );
 
-                p5.textAlign(p5.CENTER, p5.CENTER)
+            p5.text(
+                'Multiplier',
+                textLeft,
+                referenceY + height * 1.5
+            );
 
-                p5.fill(255);
-                p5.stroke(0);
-                p5.strokeWeight(3);
-                p5.textSize(24)
-                p5.text(
-                    'Inventory',
-                    canvas.playfield.x / 2,
-                    margin.y + (textMarginCount * canvas.margin / 2)
-                );
+            p5.text(
+                'XP',
+                textLeft,
+                referenceY + height * 2.5
+            );
 
-                let epicItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Epic');
-                let rareItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Rare');
-                let commonItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Common');
+            // Values
+            fillStroke()
+            p5.textAlign(p5.RIGHT, p5.CENTER)
+            p5.textSize(canvas.uiData.fontText)
+            p5.text(
+                `${formatNumber(this.attack)}`,
+                textRight,
+                referenceY - height * 2.5
+            );
 
-                let sort: (a: Item, b: Item) => number = (a: Item, b: Item) => {
-                    return a.name > b.name ? 1 : -1;
-                };
+            p5.text(
+                `${formatNumber(this.defense)}`,
+                textRight,
+                referenceY - height * 1.5
+            );
 
-                epicItems.sort(sort);
-                rareItems.sort(sort);
-                commonItems.sort(sort);
+            p5.text(
+                `${formatNumber(this.critical)}`,
+                textRight,
+                referenceY - height * 0.5
+            );
 
-                this.items = epicItems.concat(rareItems.concat(commonItems));
+            p5.text(
+                `${Math.floor((this.criticalMultiplier - 1) * 100)}%`,
+                textRight,
+                referenceY + height * 0.5
+            );
 
-                this.items.forEach((item: Item) => item.price = undefined)
+            p5.text(
+                `${Math.floor((this.damageMultiplier) * 100)}%`,
+                textRight,
+                referenceY + height * 1.5
+            );
 
-                this.items.forEach((item: Item, index: number) => {
-                    let cumulativeMarginX: number = margin.x + ((index % lengthOffSet) * (sideSize + canvas.margin)) + canvas.margin;
-                    let cumulativeMarginY: number = margin.y + (Math.floor(index / lengthOffSet) * (sideSize + canvas.margin)) + (canvas.margin * textMarginCount);
+            p5.text(
+                `${Math.floor(this.xp)}`,
+                textRight,
+                referenceY + height * 2.5
+            );
 
-                    drawItem(item, cumulativeMarginX, cumulativeMarginY, sideSize, sideSize)
-                })
+        }
 
-            }
+        if (this.hasInventoryOpen && this.items.length) {
+
+            fillFlat(Color.DIM);
+            p5.rect(
+                0,
+                0,
+                canvas.windowSize.x,
+                canvas.windowSize.y,
+            );
+
+            let sideSize: number = canvas.itemSideSize;
+            let dimension: Position = new Position(0, 0);
+            let margin: Position = new Position(0, 0);
+
+            let textMarginCount: number = 3;
+            let lengthOffSet: number = 4 + Math.ceil(this.items.length / 10);
+            let maxLength: number = this.items.length > lengthOffSet ? lengthOffSet : this.items.length
+
+            dimension.x = maxLength * sideSize + ((maxLength + 1) * canvas.margin);
+            margin.x = (canvas.playfield.x / 2) - (dimension.x / 2);
+
+            dimension.y = (Math.ceil(this.items.length / lengthOffSet) * sideSize) + ((Math.ceil(this.items.length / lengthOffSet) + textMarginCount) * canvas.margin);
+            margin.y = (canvas.playfield.y / 2) - (dimension.y / 2);
+
+            startShadow(drawingContext);
+            fillFlat(Color.GRAY_2);
+            p5.rect(
+                margin.x,
+                margin.y,
+                dimension.x,
+                dimension.y,
+                canvas.radius * 4
+            );
+            endShadow(drawingContext);
+
+            p5.textAlign(p5.CENTER, p5.CENTER)
+
+            p5.fill(255);
+            p5.stroke(0);
+            p5.strokeWeight(3);
+            p5.textSize(canvas.uiData.fontTitle)
+            p5.text(
+                'Inventory',
+                canvas.playfield.x / 2,
+                margin.y + (textMarginCount * canvas.margin / 2)
+            );
+
+            let epicItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Epic');
+            let rareItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Rare');
+            let commonItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Common');
+
+            let sort: (a: Item, b: Item) => number = (a: Item, b: Item) => {
+                return a.name > b.name ? 1 : -1;
+            };
+
+            epicItems.sort(sort);
+            rareItems.sort(sort);
+            commonItems.sort(sort);
+
+            this.items = epicItems.concat(rareItems.concat(commonItems));
+
+            this.items.forEach((item: Item) => item.price = undefined)
+
+            this.items.forEach((item: Item, index: number) => {
+                let cumulativeMarginX: number = margin.x + ((index % lengthOffSet) * (sideSize + canvas.margin)) + canvas.margin;
+                let cumulativeMarginY: number = margin.y + (Math.floor(index / lengthOffSet) * (sideSize + canvas.margin)) + (canvas.margin * textMarginCount);
+
+                drawItem(item, cumulativeMarginX, cumulativeMarginY, sideSize, sideSize)
+            })
+
         }
     }
 }

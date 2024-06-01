@@ -1,3 +1,5 @@
+import { Limits } from "./Limits";
+
 export class Position {
     x: number;
     y: number;
@@ -39,5 +41,9 @@ export class Position {
 
     addY(y: number): Position {
         return new Position(this.x, this.y + y);
+    }
+
+    toLimits(dimension: Position): Limits {
+        return new Limits(this, this.sum(dimension));
     }
 }
