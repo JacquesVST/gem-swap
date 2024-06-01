@@ -286,6 +286,7 @@ export class Grid extends EventEmitter implements IGrid {
 
         matches = validate ? this.sanitizeMatches(matches) : matches;
 
+        this.selectedCellPosition = undefined
         this.emit('MatchesFound:' + useCase, matches);
     }
 

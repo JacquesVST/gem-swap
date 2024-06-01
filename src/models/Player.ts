@@ -170,7 +170,7 @@ export class Player extends EventEmitter implements IPlayer {
     }
 
     useActiveItem(run: Run): void {
-        if (this.itemData.activeItem && !this.itemData.activeItem.disabled) {
+        if (this.itemData.activeItem && !this.itemData.activeItem.disabled && !run.hasDialogOpen) {
             this.itemData.activeItem.effect();
             if (this.itemData.activeItem.frequency === Frequency.SINGLE_USE) {
                 this.itemData.activeItem = undefined;
@@ -182,7 +182,7 @@ export class Player extends EventEmitter implements IPlayer {
     }
 
     useActiveItem2(run: Run): void {
-        if (this.hasItem('Extra Active Item') && this.itemData.activeItem2 && !this.itemData.activeItem2.disabled) {
+        if (this.hasItem('Extra Active Item') && this.itemData.activeItem2 && !this.itemData.activeItem2.disabled && !run.hasDialogOpen) {
             this.itemData.activeItem2.effect();
             if (this.itemData.activeItem2.frequency === Frequency.SINGLE_USE) {
                 this.itemData.activeItem2 = undefined;
@@ -208,6 +208,7 @@ export class Player extends EventEmitter implements IPlayer {
 
     addGold(gold: number): void {
         if (gold !== 0) {
+            gold = Math.floor(gold);
             if (gold > 0) {
                 this.itemData.goldAddCount++;
                 if (this.hasItem('Gold Fees') && this.itemData.goldAddCount % 3 === 0) {
@@ -628,7 +629,7 @@ export class Player extends EventEmitter implements IPlayer {
                     let cumulativeMarginX: number = margin.x + ((index % lengthOffSet) * (sideSize + canvas.margin)) + canvas.margin;
                     let cumulativeMarginY: number = margin.y + (Math.floor(index / lengthOffSet) * (sideSize + canvas.margin)) + (canvas.margin * textMarginCount);
 
-                    drawItem(item, cumulativeMarginX, cumulativeMarginY, sideSize, sideSize, canvas)
+                    drawItem(item, cumulativeMarginX, cumulativeMarginY, sideSize, sideSize)
                 })
 
             }

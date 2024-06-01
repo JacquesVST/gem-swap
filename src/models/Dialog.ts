@@ -8,7 +8,7 @@ import { Item } from "./Item";
 import { Limits } from "./Limits";
 import { Position } from "./Position";
 import { Run } from "./Run";
-import { BossStage, EnemyStage, MiniBossStage } from "./Stage";
+import { BossStage, CommonEnemyStage, ItemStage, MiniBossStage, ShopStage, Stage } from "./Stage";
 
 export class Dialog implements IDialog {
     id: string;
@@ -26,7 +26,7 @@ export class Dialog implements IDialog {
     relativeOpacitySpeed?: number = 0;
 
 
-    constructor(title: string, message: string, options: DialogOption[], type: DialogType, closeCallback?: () => void, textColor?: Color) {
+    constructor(title: string, message: string, options: DialogOption[], type: DialogType, closeCallback?: (id?: string) => void, textColor?: Color) {
         this.title = title;
         this.message = message;
         this.options = options;
@@ -41,12 +41,12 @@ export class Dialog implements IDialog {
         return this.type === DialogType.SHOP || this.type === DialogType.SKIPPABLE_ITEM || this.type === DialogType.INITIAL;
     }
 
-    setupAdditionalOptions(closeCallback: () => void): void {
+    setupAdditionalOptions(closeCallback: (id?: string) => void): void {
         if (this.type === DialogType.SHOP) {
             this.options.push(new DefaultDialogOption(
                 () => {
                     if (closeCallback) {
-                        closeCallback();
+                        closeCallback(this.id);
                     }
                 },
                 Color.DISABLED,
@@ -58,7 +58,7 @@ export class Dialog implements IDialog {
             this.options.push(new DefaultDialogOption(
                 () => {
                     if (closeCallback) {
-                        closeCallback();
+                        closeCallback(this.id);
                     }
                 },
                 Color.DISABLED,
@@ -236,8 +236,13 @@ export class Dialog implements IDialog {
             if (option instanceof NavigationDialogOption) {
                 p5.textAlign(p5.CENTER, p5.CENTER)
 
-                let text: string = 'Common Stage';
-                let subtext: string = `${option.stage.enemies.length} enemies`;
+                let text: string;
+                let subtext: string;
+
+                if (option.stage instanceof CommonEnemyStage) {
+                    text = 'Common Stage';
+                    subtext = `${option.stage.enemies.length} enemies`;
+                }
 
                 if (option.stage instanceof BossStage) {
                     text = 'Boss Stage';
@@ -247,6 +252,16 @@ export class Dialog implements IDialog {
                 if (option.stage instanceof MiniBossStage) {
                     text = 'Mini Boss Stage';
                     subtext = `${option.stage.enemies.length} Strong Enemies`;
+                }
+
+                if (option.stage instanceof ItemStage) {
+                    text = 'Item Stage';
+                    subtext = `A free item to help you`;
+                }
+
+                if (option.stage instanceof ShopStage) {
+                    text = 'Shop Stage';
+                    subtext = `Take only what you can afford`;
                 }
 
                 const textMargin: number = cumulativeMarginY + (optionHeight / 2);
@@ -273,7 +288,7 @@ export class Dialog implements IDialog {
             }
 
             if (option instanceof ItemDialogOption) {
-                drawItem(option.item, cumulativeMarginX, cumulativeMarginY, canvas.itemSideSize, canvas.itemSideSize, canvas, this.relativeOpacity, run, option);
+                drawItem(option.item, cumulativeMarginX, cumulativeMarginY, canvas.itemSideSize, canvas.itemSideSize, this.relativeOpacity, run, option);
             }
 
             if (option instanceof PassiveDialogOption) {
@@ -304,7 +319,7 @@ export class Dialog implements IDialog {
 
 
                 if (option.item) {
-                    drawItem(option.item, cumulativeMarginX, cumulativeMarginY, canvas.itemSideSize, canvas.itemSideSize / 2, canvas, this.relativeOpacity, run, option, true);
+                    drawItem(option.item, cumulativeMarginX, cumulativeMarginY, canvas.itemSideSize, canvas.itemSideSize / 2, this.relativeOpacity, run, option, true);
                 }
             }
 
@@ -415,10 +430,10 @@ export class PassiveDialogOption extends DialogOption {
 }
 
 export class NavigationDialogOption extends DialogOption {
-    stage: EnemyStage;
+    stage: Stage;
     index: number;
 
-    constructor(action: () => void, color: Color, stage: EnemyStage, index: number) {
+    constructor(action: () => void, color: Color, stage: Stage, index: number) {
         super(action, color)
         this.stage = stage;
         this.index = index;

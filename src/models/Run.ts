@@ -19,7 +19,7 @@ import { Piece } from "./Piece";
 import { Player } from "./Player";
 import { Position } from "./Position";
 import { Shape } from "./Shape";
-import { EnemyStage } from "./Stage";
+import { EnemyStage, ItemStage, ShopStage, Stage } from "./Stage";
 
 export class Run extends EventEmitter implements IRun {
     player: Player;
@@ -123,12 +123,38 @@ export class Run extends EventEmitter implements IRun {
             }
         });
 
-        this.on('Map:ResumeRun', () => {
+        this.on('Map:ResumeRun', (stage: Stage) => {
             this.updateTopProgressBars();
             this.updateMoves();
 
             this.player.updateMoves(this.player.totalMoves);
-            this.emit('InitGrid', this);
+
+            if (stage instanceof EnemyStage) {
+                this.emit('InitGrid', this);
+            }
+
+            if (stage instanceof ShopStage) {
+                this.newShopDialog(2, false, () => {
+                    this.sounds['item'].play();
+
+                    this.updateHealth();
+                    this.updateMoves();
+                }, (id?: string) => {
+                    this.updateTopProgressBars();
+                    this.updateHealth();
+                    this.updateMoves();
+
+                    DialogController.getInstance().close(id);
+                    this.emit('AllowNextStage');
+                });
+            }
+
+            if (stage instanceof ItemStage) {
+                this.newPercDialog(() => {
+                    this.sounds['item'].play();
+                    this.emit('AllowNextStage');
+                });
+            }
         });
 
         this.on('Run:InitialItemSelected', () => {
@@ -223,34 +249,22 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:NextStage', () => {
-            this.newPercDialog(() => {
-                this.updateHealth();
-                this.updateMoves();
-
-                this.sounds['item'].play();
-                this.emit('AllowNextStage');
-            });
+            this.emit('AllowNextStage');
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:NextFloor', () => {
-            this.newPercDialog(() => {
+            this.newShopDialog(3, true, () => {
+                this.sounds['item'].play();
+
+                this.updateHealth();
+                this.updateMoves();
+            }, (id?: string) => {
+                this.updateTopProgressBars();
                 this.updateHealth();
                 this.updateMoves();
 
-                this.sounds['item'].play();
-                this.newShopDialog(() => {
-                    this.sounds['item'].play();
-
-                    this.updateHealth();
-                    this.updateMoves();
-                }, () => {
-                    this.updateTopProgressBars();
-                    this.updateHealth();
-                    this.updateMoves();
-
-                    DialogController.getInstance().close();
-                    this.emit('AllowNextFloor');
-                });
+                DialogController.getInstance().close(id);
+                this.emit('AllowNextFloor');
             });
         });
 
@@ -327,8 +341,8 @@ export class Run extends EventEmitter implements IRun {
     }
 
     draw(): void {
-        this.map.grid.draw(!!DialogController.getInstance().currentDialog);
-        this.map.grid.drawPieces();
+        this.map.grid?.draw(!!DialogController.getInstance().currentDialog);
+        this.map.grid?.drawPieces();
         this.drawNumbers();
         this.drawEnemyDetails()
         this.player.draw()
@@ -622,7 +636,7 @@ export class Run extends EventEmitter implements IRun {
             matches.forEach((match: Piece[]) => {
                 if (match.length >= 4) {
                     let itemStack: number = this.player.items.filter((item: Item) => item.name === '4+ Match Regeneration').length
-                    let heal: number = itemStack * 0.01 * this.player.health
+                    let heal: number = itemStack * 0.01 * this.player.maxHealth
                     this.player.heal(heal);
                     this.updateHealth();
                     TextController.getInstance().playerHealedAnimaiton(heal);
@@ -662,7 +676,6 @@ export class Run extends EventEmitter implements IRun {
         let bonusDamage: number = 0;
         if (match[0]?.shape) {
             bonusDamage = match[0].shape.itemData.bonusDamage;
-            this.sounds['match'].play();
         }
 
         let criticalInMatch: boolean = match.some((piece: Piece) => piece.critical);
@@ -695,13 +708,19 @@ export class Run extends EventEmitter implements IRun {
                 );
             })
             this.emit('MidasTouched', (criticalInMatch ? 2 : 1) * (borderPieces ? 1 : 0));
-
         }
 
+        if (criticalInMatch) {
+            this.sounds['crit'].play();
+        } else {
+            this.sounds['match'].play();
+        }
 
         let additiveScore: number = (this.player.attack + bonusDamage) * lengthMultiplier * damageMultiplier;
         additiveScore *= this.player.hasItem('Combos multiply DMG') ? this.combo : 1;
         additiveScore *= criticalInMatch ? this.player.criticalMultiplier : 1;
+
+        additiveScore = Math.floor(additiveScore);
 
         this.score += additiveScore;
 
@@ -763,7 +782,7 @@ export class Run extends EventEmitter implements IRun {
 
     newNavigationDialog(callback?: (index: number) => void): void {
         let floor: Floor = this.map.floor;
-        let options: NavigationDialogOption[] = floor.stages[floor.currentStageIndex].map((stage: EnemyStage, index: number) =>
+        let options: NavigationDialogOption[] = floor.stages[floor.currentStageIndex].map((stage: Stage, index: number) =>
             new NavigationDialogOption(
                 () => {
                     if (callback) {
@@ -822,16 +841,18 @@ export class Run extends EventEmitter implements IRun {
         DialogController.getInstance().dialogs.unshift(dialog);
     }
 
-    newShopDialog(selectCallback: () => void, closeCallback?: () => void): void {
+    newShopDialog(amount: number, forceHealth: boolean, selectCallback: () => void, closeCallback?: (id?: string) => void): void {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(
-            2,
+            amount,
             ItemPools.shopPool(this),
             ['Common', 'Rare', 'Epic'],
             this.player,
             true
         );
 
-        itemList = [ItemPools.fullHealthShopItem(this), ...itemList];
+        if (forceHealth) {
+            itemList = [ItemPools.fullHealthShopItem(this), ...itemList];
+        }
 
         let dialog: Dialog = new Dialog(
             'Floor item shop',
@@ -954,9 +975,9 @@ export class Run extends EventEmitter implements IRun {
             options.unshift(new DefaultDialogOption(
                 () => {
                     dialogController.emit('DifficultyChosen', {
-                        enemies: 1,
-                        stages: 1,
-                        floors: 3,
+                        enemies: 2,
+                        stages: 5,
+                        floors: 5,
                         gridX: 10,
                         gridY: 8,
                         costMultiplier: 1,

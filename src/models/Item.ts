@@ -105,19 +105,19 @@ export class ItemPools {
             new Item(
                 'Passive',
                 'Natural Crit',
-                'Has an inate 5% critical chance on every match, crit damage starts at 100%',
+                'Inate 5% critical chance on every match, +50% critical multiplier',
                 () => {}
             ),
             new Item(
                 'Passive',
                 '4x4',
-                'Can only make matches of 4 pieces or more, but damage is tripled',
+                'Can only match 4 pieces or more, but damage is tripled',
                 () => {}
             ),
             new Item(
                 'Passive',
                 'Flexible',
-                'Can match diagonals from the start, and they deal -10% damage',
+                'Can move diagonals, but they deal -10% damage',
                 () => {}
             ),
             // new Item(
@@ -141,7 +141,7 @@ export class ItemPools {
             new Item(
                 'Passive',
                 'Midas Touched',
-                '+1 Gold for matches with pieces on the extremities, 2 on crit',
+                '+1 Gold for matches with pieces on the extremities, +2 on crit',
                 () => {}
             ),
         ]
@@ -189,11 +189,11 @@ export class ItemPools {
                 price = price * run.costMultiplier;
                 price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
                 return new Item(
-                    'Common',
+                    'Rare',
                     name,
-                    '+3 moves',
+                    '+2 moves',
                     (() => {
-                        run.player.maxMoves += 3;
+                        run.player.maxMoves += 2;
                     }).bind(run),
                     Frequency.PASSIVE,
                     price,
@@ -399,7 +399,7 @@ export class ItemPools {
                 undefined
             ),
             new Item(
-                'Common',
+                'Rare',
                 'Extra Move',
                 '+1 move',
                 (() => {

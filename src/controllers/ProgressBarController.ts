@@ -3,6 +3,7 @@ import { Color } from "../models/Color";
 import { Position } from "../models/Position";
 import { ProgressBar } from "../models/ProgressBar";
 import { Run } from "../models/Run";
+import { EnemyStage } from "../models/Stage";
 import { EventEmitter } from "./EventEmitter";
 
 export class ProgressBarController extends EventEmitter {
@@ -60,7 +61,7 @@ export class ProgressBarController extends EventEmitter {
     draw(run?: Run): void {
         if (run) {
             this.progressBars.forEach((progressBars: ProgressBar) => {
-                progressBars.draw(run);
+                progressBars?.draw(run);
             });
         }
     }
@@ -88,14 +89,19 @@ export class ProgressBarController extends EventEmitter {
     }
 
     static enemyHealthBar(run: Run, health: number): ProgressBar {
-        return new ProgressBar(
-            run.map.enemy.maxHealth,
-            health,
-            run.map.enemy.name + ' Health (' + run.map.enemy.number + '/' + run.map.stage.enemies.length + ')',
-            run.map.enemy.color,
-            true,
-            ProgressBarIndexes.ENEMY
-        );
+        if (run.map.stage instanceof EnemyStage) {
+            return new ProgressBar(
+                run.map.enemy.maxHealth,
+                health,
+                run.map.enemy.name + ' Health (' + run.map.enemy.number + '/' + run.map.stage.enemies.length + ')',
+                run.map.enemy.color,
+                true,
+                ProgressBarIndexes.ENEMY
+            );
+
+        } else {
+            return undefined;
+        }
     }
 
     static yourMovesBar(maxMoves: number, moves: number): ProgressBar {

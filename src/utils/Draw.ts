@@ -1,5 +1,6 @@
 import * as P5 from "p5";
-import { Frequency, ICanvas } from "../interfaces";
+import { Canvas } from "../controllers/Canvas";
+import { Frequency } from "../interfaces";
 import { Color } from "../models/Color";
 import { ItemDialogOption } from "../models/Dialog";
 import { Item } from "../models/Item";
@@ -8,7 +9,8 @@ import { Position } from "../models/Position";
 import { Run } from "../models/Run";
 import { countOcurrences, insertLineBreaks } from "./General";
 
-export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMarginY: number, itemSideSizeX: number, itemSideSizeY: number, canvas: ICanvas, relativeFade: number = 0, run?: Run, option?: ItemDialogOption, hideDescription?: boolean) {
+export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMarginY: number, itemSideSizeX: number, itemSideSizeY: number, relativeFade: number = 0, run?: Run, option?: ItemDialogOption, hideDescription?: boolean) {
+    const canvas: Canvas = Canvas.getInstance();
     const p5: P5 = canvas.p5
 
     let limits: Limits = new Limits(new Position(cumulativeMarginX, cumulativeMarginY), new Position(cumulativeMarginX + itemSideSizeX, cumulativeMarginY + itemSideSizeY));
@@ -120,6 +122,22 @@ export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMargin
         );
 
     }
+}
+
+export function drawClickable(position: Position, size: Position, background: Color, content: () => void, action: () => void, highlight: boolean = false) {
+    const canvas: Canvas = Canvas.getInstance();
+    const p5: P5 = canvas.p5;
+    /*
+        p5.noStroke();
+        p5.fill(background.alpha().value);
+        p5.rect(
+            cumulativeMarginX,
+            cumulativeMarginY,
+            itemSideSizeX,
+            itemSideSizeY,
+            canvas.radius * 2
+        );
+        */
 }
 
 export function rectWithStripes(drawingPos: Position, drawingSize: Position, radius: number, stripeCount: number, isHorizontal: boolean, color1: Color, color2: Color, opacity: number, p5: P5): void {

@@ -28,16 +28,17 @@ export class DialogController extends EventEmitter {
     }
 
     configureListeners(): void {
-        this.on('Main:MouseClicked:Click', (click: Position) => {
+        this.on('Main:MouseClicked:Click', (click: Position, run: Run) => {
             setTimeout(() => {
 
                 if (!this.currentDialog) {
                     return;
                 }
+                const id: string = this.currentDialog.id;
 
                 let selected: boolean = false;
 
-                this.currentDialog.options.forEach((option: DialogOption) => {
+                this.currentDialog.options.forEach((option: DialogOption, index: number) => {
                     if (option?.limits?.contains(click)) {
 
                         selected = true;
@@ -47,15 +48,15 @@ export class DialogController extends EventEmitter {
                                 this.emit('ItemPurchased', option.item.price);
                                 option.item.price = Math.floor(option.item.price * 1.25);
                             }
-                            this.emit('OptionSelected', option);
+                            this.emit('OptionSelected', option, id);
                         }
                     }
                 })
 
                 if (selected) {
                     if (this.currentDialog && this.currentDialog.type !== DialogType.SHOP) {
-                        this.close();
-                        this.emit('DialogClosed');
+                        this.close(id);
+                        this.emit('DialogClosed', id);
                     }
                 }
             }, 0);
@@ -72,8 +73,12 @@ export class DialogController extends EventEmitter {
         this.dialogs.push(dialog);
     }
 
-    close(): void {
-        this.dialogs.shift();
+    close(id?: string): void {
+        if (id) {
+            this.dialogs = this.dialogs.filter((dialog: Dialog) => dialog.id !== id);
+        } else {
+            this.dialogs.shift();
+        }
     }
 
     clear(): void {

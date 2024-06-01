@@ -1,5 +1,4 @@
 import { IEnemyStage, IStage } from "../interfaces";
-import { randomBetween } from "../utils/General";
 import { Color } from "./Color";
 import { BossEnemy, CommonEnemy, Enemy, MiniBossEnemy } from "./Enemy";
 import { Floor } from "./Floor";
@@ -17,6 +16,32 @@ export class Stage implements IStage {
         this.floor = floor;
         this.isLast = isLast;
     }
+
+    initStage(x: number, y: number): void { }
+}
+
+export class ItemStage extends Stage {
+
+    constructor(number: number, floor: Floor) {
+        super(number, floor);
+        this.color = Color.GREEN;
+    }
+
+    initStage(x: number, y: number): void {
+        this.grid = new Grid(x, y, { ...this });
+    }
+}
+
+export class ShopStage extends Stage {
+
+    constructor(number: number, floor: Floor) {
+        super(number, floor);
+        this.color = Color.YELLOW;
+    }
+
+    initStage(x: number, y: number): void {
+        this.grid = new Grid(x, y, { ...this });
+    }
 }
 
 export class EnemyStage extends Stage implements IEnemyStage {
@@ -33,7 +58,7 @@ export class EnemyStage extends Stage implements IEnemyStage {
         this.enemies = [...Array(enemyCount)];
     }
 
-    setupGrid(x: number, y: number): void {
+    initStage(x: number, y: number): void {
         this.grid = new Grid(x, y, { ...this });
     }
 }
@@ -59,8 +84,8 @@ export class MiniBossStage extends EnemyStage {
         this.color = new Color(235, 152, 78);
     }
 
-    setupBranchedStage(): void {
-        let miniBossCount = randomBetween(0, 4);
+    setupBranchedStage(enemyCount: number): void {
+        let miniBossCount: number = Math.ceil(enemyCount / 3);
         this.enemies = [...Array(miniBossCount)].map(
             (enemy: Enemy, index: number) => {
                 return new MiniBossEnemy(index + 1, { ...this }, index === miniBossCount - 1);
