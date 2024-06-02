@@ -413,7 +413,7 @@ export class ItemPools {
             ),
             new Item(
                 'Epic',
-                'Bug Crit Chance',
+                'Big Crit Chance',
                 'Matches have +10% chance of critting',
                 (() => {
                     run.player.itemData.criticalChance += 0.10;
