@@ -129,7 +129,7 @@ export class ItemPools {
             new Item(
                 'Passive',
                 'No barriers',
-                'Grids are 1 column and 1 row larger by default',
+                'Grids are 1 column and 1 row larger by default, you also have +1 reach',
                 () => { }
             ),
             new Item(
