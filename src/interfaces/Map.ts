@@ -14,7 +14,6 @@ export interface IMap{
     winState: boolean;
     floors: IFloor[];
     currentFloorIndex: number;
-
 }
 
 export interface IFloor {

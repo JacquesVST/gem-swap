@@ -49,8 +49,8 @@ export class TextController extends EventEmitter {
             `${damage} DMG${criticalInMatch ? '!' : ''}`,
             color,
             120,
-            new Position(positon.x + varianceX, positon.y + varianceY),
-            new Position(0, -100),
+            Position.of(positon.x + varianceX, positon.y + varianceY),
+            Position.of(0, -100),
             20 * (criticalInMatch ? 2 : 1),
             10 * (criticalInMatch ? 2 : 1)
         );
@@ -63,8 +63,8 @@ export class TextController extends EventEmitter {
             damage.shielded ? 'Shielded' : `-${Math.floor(damage.damage)} HP`,
             damage.shielded ? Color.GREEN : Color.RED,
             180,
-            new Position(this.canvas.windowSize.x / 2, this.canvas.windowSize.y - this.canvas.uiData.bottomUiSize),
-            new Position(0, 200)
+            Position.of(this.canvas.windowSize.x / 2, this.canvas.windowSize.y - this.canvas.uiData.bottomUiSize),
+            Position.of(0, 200)
         );
 
         this.textAnimations.push(animation);
@@ -76,7 +76,7 @@ export class TextController extends EventEmitter {
         const varianceX: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1);
         const varianceY: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1);
 
-        const position: Position = new Position(
+        const position: Position = Position.of(
             canvas.windowSize.x - canvas.margin - ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridData.horizontalCenterPadding / 2 - canvas.padding) / 2) + varianceX,
             canvas.windowSize.y / 2 + canvas.itemSideSize / 4 * 1.5 + canvas.margin * 1.5 + varianceY,
         );
@@ -88,7 +88,7 @@ export class TextController extends EventEmitter {
                 Color.YELLOW,
                 180,
                 position,
-                new Position(0, -100),
+                Position.of(0, -100),
                 20,
                 10
             );
@@ -99,8 +99,8 @@ export class TextController extends EventEmitter {
                 `${amount} Gold`,
                 Color.RED,
                 180,
-                new Position(this.canvas.p5.mouseX + varianceX, this.canvas.p5.mouseY + varianceY),
-                new Position(0, 100)
+                Position.of(this.canvas.p5.mouseX + varianceX, this.canvas.p5.mouseY + varianceY),
+                Position.of(0, 100)
             );
         }
 
@@ -112,8 +112,8 @@ export class TextController extends EventEmitter {
             `Move saved`,
             Color.GREEN,
             120,
-            new Position(this.canvas.p5.mouseX, this.canvas.p5.mouseY),
-            new Position(0, -200)
+            Position.of(this.canvas.p5.mouseX, this.canvas.p5.mouseY),
+            Position.of(0, -200)
         );
 
         this.textAnimations.push(animation);
@@ -125,8 +125,8 @@ export class TextController extends EventEmitter {
             `+${amount}`,
             Color.GREEN,
             120,
-            new Position(this.canvas.p5.mouseX, this.canvas.p5.mouseY),
-            new Position(0, -200)
+            Position.of(this.canvas.p5.mouseX, this.canvas.p5.mouseY),
+            Position.of(0, -200)
         );
 
         this.textAnimations.push(animation);
@@ -137,8 +137,8 @@ export class TextController extends EventEmitter {
             `Boss Fight`,
             Color.PURPLE,
             120,
-            new Position(this.canvas.windowSize.x / 2, this.canvas.windowSize.y / 2),
-            new Position(0, 0),
+            Position.of(this.canvas.windowSize.x / 2, this.canvas.windowSize.y / 2),
+            Position.of(0, 0),
             60,
             -40
         );
@@ -151,8 +151,8 @@ export class TextController extends EventEmitter {
             `Floor Complete`,
             Color.WHITE_1,
             120,
-            new Position(this.canvas.windowSize.x / 2, this.canvas.windowSize.y / 2 + this.canvas.uiData.topUiSize),
-            new Position(0, -200),
+            Position.of(this.canvas.windowSize.x / 2, this.canvas.windowSize.y / 2 + this.canvas.uiData.topUiSize),
+            Position.of(0, -200),
             40
         );
 

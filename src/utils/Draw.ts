@@ -9,16 +9,15 @@ import { Position } from "../models/Position";
 import { Run } from "../models/Run";
 import { countOcurrences, insertLineBreaks } from "./General";
 
-export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMarginY: number, itemSideSizeX: number, itemSideSizeY: number, relativeFade: number = 0, run?: Run, option?: ItemDialogOption, hideDescription?: boolean) {
+export function drawItem(item: Item, margin: Position, sideSize: Position, relativeFade: number = 0, run?: Run, option?: ItemDialogOption, hideDescription?: boolean) {
     const canvas: Canvas = Canvas.getInstance();
     const p5: P5 = canvas.p5
 
     const color: Color = Item.rarityColors[item.rarity].color;
     const limits: Limits = drawClickableBox(
-        new Position(cumulativeMarginX, cumulativeMarginY),
-        new Position(itemSideSizeX, itemSideSizeY),
-        (option?.disabled ? Color.DISABLED : color).alpha(255 + relativeFade),
-        true
+        margin,
+        sideSize,
+        (option?.disabled ? Color.DISABLED : color).alpha(255 + relativeFade)
     );
 
     if (option) {
@@ -27,28 +26,28 @@ export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMargin
 
     p5.textAlign(p5.CENTER, p5.CENTER);
     p5.textSize(canvas.uiData.fontText);
-    let name: string = insertLineBreaks(item.name, p5.map(itemSideSizeX - canvas.margin, 0, p5.textWidth(item.name), 0, item.name.length));
-    let textMargin: number = cumulativeMarginY + (itemSideSizeY / 2);
+    let name: string = insertLineBreaks(item.name, p5.map(sideSize.x - canvas.margin, 0, p5.textWidth(item.name), 0, item.name.length));
+    let textMargin: number = margin.y + (sideSize.y / 2);
 
     p5.fill(Color.WHITE.alpha(255 + relativeFade).value);
     p5.stroke(Color.BLACK.alpha(255 + relativeFade).value);
     p5.strokeWeight(3);
     p5.text(
         name,
-        cumulativeMarginX + (itemSideSizeX / 2),
+        margin.x + (sideSize.x / 2),
         textMargin - canvas.margin * (hideDescription ? 0 : 1)
     );
 
     if (!hideDescription) {
 
         p5.textSize(canvas.uiData.fontDetail);
-        let description: string = insertLineBreaks(item.description, p5.map(itemSideSizeX - canvas.margin, 0, p5.textWidth(item.description), 0, item.description.length));
+        let description: string = insertLineBreaks(item.description, p5.map(sideSize.x - canvas.margin, 0, p5.textWidth(item.description), 0, item.description.length));
         let subOffset: number = (countOcurrences(name, '\n') + Math.max(1, countOcurrences(description, '\n') - 1)) * canvas.margin;
 
         fillStroke(Color.WHITE_1, 255 + relativeFade)
         p5.text(
             description,
-            cumulativeMarginX + (itemSideSizeX / 2),
+            margin.x + (sideSize.x / 2),
             textMargin + subOffset
         );
     }
@@ -58,8 +57,8 @@ export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMargin
     p5.textSize(canvas.uiData.fontDetail);
     p5.text(
         item.rarity,
-        cumulativeMarginX + canvas.padding,
-        cumulativeMarginY + canvas.padding
+        margin.x + canvas.padding,
+        margin.y + canvas.padding
     );
 
     if (item.unique || item.frequency !== Frequency.PASSIVE) {
@@ -86,8 +85,8 @@ export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMargin
         p5.textSize(canvas.uiData.fontDetail);
         p5.text(
             item.unique ? 'Unique' : frequency,
-            cumulativeMarginX + itemSideSizeX - canvas.padding,
-            cumulativeMarginY + canvas.padding
+            margin.x + sideSize.x - canvas.padding,
+            margin.y + canvas.padding
         );
     }
 
@@ -103,22 +102,19 @@ export function drawItem(item: Item, cumulativeMarginX: number, cumulativeMargin
         p5.textSize(canvas.uiData.fontSubText);
         p5.text(
             `$ ${Math.floor(item.price)}`,
-            cumulativeMarginX + (itemSideSizeX / 2),
-            cumulativeMarginY + itemSideSizeY - canvas.padding
+            margin.x + (sideSize.x / 2),
+            margin.y + sideSize.y - canvas.padding
         );
 
     }
 }
 
-export function drawClickableBox(position: Position, size: Position, background: Color, highlight: boolean = false, content?: () => void): Limits {
+export function drawClickableBox(position: Position, size: Position, background: Color, content?: () => void): Limits {
     const canvas: Canvas = Canvas.getInstance();
     const p5: P5 = canvas.p5;
 
     const limits: Limits = position.toLimits(size);
-
-    if (highlight) {
-        background = background.alpha(limits.contains(canvas.mousePosition) ? background.a : p5.max(background.a - 55, 0));
-    }
+    background = background.alpha(limits.contains(canvas.mousePosition) ? background.a : p5.max(background.a - 55, 0));
 
     const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
 

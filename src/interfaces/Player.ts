@@ -1,5 +1,6 @@
 import { ILimits } from "./General";
 import { IItem } from "./Item";
+import { IShape } from "./Piece";
 
 export interface IPlayer {
     health: number;
@@ -41,6 +42,7 @@ export interface IPlayerItemData {
     criticalChance: number;
     rerolls: number;
     bossMoves: number;
+    colorDamageBosts: { [key: string]: IShape };
 }
 
 export interface IDamageData {

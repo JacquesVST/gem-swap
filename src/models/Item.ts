@@ -168,7 +168,21 @@ export class ItemPools {
     static shopPool(run: Run): Item[] {
         let shopPool: Item[] = [
             (() => {
-                let price: number = 30;
+                let price: number = 50;
+                let name: string = 'tirC';
+                price = price * run.costMultiplier;
+                price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
+                return new Item(
+                    'Rare',
+                    name,
+                    'Conditions for a critical are inverted',
+                    (() => { }).bind(run),
+                    Frequency.PASSIVE,
+                    price,
+                );
+            })(),
+            (() => {
+                let price: number = 50;
                 let name: string = 'Crit On Boss';
                 price = price * run.costMultiplier;
                 price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
@@ -252,7 +266,7 @@ export class ItemPools {
         ];
 
         if (run.possibleShapes.length >= 4) {
-            let price: number = 150;
+            let price: number = 200;
             price = price * run.costMultiplier;
             price = run.player.items.findIndex((item: Item) => item.name.startsWith('Ban')) !== -1 ? Math.floor(price * 1.25) : price;
 
@@ -270,7 +284,7 @@ export class ItemPools {
             });
         }
 
-        if (run.player.itemData.reach <= 3) {
+        if (run.player.itemData.reach <= 4) {
             let price: number = 100;
             let name: string = 'Reach Expansion';
             price = price * run.costMultiplier;
@@ -388,6 +402,14 @@ export class ItemPools {
                 'Extra Piece',
                 'Matches can remove a random piece',
                 (() => { }).bind(run),
+            ),
+            new Item(
+                'Common',
+                'Crit Chance',
+                'Matches have +2% chance of critting',
+                (() => {
+                    run.player.itemData.criticalChance += 0.02;
+                }).bind(run),
             ),
             new Item(
                 'Common',
@@ -533,9 +555,10 @@ export class ItemPools {
                 }).bind(run),
                 Frequency.SINGLE_USE
             ));
+            
             defaultPool.push(new Item(
                 'Common',
-                `${shape.id.charAt(0).toUpperCase() + shape.id.slice(1)} Boost`,
+                `${shape.id.charAt(0).toUpperCase() + shape.id.slice(1)} Color Boost`,
                 `+50 base DMG on ${shape.id} matches`,
                 (() => {
                     run.emit('Item:ColorDamageBoost', shape.id, 50);

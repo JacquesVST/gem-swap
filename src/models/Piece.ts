@@ -49,7 +49,7 @@ export class Piece extends EventEmitter implements IPiece {
     }
 
     renewPosition(position: IPosition): Piece {
-        this.gridPosition = new Position(position.x, position.y);
+        this.gridPosition = Position.of(position.x, position.y);
         this.relativePositon = Position.ORIGIN
         return this;
     }

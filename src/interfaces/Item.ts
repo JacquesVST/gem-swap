@@ -2,12 +2,13 @@ export interface IItem {
     rarity: string;
     name: string;
     description: string;
-    effect: () => void;
     price: number;
-
+    
     frequency: Frequency;
     unique: boolean;
     disabled: boolean;
+    
+    effect: () => void;
 }
 
 export enum Frequency {

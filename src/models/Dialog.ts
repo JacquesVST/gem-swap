@@ -1,6 +1,6 @@
 import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
-import { AnimationStatus, DialogType, Frequency, ICanvas, IDialog, IDialogOption } from "../interfaces";
+import { AnimationStatus, DialogType, Frequency, IDialog, IDialogOption } from "../interfaces";
 import { drawItem, endShadow, fillFlat, startShadow } from "../utils/Draw";
 import { generateId, insertLineBreaks } from "../utils/General";
 import { Color } from "./Color";
@@ -69,13 +69,13 @@ export class Dialog implements IDialog {
     }
 
     draw(run?: Run): void {
-        const canvas: ICanvas = Canvas.getInstance();
+        const canvas: Canvas = Canvas.getInstance();
         if (this.animationStatus === AnimationStatus.NOT_STARTED) {
             this.calculateSpeed();
         }
 
-        const dimension: Position = new Position(0, 0);
-        const margin: Position = new Position(0, 0);
+        const dimension: Position = Position.of(0, 0);
+        const margin: Position = Position.of(0, 0);
         const textMarginCount: number = 8;
         const lengthOffSet: number = 5;
 
@@ -102,7 +102,7 @@ export class Dialog implements IDialog {
 
 
     drawDialogBackground(dimension: Position, margin: Position, textOffset: number): void {
-        const canvas: ICanvas = Canvas.getInstance();
+        const canvas: Canvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
 
         const opacity: number = this.initialOpacity + this.relativeOpacity;
@@ -145,7 +145,7 @@ export class Dialog implements IDialog {
     }
 
     drawOptions(lengthOffSet: number, dimension: Position, margin: Position, run?: Run): void {
-        const canvas: ICanvas = Canvas.getInstance();
+        const canvas: Canvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
 
         this.options.forEach((option: DialogOption, index: number) => {
@@ -175,7 +175,7 @@ export class Dialog implements IDialog {
                 }
             }
 
-            option.limits = new Limits(new Position(cumulativeMarginX, cumulativeMarginY), new Position(cumulativeMarginX + optionWidth, cumulativeMarginY + optionHeight));
+            option.limits = new Limits(Position.of(cumulativeMarginX, cumulativeMarginY), Position.of(cumulativeMarginX + optionWidth, cumulativeMarginY + optionHeight));
 
             const isMouseOver: boolean = option.limits.contains(canvas.mousePosition)
 
@@ -300,7 +300,7 @@ export class Dialog implements IDialog {
             }
 
             if (option instanceof ItemDialogOption) {
-                drawItem(option.item, cumulativeMarginX, cumulativeMarginY, canvas.itemSideSize, canvas.itemSideSize, this.relativeOpacity, run, option);
+                drawItem(option.item, Position.of(cumulativeMarginX, cumulativeMarginY), Position.of(canvas.itemSideSize, canvas.itemSideSize), this.relativeOpacity, run, option);
             }
 
             if (option instanceof PassiveDialogOption) {
@@ -329,9 +329,8 @@ export class Dialog implements IDialog {
                     );
                 }
 
-
                 if (option.item) {
-                    drawItem(option.item, cumulativeMarginX, cumulativeMarginY, canvas.itemSideSize, canvas.itemSideSize / 2, this.relativeOpacity, run, option, true);
+                    drawItem(option.item, Position.of(cumulativeMarginX, cumulativeMarginY), Position.of(canvas.itemSideSize, canvas.itemSideSize / 2), this.relativeOpacity, run, option, true);
                 }
             }
 

@@ -4,7 +4,7 @@ import { DialogController } from "../controllers/DialogController";
 import { EventEmitter } from "../controllers/EventEmitter";
 import { ProgressBarController } from "../controllers/ProgressBarController";
 import { TextController } from "../controllers/TextController";
-import { DialogType, Difficulty, IBestNumbers, ICanvas, IDamageData, IEventParams, IRun, IRunConfig, IRunItemData, ProgressBarIndexes } from "../interfaces";
+import { DialogType, Difficulty, IBestNumbers, IDamageData, IEventParams, IRun, IRunConfig, IRunItemData, ProgressBarIndexes } from "../interfaces";
 import { endShadow, fillFlat, fillStroke, startShadow } from "../utils/Draw";
 import { formatNumber } from "../utils/General";
 import { getBestNumbers, setBestNumbers } from "../utils/LocalStorage";
@@ -304,6 +304,7 @@ export class Run extends EventEmitter implements IRun {
 
         this.on('Grid:ClearingGrid:GridCleared:MapEnded', () => {
             this.sounds['newFloor'].play();
+            TextController.getInstance().newFloorAnimation();
         });
 
         // Item events 
@@ -312,6 +313,7 @@ export class Run extends EventEmitter implements IRun {
             this.possibleShapes.forEach((shape: Shape) => {
                 if (shape.id === id) {
                     shape.itemData.bonusDamage += bonus;
+                    this.player.itemData.colorDamageBosts[shape.id] = shape
                 }
             });
         });
@@ -541,7 +543,7 @@ export class Run extends EventEmitter implements IRun {
     }
 
     drawEnemyDetails() {
-        const canvas: ICanvas = Canvas.getInstance();
+        const canvas: Canvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
 
         if (this.enemyDetailsOpen) {
@@ -680,7 +682,17 @@ export class Run extends EventEmitter implements IRun {
 
         if (Math.random() < this.player.itemData.criticalChance) {
             criticalInMatch = true;
-            damageMultiplier = damageMultiplier * 1.1;
+            if(this.player?.passive?.name === 'Natural Crit'){
+                damageMultiplier = damageMultiplier * 1.1;
+            }
+        }
+
+        criticalInMatch = this.player.items.filter((item: Item) => item.name === 'tirC').length % 2 === 1 ? !criticalInMatch : criticalInMatch;
+
+        let criticalMultiplier: number = this.player.criticalMultiplier;
+
+        if (match.every((piece: Piece) => piece.critical) && this.player.items.filter((item: Item) => item.name === 'tirC').length % 2 === 0) {
+            criticalMultiplier = Math.pow(criticalMultiplier, match.length);
         }
 
         if (this.player?.passive?.name === 'Midas Touched') {
@@ -704,7 +716,7 @@ export class Run extends EventEmitter implements IRun {
 
         let additiveScore: number = (this.player.attack + bonusDamage) * lengthMultiplier * damageMultiplier;
         additiveScore *= this.player.hasItem('Combos multiply DMG') ? this.combo : 1;
-        additiveScore *= criticalInMatch ? this.player.criticalMultiplier : 1;
+        additiveScore *= criticalInMatch ? criticalMultiplier : 1;
 
         additiveScore = Math.floor(additiveScore);
 

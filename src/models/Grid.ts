@@ -1,6 +1,6 @@
 import { Canvas } from "../controllers/Canvas";
 import { EventEmitter } from "../controllers/EventEmitter";
-import { ICanvas, IGrid, IPosition, ISwapData } from "../interfaces";
+import { IGrid, IPosition, ISwapData } from "../interfaces";
 import { rectWithStripes } from "../utils/Draw";
 import { hasConsecutive } from "../utils/General";
 import { Cell } from "./Cell";
@@ -120,7 +120,7 @@ export class Grid extends EventEmitter implements IGrid {
         let chosenCriticals: Position[] = [];
 
         do {
-            let randomPosition: Position = new Position(Math.floor(Math.random() * this.width), Math.floor(Math.random() * this.height));
+            let randomPosition: Position = Position.of(Math.floor(Math.random() * this.width), Math.floor(Math.random() * this.height));
 
             if (!chosenCriticals.map((position: Position) => position.checksum).includes(randomPosition.checksum)) {
                 chosenCriticals.push(randomPosition);
@@ -156,14 +156,14 @@ export class Grid extends EventEmitter implements IGrid {
         this.cells = [...Array(this.width)].map(
             (_, x: number) => [...Array(this.height)].map(
                 (_, y: number) => {
-                    return new Cell(new Position(x, y));
+                    return new Cell(Position.of(x, y));
                 }
             )
         );
     }
 
     calculateSpacing(): void {
-        const canvas: ICanvas = Canvas.getInstance();
+        const canvas: Canvas = Canvas.getInstance();
 
         let horizontalCenterPadding: number = 0;
         let verticalCenterPadding: number = 0;
@@ -210,7 +210,7 @@ export class Grid extends EventEmitter implements IGrid {
                 marginBottom = currentYMargin + this.sideSize;
             }
 
-            this.getCellbyPosition(position).canvasPosition = new Position(currentXMargin, currentYMargin);
+            this.getCellbyPosition(position).canvasPosition = Position.of(currentXMargin, currentYMargin);
         });
 
         Canvas.getInstance().gridData = {
@@ -236,7 +236,7 @@ export class Grid extends EventEmitter implements IGrid {
     reapplyPositionsToPieces(): void {
         this.cells.forEach((cells: Cell[], x: number) => {
             cells.forEach((cell: Cell, y: number) => {
-                cell.gridPosition = new Position(x, y);
+                cell.gridPosition = Position.of(x, y);
                 cell.piece?.renewPosition(cell.gridPosition);
                 this.calculateSpacing();
             })
@@ -369,7 +369,7 @@ export class Grid extends EventEmitter implements IGrid {
         let generated: boolean = false;
         if (allowMatches) {
             for (let x = 0; x < this.width; x++) {
-                let position: Position = new Position(x, 0)
+                let position: Position = Position.of(x, 0)
                 if (this.getPieceByPosition(position) === undefined) {
                     generated = true;
                     this.setCellPiece(position, Piece.generateRandomPiece(position, this.runSnapshot));
@@ -384,7 +384,7 @@ export class Grid extends EventEmitter implements IGrid {
                 row = [];
 
                 for (let x = 0; x < this.width; x++) {
-                    let position: Position = new Position(x, 0);
+                    let position: Position = Position.of(x, 0);
                     if (this.getPieceByPosition(position) === undefined) {
 
                         let generatedPiece: Piece;
@@ -437,7 +437,7 @@ export class Grid extends EventEmitter implements IGrid {
             }
         }
 
-        if (this.canReachDiagonal(position1).map((position: Position) => position.checksum).includes(position2.checksum) &&
+        if (this.canReachDiagonal(position1, this.runSnapshot.player.itemData.reach).map((position: Position) => position.checksum).includes(position2.checksum) &&
             this.runSnapshot.player?.passive?.name === 'Flexible' &&
             !this.runSnapshot.player.hasItem('Diagonal Reach')
         ) {
@@ -459,27 +459,31 @@ export class Grid extends EventEmitter implements IGrid {
 
         for (let currentReach: number = 1; currentReach <= reach; currentReach++) {
             possibleMoves.push(...[
-                new Position(pos1.x - currentReach, pos1.y),
-                new Position(pos1.x + currentReach, pos1.y),
-                new Position(pos1.x, pos1.y - currentReach),
-                new Position(pos1.x, pos1.y + currentReach)
+                Position.of(pos1.x - currentReach, pos1.y),
+                Position.of(pos1.x + currentReach, pos1.y),
+                Position.of(pos1.x, pos1.y - currentReach),
+                Position.of(pos1.x, pos1.y + currentReach)
             ]);
         }
 
         if (extended) {
-            possibleMoves.push(...this.canReachDiagonal(pos1));
+            possibleMoves.push(...this.canReachDiagonal(pos1, this.runSnapshot.player.itemData.reach));
         }
 
         return possibleMoves.map((position: Position) => position.checksum).includes(pos2.checksum);
     }
 
-    canReachDiagonal(pos1: Position): Position[] {
-        return [
-            new Position(pos1.x - 1, pos1.y - 1),
-            new Position(pos1.x - 1, pos1.y + 1),
-            new Position(pos1.x + 1, pos1.y - 1),
-            new Position(pos1.x + 1, pos1.y + 1),
-        ];
+    canReachDiagonal(pos1: Position, reach: number): Position[] {
+        let diagonals: Position[] = [];
+        for (let currentReach: number = 1; currentReach <= reach; currentReach++) {
+            diagonals.push(...[
+                Position.of(pos1.x - currentReach, pos1.y - currentReach),
+                Position.of(pos1.x + currentReach, pos1.y + currentReach),
+                Position.of(pos1.x + currentReach, pos1.y - currentReach),
+                Position.of(pos1.x - currentReach, pos1.y + currentReach)
+            ]);
+        }
+        return diagonals
     }
 
 
@@ -649,7 +653,7 @@ export class Grid extends EventEmitter implements IGrid {
                 if (breakY && breakY(x, y)) {
                     break;
                 }
-                callback(new Position(x, y));
+                callback(Position.of(x, y));
             }
         }
     }
@@ -663,19 +667,19 @@ export class Grid extends EventEmitter implements IGrid {
                 if (breakX && breakX(x, y)) {
                     break;
                 }
-                callback(new Position(x, y));
+                callback(Position.of(x, y));
             }
         }
     }
 
     draw(hasDialogOpen: boolean = false): void {
-        const canvas: ICanvas = Canvas.getInstance();
+        const canvas: Canvas = Canvas.getInstance();
         const p5 = canvas.p5;
 
         this.cells.flat().forEach((cell: Cell) => {
             p5.noStroke();
 
-            const limits: Limits = new Limits(new Position(cell.canvasPosition.x, cell.canvasPosition.y), new Position(cell.canvasPosition.x + this.sideSize, cell.canvasPosition.y + this.sideSize));
+            const limits: Limits = new Limits(Position.of(cell.canvasPosition.x, cell.canvasPosition.y), Position.of(cell.canvasPosition.x + this.sideSize, cell.canvasPosition.y + this.sideSize));
             const highlight: boolean = (!hasDialogOpen && limits.contains(canvas.mousePosition)) || (this.selectedCellPosition ? cell.gridPosition.checksum === this.selectedCellPosition.checksum : false);
 
             const critical: boolean = this.getPieceByPosition(cell.gridPosition)?.critical;
@@ -686,7 +690,7 @@ export class Grid extends EventEmitter implements IGrid {
                 if (['Vertical AOE', 'Horizontal AOE'].includes(cell.piece.effect.id)) {
                     rectWithStripes(
                         cell.canvasPosition,
-                        new Position(this.sideSize, this.sideSize),
+                        Position.of(this.sideSize, this.sideSize),
                         6,
                         cell.piece.effect.id === 'Horizontal AOE',
                         color1,

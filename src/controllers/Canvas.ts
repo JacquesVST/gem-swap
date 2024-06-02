@@ -1,5 +1,5 @@
 import * as P5 from "p5";
-import { ICanvas, IGridData, IPosition, IUiData } from "../interfaces";
+import { ICanvas, IGridData, IUiData } from "../interfaces";
 import { Color } from "../models/Color";
 import { Position } from "../models/Position";
 
@@ -29,15 +29,15 @@ export class Canvas implements ICanvas {
         return Canvas.instance;
     }
 
-    get mousePosition(): IPosition {
-        return new Position(this.p5.mouseX, this.p5.mouseY);
+    get mousePosition(): Position {
+        return Position.of(this.p5.mouseX, this.p5.mouseY);
     }
 
     calculateAndCreatePlayfield(): void {
         const screenWidth: number = document.body.clientWidth;
         const screenHeight: number = window.innerHeight
 
-        this.windowSize = new Position(screenWidth, screenHeight);
+        this.windowSize = Position.of(screenWidth, screenHeight);
 
         this.itemSideSize = this.scale(0.16);
         this.margin = this.scale(0.016);
@@ -45,10 +45,10 @@ export class Canvas implements ICanvas {
         this.radius = this.scale(0.004);
         this.stroke = this.scale(0.002);
 
-        const uiBarSize = this.p5.min(this.windowSize.x, this.windowSize.y) * 0.020;
+        const uiBarSize = this.scale(0.020);
         this.uiData = this.calculateUiSize({ uiBarSize, topBarCount: 3, bottomBarCount: 3 });
 
-        this.playfield = new Position(this.windowSize.x - 2 * this.margin, (this.windowSize.y - 2 * this.margin));
+        this.playfield = Position.of(this.windowSize.x - 2 * this.margin, (this.windowSize.y - 2 * this.margin));
 
         this.p5.createCanvas(this.windowSize.x, this.windowSize.y);
     }
@@ -57,10 +57,10 @@ export class Canvas implements ICanvas {
         uiData.topUiSize = ((uiData.topBarCount + 1) * this.margin) + (uiData.topBarCount * uiData.uiBarSize);
         uiData.bottomUiSize = ((uiData.bottomBarCount + 1) * this.margin) + (uiData.bottomBarCount * uiData.uiBarSize);
 
-        uiData.fontTitle = this.p5.min(this.windowSize.x, this.windowSize.y) * 0.024;
-        uiData.fontText = this.p5.min(this.windowSize.x, this.windowSize.y) * 0.020;
-        uiData.fontSubText = this.p5.min(this.windowSize.x, this.windowSize.y) * 0.016;
-        uiData.fontDetail = this.p5.min(this.windowSize.x, this.windowSize.y) * 0.012;
+        uiData.fontTitle = this.scale(0.024);
+        uiData.fontText = this.scale(0.020);
+        uiData.fontSubText = this.scale(0.016);
+        uiData.fontDetail = this.scale(0.012);
 
         return uiData;
     }

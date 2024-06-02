@@ -104,7 +104,7 @@ export class Map extends EventEmitter implements IMap {
             let clickFound: boolean;
             this.grid.iterateXtoY((position: Position) => {
                 const cell: Cell = this.grid.getCellbyPosition(position);
-                const limits: Limits = new Limits(new Position(cell.canvasPosition.x, cell.canvasPosition.y), new Position(cell.canvasPosition.x + this.grid.sideSize, cell.canvasPosition.y + this.grid.sideSize))
+                const limits: Limits = new Limits(Position.of(cell.canvasPosition.x, cell.canvasPosition.y), Position.of(cell.canvasPosition.x + this.grid.sideSize, cell.canvasPosition.y + this.grid.sideSize))
 
                 if (limits.contains(click)) {
                     clickFound = true;

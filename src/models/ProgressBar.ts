@@ -1,7 +1,7 @@
 import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
 import { EventEmitter } from "../controllers/EventEmitter";
-import { ICanvas, IEventParams, IProgressBar } from "../interfaces";
+import { IEventParams, IProgressBar } from "../interfaces";
 import { endShadow, startShadow } from "../utils/Draw";
 import { formatNumber } from "../utils/General";
 import { Color } from "./Color";
@@ -49,7 +49,7 @@ export class ProgressBar extends EventEmitter implements IProgressBar {
     }
 
     draw(run?: Run): void {
-        const canvas: ICanvas = Canvas.getInstance();
+        const canvas: Canvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
 
         let commonMargin: number;
@@ -69,7 +69,7 @@ export class ProgressBar extends EventEmitter implements IProgressBar {
         const maxBarSize: number = (canvas.playfield.x - (2 * canvas.margin));
         const finalElementSize: number = (maxBarSize * percentageOfBar) > maxBarSize ? maxBarSize : (maxBarSize * percentageOfBar);
 
-        this.limits = new Limits(new Position(canvas.margin * 1.5, commonMargin - canvas.margin / 2), new Position(canvas.playfield.x - canvas.margin * 1.5, commonMargin - canvas.margin / 2 + canvas.uiData.uiBarSize + canvas.margin))
+        this.limits = new Limits(Position.of(canvas.margin * 1.5, commonMargin - canvas.margin / 2), Position.of(canvas.playfield.x - canvas.margin * 1.5, commonMargin - canvas.margin / 2 + canvas.uiData.uiBarSize + canvas.margin))
 
         if (this.limits.contains(canvas.mousePosition) && this.top) {
             p5.fill(Color.GRAY_3.alpha(200).value);

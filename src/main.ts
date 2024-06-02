@@ -70,11 +70,11 @@ const sketch = (p5Instance: p5) => {
 
     // mouse events
     p5Instance.mouseClicked = () => {
-        eventEmitter.emit('MouseClicked:Click', new Position(p5Instance.mouseX, p5Instance.mouseY), run)
+        eventEmitter.emit('MouseClicked:Click', Position.of(p5Instance.mouseX, p5Instance.mouseY), run)
     }
 
     p5Instance.mousePressed = () => {
-        let click: Position = new Position(p5Instance.mouseX, p5Instance.mouseY)
+        let click: Position = Position.of(p5Instance.mouseX, p5Instance.mouseY)
         dragController.add(new DragAnimation(click, 30))
         dragController.isDragging = true;
         eventEmitter.emit('MouseClicked', click, run)
@@ -82,11 +82,11 @@ const sketch = (p5Instance: p5) => {
 
     p5Instance.mouseReleased = () => {
         dragController.isDragging = false;
-        eventEmitter.emit('MouseClicked', new Position(p5Instance.mouseX, p5Instance.mouseY), run, true)
+        eventEmitter.emit('MouseClicked', Position.of(p5Instance.mouseX, p5Instance.mouseY), run, true)
     }
 
     p5Instance.mouseDragged = () => {
-        eventEmitter.emit('MouseClicked:Drag', new Position(p5Instance.mouseX, p5Instance.mouseY), !!dialogController.currentDialog)
+        eventEmitter.emit('MouseClicked:Drag', Position.of(p5Instance.mouseX, p5Instance.mouseY), !!dialogController.currentDialog)
     }
 
     // keyboard events

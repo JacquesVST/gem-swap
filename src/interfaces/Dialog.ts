@@ -1,5 +1,6 @@
 import { IAnimatable } from "./Animation";
-import { IColor, ILimits } from "./General";
+import { IColor, ILimits, IPosition } from "./General";
+import { IRun } from "./Run";
 
 export interface IDialog extends IAnimatable {
     id: string;
@@ -23,4 +24,17 @@ export enum DialogType {
     NAVIGATION,
     SHOP,
     SKIPPABLE_ITEM,
+}
+
+export interface IButton {
+    id: string;
+    size: IPosition;
+    color: IColor;
+    limits: ILimits;
+    position: IPosition;
+    disabled: boolean;
+    
+    content: (...params: any) => void;
+    action: (...params: any) => void;
+    draw: (run?: IRun) => void;
 }

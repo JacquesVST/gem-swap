@@ -4,13 +4,14 @@ import { DialogController } from "../controllers/DialogController";
 import { EventEmitter } from "../controllers/EventEmitter";
 import { Frequency, IDamageData, IPlayer, IPlayerItemData } from "../interfaces";
 import { drawItem, endShadow, fillFlat, fillStroke, rectWithStripes, startShadow } from "../utils/Draw";
-import { countOcurrences, formatNumber, insertLineBreaks } from "../utils/General";
+import { formatNumber, insertLineBreaks } from "../utils/General";
 import { Color } from "./Color";
 import { Enemy } from "./Enemy";
 import { Item } from "./Item";
 import { Limits } from "./Limits";
 import { Position } from "./Position";
 import { Run } from "./Run";
+import { Shape } from "./Shape";
 
 export class Player extends EventEmitter implements IPlayer {
     health: number;
@@ -51,6 +52,7 @@ export class Player extends EventEmitter implements IPlayer {
         passiveLimits: undefined,
         reach: 1,
         rerolls: 0,
+        colorDamageBosts: {}
     }
 
     constructor(health: number, moves: number, attack: number, defense: number, passive?: Item) {
@@ -307,9 +309,9 @@ export class Player extends EventEmitter implements IPlayer {
             const passiveSlotX: number = itemLeft + canvas.itemSideSize / 6;
             const passiveSlotY: number = activeSlotY + canvas.itemSideSize + canvas.margin;
 
-            this.itemData.activeItemLimits = new Position(activeSlotX, activeSlotY).toLimits(new Position(canvas.itemSideSize, canvas.itemSideSize));
-            this.itemData.activeItem2Limits = new Position(activeSlotX2, activeSlotY2).toLimits(new Position(compactItemSideSize, compactItemSideSize));
-            this.itemData.passiveLimits = new Position(passiveSlotX, passiveSlotY).toLimits(new Position(compactItemSideSize, compactItemSideSize));
+            this.itemData.activeItemLimits = Position.of(activeSlotX, activeSlotY).toLimits(Position.of(canvas.itemSideSize, canvas.itemSideSize));
+            this.itemData.activeItem2Limits = Position.of(activeSlotX2, activeSlotY2).toLimits(Position.of(compactItemSideSize, compactItemSideSize));
+            this.itemData.passiveLimits = Position.of(passiveSlotX, passiveSlotY).toLimits(Position.of(compactItemSideSize, compactItemSideSize));
 
             const opacity1: number = this.itemData.activeItemLimits.contains(canvas.mousePosition) ? 200 : 255;
             const opacity2: number = this.itemData.activeItem2Limits.contains(canvas.mousePosition) ? 200 : 255;
@@ -471,11 +473,69 @@ export class Player extends EventEmitter implements IPlayer {
             const width: number = rectRight - rectLeft;
             const height: number = canvas.itemSideSize / 4;
 
+            const statsData: StatData[] = [
+                {
+                    label: 'Attack',
+                    value: `${formatNumber(this.attack)}`
+                },
+                {
+                    label: 'Defense',
+                    value: `${formatNumber(this.defense)}`
+                },
+                {
+                    label: 'Crit Count',
+                    value: `${formatNumber(this.critical)}`
+                },
+                {
+                    label: 'Crit Damage',
+                    value: `${Math.floor((this.criticalMultiplier - 1) * 100)}%`,
+                },
+                {
+                    label: 'Multiplier',
+                    value: `${Math.floor((this.damageMultiplier) * 100)}%`,
+                },
+                {
+                    label: 'XP',
+                    value: `${Math.floor(this.xp)}`
+                }
+            ]
+
+            if (this.itemData?.criticalChance > 0) {
+                statsData.push({
+                    label: 'Crit Chance',
+                    value: `${Math.floor((this.itemData.criticalChance) * 100)}%`,
+                })
+            }
+
+            if (this.itemData?.reach > 1) {
+                statsData.push({
+                    label: 'Reach',
+                    value: `${Math.floor(this.itemData.reach)}`
+                })
+            }
+
+            if (this.itemData.moveSaverChance) {
+                statsData.push({
+                    label: 'Move Spare Chacne',
+                    value: `${Math.floor((this.itemData.moveSaverChance) * 100)}%`,
+                })
+            }
+
+            if (this.items.some((item: Item) => item.name.endsWith('Color Boost'))) {
+                this.items.filter((item: Item) => item.name.endsWith('Color Boost')).forEach((item: Item) => {
+                    statsData.push({
+                        label: item.name,
+                        value: `+${Math.floor(this.itemData.colorDamageBosts[item.name.split(' ')[0].toLowerCase()].itemData.bonusDamage)}`,
+                    })
+                })
+
+            }
+
             startShadow(drawingContext);
             rectWithStripes(
-                new Position(rectLeft, referenceY - (height * 3)),
-                new Position(width, height * 6),
-                6,
+                Position.of(rectLeft, referenceY - (height * (statsData.length / 2))),
+                Position.of(width, height * statsData.length),
+                statsData.length,
                 true,
                 Color.GRAY_3,
                 Color.GRAY_2
@@ -483,85 +543,102 @@ export class Player extends EventEmitter implements IPlayer {
             endShadow(drawingContext);
 
             // Titles
-            fillStroke(Color.WHITE_1)
-            p5.textAlign(p5.LEFT, p5.CENTER)
-            p5.textSize(canvas.uiData.fontSubText)
-            p5.text(
-                'Attack',
-                textLeft,
-                referenceY - height * 2.5
-            );
 
-            p5.text(
-                'Defense',
-                textLeft,
-                referenceY - height * 1.5
-            );
+            const referenceIndex: number = statsData.length / 2;
+            statsData.forEach((stat: StatData, index) => {
+                const offset: number = index - referenceIndex + 0.5;
 
-            p5.text(
-                'Crit Count',
-                textLeft,
-                referenceY - height * 0.5
-            );
+                fillStroke(Color.WHITE_1)
+                p5.textAlign(p5.LEFT, p5.CENTER)
+                p5.textSize(canvas.uiData.fontSubText)
+                p5.text(
+                    stat.label,
+                    textLeft,
+                    referenceY + height * offset
+                );
 
-            p5.text(
-                'Crit Damage',
-                textLeft,
-                referenceY + height * 0.5
-            );
+                fillStroke()
+                p5.textAlign(p5.RIGHT, p5.CENTER)
+                p5.textSize(canvas.uiData.fontText)
+                p5.text(
+                    stat.value,
+                    textRight,
+                    referenceY + height * offset
+                );
 
-            p5.text(
-                'Multiplier',
-                textLeft,
-                referenceY + height * 1.5
-            );
-
-            p5.text(
-                'XP',
-                textLeft,
-                referenceY + height * 2.5
-            );
-
-            // Values
-            fillStroke()
-            p5.textAlign(p5.RIGHT, p5.CENTER)
-            p5.textSize(canvas.uiData.fontText)
-            p5.text(
-                `${formatNumber(this.attack)}`,
-                textRight,
-                referenceY - height * 2.5
-            );
-
-            p5.text(
-                `${formatNumber(this.defense)}`,
-                textRight,
-                referenceY - height * 1.5
-            );
-
-            p5.text(
-                `${formatNumber(this.critical)}`,
-                textRight,
-                referenceY - height * 0.5
-            );
-
-            p5.text(
-                `${Math.floor((this.criticalMultiplier - 1) * 100)}%`,
-                textRight,
-                referenceY + height * 0.5
-            );
-
-            p5.text(
-                `${Math.floor((this.damageMultiplier) * 100)}%`,
-                textRight,
-                referenceY + height * 1.5
-            );
-
-            p5.text(
-                `${Math.floor(this.xp)}`,
-                textRight,
-                referenceY + height * 2.5
-            );
-
+            });
+            /*
+                        fillStroke(Color.WHITE_1)
+                        p5.textAlign(p5.LEFT, p5.CENTER)
+                        p5.textSize(canvas.uiData.fontSubText)
+                        p5.text(
+                            'Attack',
+                            textLeft,
+                            referenceY - height * 2.5
+                        );
+            
+                        p5.text(
+                            'Defense',
+                            textLeft,
+                            referenceY - height * 1.5
+                        );
+            
+                        p5.text(
+                            'Crit Count',
+                            textLeft,
+                            referenceY - height * 0.5
+                        );
+            
+                        p5.text(
+                            'Crit Damage',
+                            textLeft,
+                            referenceY + height * 0.5
+                        );
+            
+                        p5.text(
+                            'Multiplier',
+                            textLeft,
+                            referenceY + height * 1.5
+                        );
+            
+                        p5.text(
+                            'XP',
+                            textLeft,
+                            referenceY + height * 2.5
+                        );
+            
+                        // Values
+            
+                        p5.text(
+                            `${formatNumber(this.defense)}`,
+                            textRight,
+                            referenceY - height * 1.5
+                        );
+            
+                        p5.text(
+                            `${formatNumber(this.critical)}`,
+                            textRight,
+                            referenceY - height * 0.5
+                        );
+            
+                        p5.text(
+                            `${Math.floor((this.criticalMultiplier - 1) * 100)}%`,
+                            textRight,
+                            referenceY + height * 0.5
+                        );
+            
+                        p5.text(
+                            `${Math.floor((this.damageMultiplier) * 100)}%`,
+                            textRight,
+                            referenceY + height * 1.5
+                        );
+            
+                        p5.text(
+                            `${Math.floor(this.xp)}`,
+                            textRight,
+                            referenceY + height * 2.5
+                        );
+            */
         }
 
         if (this.hasInventoryOpen && this.items.length) {
@@ -575,8 +652,8 @@ export class Player extends EventEmitter implements IPlayer {
             );
 
             let sideSize: number = canvas.itemSideSize;
-            let dimension: Position = new Position(0, 0);
-            let margin: Position = new Position(0, 0);
+            let dimension: Position = Position.of(0, 0);
+            let margin: Position = Position.of(0, 0);
 
             let textMarginCount: number = 3;
             let lengthOffSet: number = 4 + Math.ceil(this.items.length / 10);
@@ -631,7 +708,7 @@ export class Player extends EventEmitter implements IPlayer {
                 let cumulativeMarginX: number = margin.x + ((index % lengthOffSet) * (sideSize + canvas.margin)) + canvas.margin;
                 let cumulativeMarginY: number = margin.y + (Math.floor(index / lengthOffSet) * (sideSize + canvas.margin)) + (canvas.margin * textMarginCount);
 
-                drawItem(item, cumulativeMarginX, cumulativeMarginY, sideSize, sideSize)
+                drawItem(item, Position.of(cumulativeMarginX, cumulativeMarginY), Position.of(sideSize, sideSize))
             })
 
         }
@@ -669,7 +746,7 @@ export class Player extends EventEmitter implements IPlayer {
             p5.textAlign(p5.CENTER, p5.CENTER)
             p5.textSize(canvas.uiData.fontDetail);
             let description: string = insertLineBreaks(this.passive.description, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.passive.description), 0, this.passive.description.length));
-            
+
             fillStroke(Color.WHITE_1)
             p5.text(
                 description,
@@ -686,4 +763,10 @@ export interface PlayerItemData extends IPlayerItemData {
     activeItem2: Item;
     activeItem2Limits: Limits;
     passiveLimits: Limits;
+    colorDamageBosts: { [key: string]: Shape }
+}
+
+export interface StatData {
+    label: string,
+    value: string
 }
