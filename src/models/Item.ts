@@ -406,9 +406,17 @@ export class ItemPools {
             new Item(
                 'Common',
                 'Crit Chance',
-                'Matches have +2% chance of critting',
+                'Matches have +1% chance of critting',
                 (() => {
-                    run.player.itemData.criticalChance += 0.02;
+                    run.player.itemData.criticalChance += 0.01;
+                }).bind(run),
+            ),
+            new Item(
+                'Epic',
+                'Bug Crit Chance',
+                'Matches have +10% chance of critting',
+                (() => {
+                    run.player.itemData.criticalChance += 0.10;
                 }).bind(run),
             ),
             new Item(
