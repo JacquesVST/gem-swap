@@ -168,12 +168,12 @@ export class ItemPools {
     static shopPool(run: Run): Item[] {
         let shopPool: Item[] = [
             (() => {
-                let price: number = 50;
+                let price: number = 100;
                 let name: string = 'tirC';
                 price = price * run.costMultiplier;
                 price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
                 return new Item(
-                    'Rare',
+                    'Epic',
                     name,
                     'Conditions for a critical are inverted',
                     (() => { }).bind(run),
