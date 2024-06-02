@@ -4,7 +4,7 @@ import { DialogController } from "../controllers/DialogController";
 import { EventEmitter } from "../controllers/EventEmitter";
 import { Frequency, IDamageData, IPlayer, IPlayerItemData } from "../interfaces";
 import { drawItem, endShadow, fillFlat, fillStroke, rectWithStripes, startShadow } from "../utils/Draw";
-import { formatNumber, insertLineBreaks } from "../utils/General";
+import { countOcurrences, formatNumber, insertLineBreaks } from "../utils/General";
 import { Color } from "./Color";
 import { Enemy } from "./Enemy";
 import { Item } from "./Item";
@@ -28,6 +28,7 @@ export class Player extends EventEmitter implements IPlayer {
 
     hasInventoryOpen: boolean = false;
     hasStatsOpen: boolean = false;
+    hasPassiveDetailsOpen: boolean = false;
 
     passive: Item;
     items: Item[] = [];
@@ -108,10 +109,16 @@ export class Player extends EventEmitter implements IPlayer {
                 this.hasInventoryOpen = false;
             }
 
-            if ((event.key === 's' || event.key === 'S') && !run.hasDialogOpen) {
+            if ((event.key === 's' || event.key === 'S')) {
                 this.hasStatsOpen = !this.hasStatsOpen;
             }
+
+            if ((event.key === 'p' || event.key === 'P') && !run.hasDialogOpen) {
+                this.hasPassiveDetailsOpen = !this.hasPassiveDetailsOpen;
+            }
         });
+
+
 
         this.on('Main:KeyReleased', (event: KeyboardEvent, run: Run) => {
             if (event.key === ' ') {
@@ -138,6 +145,12 @@ export class Player extends EventEmitter implements IPlayer {
                 if (this.itemData.activeItem2) {
                     if (this.itemData.activeItem2Limits.contains(position)) {
                         this.useActiveItem2(run);
+                    }
+                }
+
+                if (this.passive) {
+                    if (this.itemData.passiveLimits.contains(position)) {
+                        this.hasPassiveDetailsOpen = !this.hasPassiveDetailsOpen;
                     }
                 }
             }, 0);
@@ -621,6 +634,48 @@ export class Player extends EventEmitter implements IPlayer {
                 drawItem(item, cumulativeMarginX, cumulativeMarginY, sideSize, sideSize)
             })
 
+        }
+
+        this.drawPassiveDetail();
+    }
+
+    drawPassiveDetail() {
+        const canvas: Canvas = Canvas.getInstance();
+        const p5: P5 = canvas.p5;
+
+        if (this.hasPassiveDetailsOpen && this.passive) {
+
+            const slotX: number = ((canvas.gridData.marginLeft - canvas.margin) / 2) + canvas.margin - canvas.itemSideSize / 2
+            const slotY: number = (canvas.windowSize.y / 2) - (canvas.itemSideSize / 2) + canvas.itemSideSize + (canvas.margin * 2) + canvas.itemSideSize / 6 * 4;
+
+            fillFlat(Color.GRAY_3.alpha(200));
+            p5.rect(
+                slotX,
+                slotY,
+                canvas.itemSideSize,
+                canvas.itemSideSize / 3,
+                canvas.radius
+            );
+
+            p5.triangle(
+                slotX + canvas.itemSideSize / 2 - canvas.margin,
+                slotY,
+                slotX + canvas.itemSideSize / 2 + canvas.margin,
+                slotY,
+                slotX + canvas.itemSideSize / 2,
+                slotY - canvas.margin,
+            );
+
+            p5.textAlign(p5.CENTER, p5.CENTER)
+            p5.textSize(canvas.uiData.fontDetail);
+            let description: string = insertLineBreaks(this.passive.description, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.passive.description), 0, this.passive.description.length));
+            
+            fillStroke(Color.WHITE_1)
+            p5.text(
+                description,
+                slotX + canvas.itemSideSize / 2,
+                slotY + canvas.itemSideSize / 6
+            );
         }
     }
 }

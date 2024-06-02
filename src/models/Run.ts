@@ -223,7 +223,6 @@ export class Run extends EventEmitter implements IRun {
 
         this.on('Grid:MoveDone', () => {
             if (this.combo > 0) {
-                console.log(this.map.isBoss)
                 this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
             } else {
                 this.map.grid.isUnstable = false;
@@ -352,7 +351,6 @@ export class Run extends EventEmitter implements IRun {
     }
 
     updateMoves(): void {
-        console.log(this.player)
         if (this.player.hasItem('Moves as you Crits')) {
             this.player.itemData.bonusMoves = this.player.critical
         }
