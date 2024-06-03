@@ -224,16 +224,13 @@ export class Run extends EventEmitter implements IRun {
         this.on('Grid:MoveDone', () => {
             if (this.combo > 0) {
                 this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
+                if (this.player.passive.name === 'Think Fast') {
+                    this.player.resetTimer();
+                    this.player.itemData.damageBoostTimer.hasMoved = true;
+                }
             } else {
                 this.map.grid.isUnstable = false;
             }
-
-            if (this.player.passive.name === 'Think Fast') {
-                this.player.resetTimer();
-                this.player.itemData.damageBoostTimer.hasMoved = true;
-            }
-
-
 
             if (this.player.movesEnded) {
                 this.reload();
@@ -695,7 +692,6 @@ export class Run extends EventEmitter implements IRun {
         }
 
         if (this.player?.passive?.name === 'Think Fast') {
-            console.log(this.player.itemData.damageBoostTimer.multiplier)
             damageMultiplier = damageMultiplier * this.player.itemData.damageBoostTimer.multiplier;
         }
 

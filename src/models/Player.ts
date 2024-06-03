@@ -193,7 +193,6 @@ export class Player extends EventEmitter implements IPlayer {
         this.on('Run:MidasTouched', (gold: number) => {
             this.addGold(gold)
         });
-
     }
 
     get movesEnded(): boolean {
@@ -253,6 +252,7 @@ export class Player extends EventEmitter implements IPlayer {
                     this.itemData.damageBoostTimer.timer -= updateInterval;
                 } else {
                     clearInterval(timerInterval);
+
                 }
                 this.itemData.damageBoostTimer.multiplier = multiplier;
                 this.itemData.damageBoostTimer.color = color;

@@ -147,7 +147,7 @@ export class ItemPools {
             new Item(
                 'Passive',
                 'Think Fast',
-                'Damage multiplier for matches within the time limit',
+                'Has a timer that resets every move that multiplies your damage the faster you act',
                 () => { }
             ),
         ]
