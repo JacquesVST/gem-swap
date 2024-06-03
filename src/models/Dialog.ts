@@ -401,7 +401,7 @@ export class ItemDialogOption extends DialogOption {
                                     run.player.itemData.activeItem = aux;
                                 }
                             } else {
-                                run.player.itemData.activeItem2 = item;
+                                run.player.itemData.activeItem = item;
                             }
                         } else {
                             item.effect();

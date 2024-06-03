@@ -1,4 +1,4 @@
-import { ILimits } from "./General";
+import { IColor, ILimits } from "./General";
 import { IItem } from "./Item";
 import { IShape } from "./Piece";
 
@@ -43,6 +43,15 @@ export interface IPlayerItemData {
     rerolls: number;
     bossMoves: number;
     colorDamageBosts: { [key: string]: IShape };
+    damageBoostTimer: IDamageBoostTimerData
+}
+
+export interface IDamageBoostTimerData {
+    timer: number;
+    multiplier: number;
+    label: string;
+    hasMoved: boolean;
+    color: IColor;
 }
 
 export interface IDamageData {

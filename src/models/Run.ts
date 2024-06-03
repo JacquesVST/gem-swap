@@ -227,6 +227,14 @@ export class Run extends EventEmitter implements IRun {
             } else {
                 this.map.grid.isUnstable = false;
             }
+
+            if (this.player.passive.name === 'Think Fast') {
+                this.player.resetTimer();
+                this.player.itemData.damageBoostTimer.hasMoved = true;
+            }
+
+
+
             if (this.player.movesEnded) {
                 this.reload();
                 this.updateMoves();
@@ -252,6 +260,7 @@ export class Run extends EventEmitter implements IRun {
         this.on('Grid:GridStabilized:Init', () => {
             this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
             this.updateTopProgressBars();
+            this.player.resetTimer();
         });
 
         this.on('Grid:FirstClickFound', () => {
@@ -624,10 +633,8 @@ export class Run extends EventEmitter implements IRun {
             matches.forEach((match: Piece[]) => {
                 if (match.length >= 4) {
                     let itemStack: number = this.player.items.filter((item: Item) => item.name === '4+ Match Regeneration').length
-                    let heal: number = itemStack * 0.01 * this.player.maxHealth
-                    this.player.heal(heal);
+                    this.player.heal(itemStack);
                     this.updateHealth();
-                    TextController.getInstance().playerHealedAnimaiton(heal);
                 }
             });
         }
@@ -682,9 +689,14 @@ export class Run extends EventEmitter implements IRun {
 
         if (Math.random() < this.player.itemData.criticalChance) {
             criticalInMatch = true;
-            if(this.player?.passive?.name === 'Natural Crit'){
+            if (this.player?.passive?.name === 'Natural Crit') {
                 damageMultiplier = damageMultiplier * 1.1;
             }
+        }
+
+        if (this.player?.passive?.name === 'Think Fast') {
+            console.log(this.player.itemData.damageBoostTimer.multiplier)
+            damageMultiplier = damageMultiplier * this.player.itemData.damageBoostTimer.multiplier;
         }
 
         criticalInMatch = this.player.items.filter((item: Item) => item.name === 'tirC').length % 2 === 1 ? !criticalInMatch : criticalInMatch;

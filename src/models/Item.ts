@@ -110,7 +110,7 @@ export class ItemPools {
             ),
             new Item(
                 'Passive',
-                '4x4',
+                '4x3',
                 'Can only match 4 pieces or more, but damage is tripled',
                 () => { }
             ),
@@ -142,6 +142,12 @@ export class ItemPools {
                 'Passive',
                 'Midas Touched',
                 '+1 Gold for matches with pieces on the extremities, +2 on crit',
+                () => { }
+            ),
+            new Item(
+                'Passive',
+                'Think Fast',
+                'Damage multiplier for matches within the time limit',
                 () => { }
             ),
         ]

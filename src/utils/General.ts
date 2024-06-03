@@ -6,6 +6,23 @@ export function formatNumber(number: number): string {
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
+export function formatTimer(ms: number, multi: number): string {
+    let text: string = '';
+    
+    if (ms === 0) {
+        text = '0.00'
+    }
+    const seconds: number = Math.floor(ms / 1000);
+    const milliseconds: number = Math.floor((ms % 1000) / 10);
+    text = `${seconds}.${milliseconds.toString().padStart(2, '0')}`;
+
+    if (!isNaN(multi)) {
+        text += ` (X${multi})`;
+    }
+
+    return text;
+}
+
 export function hasConsecutive(array: string[], amount: number): boolean {
     let last: any;
     let count: number = 0;

@@ -2,9 +2,9 @@ import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
 import { DialogController } from "../controllers/DialogController";
 import { EventEmitter } from "../controllers/EventEmitter";
-import { Frequency, IDamageData, IPlayer, IPlayerItemData } from "../interfaces";
+import { Frequency, IDamageBoostTimerData, IDamageData, IPlayer, IPlayerItemData } from "../interfaces";
 import { drawItem, endShadow, fillFlat, fillStroke, rectWithStripes, startShadow } from "../utils/Draw";
-import { formatNumber, insertLineBreaks } from "../utils/General";
+import { formatNumber, formatTimer, insertLineBreaks } from "../utils/General";
 import { Color } from "./Color";
 import { Enemy } from "./Enemy";
 import { Item } from "./Item";
@@ -52,7 +52,14 @@ export class Player extends EventEmitter implements IPlayer {
         passiveLimits: undefined,
         reach: 1,
         rerolls: 0,
-        colorDamageBosts: {}
+        colorDamageBosts: {},
+        damageBoostTimer: {
+            timer: 0,
+            multiplier: 1,
+            label: '0.00 (X1)',
+            hasMoved: false,
+            color: Color.WHITE_1
+        }
     }
 
     constructor(health: number, moves: number, attack: number, defense: number, passive?: Item) {
@@ -217,6 +224,46 @@ export class Player extends EventEmitter implements IPlayer {
         }
     }
 
+    resetTimer(): void {
+        if (this.passive?.name === 'Think Fast') {
+            this.itemData.damageBoostTimer.timer = 15000;
+            const updateInterval: number = 10;
+            const timerInterval: NodeJS.Timeout = setInterval(() => {
+                if (this.itemData.damageBoostTimer.hasMoved){
+                    this.itemData.damageBoostTimer.hasMoved = false;
+                    clearInterval(timerInterval)
+                }
+
+                let multiplier: number = 1;
+                let color: Color = Color.WHITE_1;
+                if (this.timeLeft > 0) {
+                    if (this.timeLeft > 13000) {
+                        multiplier = 5;
+                        color = Color.GREEN;
+                    } else if (this.timeLeft > 10000) {
+                        multiplier = 4;
+                        color = Color.YELLOW;
+                    } else if (this.timeLeft > 5000) {
+                        multiplier = 3;
+                        color = Color.ORANGE;
+                    } else {
+                        multiplier = 2;
+                        color = Color.WHITE;
+                    }
+                    this.itemData.damageBoostTimer.timer -= updateInterval;
+                } else {
+                    clearInterval(timerInterval);
+                }
+                this.itemData.damageBoostTimer.multiplier = multiplier;
+                this.itemData.damageBoostTimer.color = color;
+                this.itemData.damageBoostTimer.label = formatTimer(this.timeLeft, multiplier);
+            }, updateInterval)
+        }
+    }
+
+    get timeLeft(): number {
+        return this.itemData.damageBoostTimer.timer;
+    }
 
     hasItem(name: string): boolean {
         return this.items.map((item: Item) => item.name).includes(name);
@@ -465,6 +512,31 @@ export class Player extends EventEmitter implements IPlayer {
                     passiveSlotY + compactItemSideSize - canvas.padding
                 );
 
+                if (this.passive.name === 'Think Fast') {
+
+                    startShadow(drawingContext)
+                    fillFlat(Color.GRAY_3);
+                    p5.rect(
+                        passiveSlotX,
+                        passiveSlotY + compactItemSideSize + canvas.margin,
+                        compactItemSideSize,
+                        canvas.itemSideSize / 4,
+                        canvas.radius
+                    );
+                    endShadow(drawingContext)
+
+                    const timerColor: Color = this.itemData.damageBoostTimer.color;
+
+                    fillStroke(timerColor);
+                    p5.textAlign(p5.CENTER, p5.CENTER)
+                    p5.textSize(canvas.uiData.fontText);
+                    p5.text(
+                        this.itemData.damageBoostTimer.label,
+                        passiveSlotX + compactItemSideSize / 2,
+                        passiveSlotY + compactItemSideSize + canvas.margin + canvas.itemSideSize / 8
+                    );
+                }
+
             }
         }
 
@@ -545,8 +617,6 @@ export class Player extends EventEmitter implements IPlayer {
             );
             endShadow(drawingContext);
 
-            // Titles
-
             const referenceIndex: number = statsData.length / 2;
             statsData.forEach((stat: StatData, index) => {
                 const offset: number = index - referenceIndex + 0.5;
@@ -570,78 +640,6 @@ export class Player extends EventEmitter implements IPlayer {
                 );
 
             });
-            /*
-                        fillStroke(Color.WHITE_1)
-                        p5.textAlign(p5.LEFT, p5.CENTER)
-                        p5.textSize(canvas.uiData.fontSubText)
-                        p5.text(
-                            'Attack',
-                            textLeft,
-                            referenceY - height * 2.5
-                        );
-            
-                        p5.text(
-                            'Defense',
-                            textLeft,
-                            referenceY - height * 1.5
-                        );
-            
-                        p5.text(
-                            'Crit Count',
-                            textLeft,
-                            referenceY - height * 0.5
-                        );
-            
-                        p5.text(
-                            'Crit Damage',
-                            textLeft,
-                            referenceY + height * 0.5
-                        );
-            
-                        p5.text(
-                            'Multiplier',
-                            textLeft,
-                            referenceY + height * 1.5
-                        );
-            
-                        p5.text(
-                            'XP',
-                            textLeft,
-                            referenceY + height * 2.5
-                        );
-            
-                        // Values
-            
-                        p5.text(
-                            `${formatNumber(this.defense)}`,
-                            textRight,
-                            referenceY - height * 1.5
-                        );
-            
-                        p5.text(
-                            `${formatNumber(this.critical)}`,
-                            textRight,
-                            referenceY - height * 0.5
-                        );
-            
-                        p5.text(
-                            `${Math.floor((this.criticalMultiplier - 1) * 100)}%`,
-                            textRight,
-                            referenceY + height * 0.5
-                        );
-            
-                        p5.text(
-                            `${Math.floor((this.damageMultiplier) * 100)}%`,
-                            textRight,
-                            referenceY + height * 1.5
-                        );
-            
-                        p5.text(
-                            `${Math.floor(this.xp)}`,
-                            textRight,
-                            referenceY + height * 2.5
-                        );
-            */
         }
 
         if (this.hasInventoryOpen && this.items.length) {
@@ -767,7 +765,13 @@ export interface PlayerItemData extends IPlayerItemData {
     activeItem2Limits: Limits;
     passiveLimits: Limits;
     colorDamageBosts: { [key: string]: Shape }
+    damageBoostTimer: DamageBoostTimerData
 }
+
+export interface DamageBoostTimerData extends IDamageBoostTimerData{
+    color: Color;
+}
+
 
 export interface StatData {
     label: string,

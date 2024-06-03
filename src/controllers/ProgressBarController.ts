@@ -41,7 +41,7 @@ export class ProgressBarController extends EventEmitter {
             }
 
             this.progressBars.forEach((progressBar: ProgressBar, index: number) => {
-                if (progressBar?.limits.contains(click) && index === 2) {
+                if (progressBar?.limits?.contains(click) && index === 2) {
                     run.enemyDetailsOpen = !run.enemyDetailsOpen;
                 }
             })
