@@ -122,6 +122,12 @@ export class ItemPools {
             ),
             new Item(
                 'Passive',
+                'Less Is More',
+                'Start with one less color, grid is 1x1 shorter',
+                () => { }
+            ),
+            new Item(
+                'Passive',
                 'Midas Touched',
                 '+1 Gold for matches with pieces on the extremities, +2 on crit',
                 () => { }
@@ -135,7 +141,7 @@ export class ItemPools {
             new Item(
                 'Passive',
                 'No barriers',
-                'Grids are 1 column and 1 row larger by default, you also have +1 reach',
+                'Grid is 1x1 larger, you also have +1 reach',
                 () => { }
             ),
             new Item(

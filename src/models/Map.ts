@@ -36,6 +36,11 @@ export class Map extends EventEmitter implements IMap {
             config.gridY += 1;
         }
 
+        if (config?.item?.name === 'Less Is More') {
+            config.gridX -= 1;
+            config.gridY -= 1;
+        }
+
         this.gridX = config.gridX;
         this.gridY = config.gridY;
         this.run = run;

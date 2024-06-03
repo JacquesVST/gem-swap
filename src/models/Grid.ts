@@ -231,6 +231,7 @@ export class Grid extends EventEmitter implements IGrid {
             possibleShapes: run.possibleShapes,
             player: run.player
         } as Run;
+        console.log(this.runSnapshot)
     }
 
     reapplyPositionsToPieces(): void {

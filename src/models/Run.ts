@@ -55,11 +55,16 @@ export class Run extends EventEmitter implements IRun {
         super('Run');
 
         this.sounds = sounds;
-        this.player = Player.defaultPlayerWith(config.item);
         this.difficulty = config.difficulty;
         this.costMultiplier = config.costMultiplier;
-
+        this.player = Player.defaultPlayerWith(config.item);
         this.possibleShapes = Shape.defaultShapes();
+
+        if (config?.item?.name === 'Less Is More') {
+            const index = Math.floor(Math.random() * this.possibleShapes.length);
+            this.possibleShapes = this.possibleShapes.filter((shape: Shape) => shape.id !== this.possibleShapes[index].id);
+        }
+
         this.canvas = Canvas.getInstance();
         this.map = new Map(config, this);
 
@@ -263,8 +268,8 @@ export class Run extends EventEmitter implements IRun {
             this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
             this.updateTopProgressBars();
             this.player.resetTimer();
-            
-            if (this.map.stage.number === 1 && this.map.floor.number > 1){
+
+            if (this.map.stage.number === 1 && this.map.floor.number > 1) {
                 TextController.getInstance().newFloorAnimation();
             }
         });
