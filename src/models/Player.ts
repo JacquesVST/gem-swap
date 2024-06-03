@@ -180,10 +180,6 @@ export class Player extends EventEmitter implements IPlayer {
             if (this.itemData.activeItem2 && this.itemData.activeItem2.frequency === Frequency.EVERY_STAGE) {
                 this.itemData.activeItem2.disabled = false;
             }
-
-            if (this.passive?.name === 'Gambler') {
-                this.itemData.rerolls = 1;
-            }
         });
 
         this.on('Grid:OmniMoveDone', () => {
@@ -228,7 +224,7 @@ export class Player extends EventEmitter implements IPlayer {
             this.itemData.damageBoostTimer.timer = 15000;
             const updateInterval: number = 10;
             const timerInterval: NodeJS.Timeout = setInterval(() => {
-                if (this.itemData.damageBoostTimer.hasMoved){
+                if (this.itemData.damageBoostTimer.hasMoved) {
                     this.itemData.damageBoostTimer.hasMoved = false;
                     clearInterval(timerInterval)
                 }
@@ -478,7 +474,7 @@ export class Player extends EventEmitter implements IPlayer {
 
             //passive
             if (this.passive) {
-                const color: Color = this.passive?.disabled ? Color.GRAY_3 : Item.rarityColors[this.passive.rarity].color.alpha(opacity3);
+                const color: Color = this.passive.disabled ? Color.GRAY_3 : Item.rarityColors[this.passive?.rarity].color.alpha(opacity3);
 
                 startShadow(drawingContext)
                 fillFlat(color);
@@ -591,8 +587,15 @@ export class Player extends EventEmitter implements IPlayer {
 
             if (this.itemData.moveSaverChance) {
                 statsData.push({
-                    label: 'Move Spare Chacne',
+                    label: 'Move Spare Chance',
                     value: `${Math.floor((this.itemData.moveSaverChance) * 100)}%`,
+                })
+            }
+
+            if (this.itemData.rerolls) {
+                statsData.push({
+                    label: 'Rerolls Left',
+                    value: `${Math.floor(this.itemData.rerolls)}`,
                 })
             }
 
@@ -681,7 +684,7 @@ export class Player extends EventEmitter implements IPlayer {
 
             p5.fill(255);
             p5.stroke(0);
-            p5.strokeWeight(3);
+            p5.strokeWeight(canvas.stroke);
             p5.textSize(canvas.uiData.fontTitle)
             p5.text(
                 'Inventory',
@@ -768,7 +771,7 @@ export interface PlayerItemData extends IPlayerItemData {
     damageBoostTimer: DamageBoostTimerData
 }
 
-export interface DamageBoostTimerData extends IDamageBoostTimerData{
+export interface DamageBoostTimerData extends IDamageBoostTimerData {
     color: Color;
 }
 

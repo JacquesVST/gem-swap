@@ -32,6 +32,7 @@ export interface IRun {
 export interface IRunItemData {
     lastShapeIds: string[];
     wasDiagonalMove: boolean;
+    lastDialogParams: any
 }
 
 export interface IProgressBar extends IAnimatable {

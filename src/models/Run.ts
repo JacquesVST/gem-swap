@@ -20,7 +20,7 @@ import { Piece } from "./Piece";
 import { Player } from "./Player";
 import { Position } from "./Position";
 import { Shape } from "./Shape";
-import { EnemyStage, ItemStage, ShopStage, Stage } from "./Stage";
+import { EnemyStage, ItemStage, MiniBossStage, ShopStage, Stage } from "./Stage";
 
 export class Run extends EventEmitter implements IRun {
     player: Player;
@@ -47,7 +47,8 @@ export class Run extends EventEmitter implements IRun {
 
     itemData: IRunItemData = {
         lastShapeIds: [],
-        wasDiagonalMove: false
+        wasDiagonalMove: false,
+        lastDialogParams: {}
     }
 
     constructor(config: RunConfig, sounds: { [key: string]: P5.SoundFile }) {
@@ -126,6 +127,10 @@ export class Run extends EventEmitter implements IRun {
                 this.player.updateMoves(this.player.totalMoves);
                 this.updateMoves();
                 this.emit('InitGrid', this);
+
+                if (this.player?.passive?.name === 'Gambler') {
+                    this.player.itemData.rerolls += 1;
+                }
             }
         });
 
@@ -206,7 +211,7 @@ export class Run extends EventEmitter implements IRun {
 
             if (enemy.hasDrop) {
                 let isMiniBoss = enemy instanceof MiniBossEnemy;
-                let rarities: string[] = isMiniBoss ? ['Rare', 'Epic'] : ['Common', 'Rare'];
+                let rarities: string[] = isMiniBoss ? ['Common', 'Rare', 'Epic'] : ['Common', 'Rare'];
 
                 this.newRandomDropDialog(rarities, () => {
                     this.updateTopProgressBars();
@@ -224,7 +229,7 @@ export class Run extends EventEmitter implements IRun {
         this.on('Grid:MoveDone', () => {
             if (this.combo > 0) {
                 this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
-                if (this.player.passive.name === 'Think Fast') {
+                if (this.player?.passive?.name === 'Think Fast') {
                     this.player.resetTimer();
                     this.player.itemData.damageBoostTimer.hasMoved = true;
                 }
@@ -258,6 +263,10 @@ export class Run extends EventEmitter implements IRun {
             this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
             this.updateTopProgressBars();
             this.player.resetTimer();
+            
+            if (this.map.stage.number === 1 && this.map.floor.number > 1){
+                TextController.getInstance().newFloorAnimation();
+            }
         });
 
         this.on('Grid:FirstClickFound', () => {
@@ -272,7 +281,19 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:NextStage', () => {
-            this.emit('AllowNextStage');
+
+            if (this.map.stage instanceof MiniBossStage) {
+                this.newPercDialog(() => {
+                    this.sounds['item'].play();
+
+                    this.updateTopProgressBars();
+                    this.updateHealth();
+                    this.updateMoves();
+                    this.emit('AllowNextStage');
+                })
+            } else {
+                this.emit('AllowNextStage');
+            }
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:NextFloor', () => {
@@ -299,7 +320,6 @@ export class Run extends EventEmitter implements IRun {
             this.emit('RunEnded', 'You Lost!', this.score, new Color(231, 76, 60));
         });
 
-
         this.on('Grid:ClearingGrid:GridCleared:NextStage', () => {
             this.sounds['bossDefeat'].play();
         });
@@ -310,7 +330,6 @@ export class Run extends EventEmitter implements IRun {
 
         this.on('Grid:ClearingGrid:GridCleared:MapEnded', () => {
             this.sounds['newFloor'].play();
-            TextController.getInstance().newFloorAnimation();
         });
 
         // Item events 
@@ -335,6 +354,28 @@ export class Run extends EventEmitter implements IRun {
 
         this.on('DialogController:ItemPurchased', (price: number) => {
             this.player.addGold(-price);
+        });
+
+        this.on('DialogController:Reroll', (dialog: Dialog) => {
+            this.player.itemData.rerolls -= 1;
+            DialogController.getInstance().clear();
+            const params: any = this.itemData.lastDialogParams;
+
+            if (dialog.type === DialogType.ITEM) {
+                this.newPercDialog(params.callback);
+            }
+
+            if (dialog.type === DialogType.SHOP) {
+                this.newShopDialog(params.amount, params.forceHealth, params.selectCallback, params.closeCallback);
+            }
+
+            if (dialog.type === DialogType.SKIPPABLE_ITEM) {
+                if (params.initial) {
+                    this.newInitialItemDialog();
+                } else {
+                    this.newRandomDropDialog(params.rarities, params.callback);
+                }
+            }
         });
     }
 
@@ -578,7 +619,7 @@ export class Run extends EventEmitter implements IRun {
             p5.textAlign(p5.CENTER, p5.CENTER)
             p5.fill(255);
             p5.stroke(0);
-            p5.strokeWeight(3);
+            p5.strokeWeight(canvas.stroke);
             p5.textSize(canvas.uiData.fontText)
             p5.text(
                 this.map.enemy.name,
@@ -589,7 +630,7 @@ export class Run extends EventEmitter implements IRun {
             p5.textAlign(p5.LEFT, p5.CENTER)
             p5.fill(200);
             p5.stroke(0);
-            p5.strokeWeight(3);
+            p5.strokeWeight(canvas.stroke);
             p5.textSize(canvas.uiData.fontText)
             p5.text(
                 'Attack',
@@ -818,12 +859,17 @@ export class Run extends EventEmitter implements IRun {
         );
 
         let dialog: Dialog = new Dialog(
-            'This Enemy Dropped Something',
+            'Enemy Loot',
             'You may take it',
             ItemDialogOption.itemListToDialogOption(itemList, this, callback),
             DialogType.SKIPPABLE_ITEM,
             callback
         );
+
+        this.itemData.lastDialogParams = {
+            rarities,
+            callback
+        }
 
         DialogController.getInstance().dialogs.unshift(dialog);
     }
@@ -843,6 +889,10 @@ export class Run extends EventEmitter implements IRun {
             DialogType.ITEM,
             undefined,
         );
+
+        this.itemData.lastDialogParams = {
+            callback
+        }
 
         DialogController.getInstance().dialogs.unshift(dialog);
     }
@@ -868,6 +918,13 @@ export class Run extends EventEmitter implements IRun {
             closeCallback
         );
 
+        this.itemData.lastDialogParams = {
+            amount,
+            forceHealth,
+            selectCallback,
+            closeCallback
+        }
+
         DialogController.getInstance().dialogs.unshift(dialog);
     }
 
@@ -888,6 +945,10 @@ export class Run extends EventEmitter implements IRun {
             DialogType.SKIPPABLE_ITEM,
             () => this.emit('InitialItemSelected')
         );
+
+        this.itemData.lastDialogParams = {
+            initial: true
+        }
 
         DialogController.getInstance().dialogs.push(dialog);
     }

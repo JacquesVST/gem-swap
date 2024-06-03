@@ -59,6 +59,10 @@ export class DialogController extends EventEmitter {
                         this.emit('DialogClosed', id);
                     }
                 }
+
+                if (this.currentDialog?.rerollButton?.contains(click) && run.player.itemData.rerolls > 0){
+                    this.emit('Reroll', this.currentDialog)
+                }
             }, 0);
         });
     }

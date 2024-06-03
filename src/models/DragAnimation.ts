@@ -41,7 +41,7 @@ export class DragAnimation implements IDrag {
             const color: Color = run.player.itemData.omniMoves > 0 ? Color.GREEN : Color.WHITE
             const opacity: number = this.initialOpacity + this.relativeOpacity;
 
-            p5.strokeWeight(3);
+            p5.strokeWeight(Canvas.getInstance().stroke);
             p5.stroke(Color.BLACK.alpha(opacity).value);
             p5.fill(color.alpha(opacity).value);
 

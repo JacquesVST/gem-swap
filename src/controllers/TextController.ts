@@ -148,11 +148,12 @@ export class TextController extends EventEmitter {
 
     newFloorAnimation(): void {
         const animation: TextAnimation = new TextAnimation(
-            `Floor Complete`,
-            Color.WHITE_1,
+            `New Floor Reached`,
+            Color.YELLOW,
             120,
-            Position.of(this.canvas.windowSize.x / 2, this.canvas.windowSize.y / 2 + this.canvas.uiData.topUiSize),
-            Position.of(0, -200),
+            Position.of(this.canvas.windowSize.x / 2, this.canvas.uiData.topUiSize),
+            Position.of(0, 100),
+            40,
             40
         );
 

@@ -31,7 +31,7 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
 
     p5.fill(Color.WHITE.alpha(255 + relativeFade).value);
     p5.stroke(Color.BLACK.alpha(255 + relativeFade).value);
-    p5.strokeWeight(3);
+    p5.strokeWeight(canvas.stroke);
     p5.text(
         name,
         margin.x + (sideSize.x / 2),

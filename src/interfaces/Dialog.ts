@@ -9,6 +9,7 @@ export interface IDialog extends IAnimatable {
     options: IDialogOption[];
     textColor: IColor;
     type: DialogType;
+    rerollButton: ILimits;
 }
 
 export interface IDialogOption {
@@ -18,7 +19,6 @@ export interface IDialogOption {
 }
 
 export enum DialogType {
-    CHOICE,
     INITIAL,
     ITEM,
     NAVIGATION,

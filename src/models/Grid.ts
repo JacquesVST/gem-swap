@@ -712,7 +712,7 @@ export class Grid extends EventEmitter implements IGrid {
                     p5.textAlign(p5.LEFT, p5.TOP);
                     p5.fill(Color.YELLOW.value);
                     p5.stroke(Color.BLACK.value);
-                    p5.strokeWeight(3);
+                    p5.strokeWeight(canvas.stroke);
                     p5.textSize(canvas.uiData.fontTitle);
                     p5.text(
                         '$',

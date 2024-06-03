@@ -104,12 +104,6 @@ export class ItemPools {
         let passivePool: Item[] = [
             new Item(
                 'Passive',
-                'Natural Crit',
-                'Inate 5% critical chance on every match, +50% critical multiplier',
-                () => { }
-            ),
-            new Item(
-                'Passive',
                 '4x3',
                 'Can only match 4 pieces or more, but damage is tripled',
                 () => { }
@@ -120,12 +114,24 @@ export class ItemPools {
                 'Can move diagonals, but they deal -10% damage',
                 () => { }
             ),
-            // new Item(
-            //     'Passive',
-            //     'Gambler',
-            //     'Can reroll once every stage',
-            //     () => {}
-            // ),
+            new Item(
+                'Passive',
+                'Gambler',
+                'Can reroll once every floor, unused rerolls will stack',
+                () => { }
+            ),
+            new Item(
+                'Passive',
+                'Midas Touched',
+                '+1 Gold for matches with pieces on the extremities, +2 on crit',
+                () => { }
+            ),
+            new Item(
+                'Passive',
+                'Natural Crit',
+                'Inate 5% critical chance on every match, +50% critical multiplier',
+                () => { }
+            ),
             new Item(
                 'Passive',
                 'No barriers',
@@ -140,16 +146,10 @@ export class ItemPools {
             ),
             new Item(
                 'Passive',
-                'Midas Touched',
-                '+1 Gold for matches with pieces on the extremities, +2 on crit',
-                () => { }
-            ),
-            new Item(
-                'Passive',
                 'Think Fast',
                 'Has a timer that resets every move that multiplies your damage the faster you act',
                 () => { }
-            ),
+            )
         ]
         return passivePool;
     }
@@ -406,7 +406,7 @@ export class ItemPools {
             new Item(
                 'Common',
                 'Extra Piece',
-                'Matches can remove a random piece',
+                'Matches can remove a random piece of the same color',
                 (() => { }).bind(run),
             ),
             new Item(
@@ -569,7 +569,7 @@ export class ItemPools {
                 }).bind(run),
                 Frequency.SINGLE_USE
             ));
-            
+
             defaultPool.push(new Item(
                 'Common',
                 `${shape.id.charAt(0).toUpperCase() + shape.id.slice(1)} Color Boost`,

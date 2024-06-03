@@ -60,7 +60,7 @@ export class TextAnimation implements IText {
 
         p5.fill(this.color.alpha(opacity).value);
         p5.stroke(Color.BLACK.alpha(opacity).value)
-        p5.strokeWeight(3);
+        p5.strokeWeight(Canvas.getInstance().stroke);
 
         p5.textSize(this.initialLinearSize + this.relativeLinearSize);
         p5.textAlign(p5.CENTER, p5.CENTER);

@@ -17,6 +17,7 @@ export class Dialog implements IDialog {
     options: DialogOption[];
     textColor: Color;
     type: DialogType;
+    rerollButton: Limits;
 
     animationStatus: AnimationStatus = AnimationStatus.NOT_STARTED;
     frames: number = 0;
@@ -81,7 +82,7 @@ export class Dialog implements IDialog {
 
         let optionsLength: number = this.hasAdditionalButton ? this.options.length - 1 : this.options.length;
 
-        optionsLength = optionsLength === 1 ? 2 : optionsLength;
+        optionsLength = optionsLength < 3 ? 3 : optionsLength;
 
         dimension.x = (optionsLength > lengthOffSet ? lengthOffSet : optionsLength) * canvas.itemSideSize + (((optionsLength > lengthOffSet ? lengthOffSet : optionsLength) + 1) * canvas.margin);
         margin.x = (canvas.playfield.x / 2) - (dimension.x / 2);
@@ -126,7 +127,7 @@ export class Dialog implements IDialog {
 
         p5.fill(this.textColor.alpha(opacity).value);
         p5.stroke(Color.BLACK.alpha(opacity).value);
-        p5.strokeWeight(3);
+        p5.strokeWeight(canvas.stroke);
         p5.textSize(canvas.uiData.fontTitle)
         p5.text(
             this.title,
@@ -136,7 +137,7 @@ export class Dialog implements IDialog {
 
         p5.fill(Color.WHITE_1.alpha(opacity).value);
         p5.textSize(canvas.uiData.fontSubText)
-        p5.strokeWeight(2);
+        p5.strokeWeight(canvas.stroke);
         p5.text(
             this.message,
             canvas.playfield.x / 2,
@@ -147,6 +148,42 @@ export class Dialog implements IDialog {
     drawOptions(lengthOffSet: number, dimension: Position, margin: Position, run?: Run): void {
         const canvas: Canvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
+        const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
+
+        if (run?.player?.itemData?.rerolls > 0 && ![DialogType.INITIAL, DialogType.NAVIGATION].includes(this.type)) {
+
+            const offsetX: number = margin.x + dimension.x - canvas.margin - canvas.itemSideSize / 2;
+            const offsetY: number = margin.y + canvas.margin
+
+            this.rerollButton = Position.of(offsetX, offsetY).toLimits(Position.of(canvas.itemSideSize / 2, canvas.itemSideSize / 4));
+
+            const opacity: number = (this.rerollButton.contains(canvas.mousePosition) ? 255 : 200) + this.relativeOpacity
+
+            startShadow(drawingContext);
+
+            p5.noStroke();
+            fillFlat(Color.PURPLE);
+            p5.rect(
+                offsetX,
+                offsetY,
+                canvas.itemSideSize / 2,
+                canvas.itemSideSize / 4,
+                canvas.radius * 2
+            );
+
+            endShadow(drawingContext);
+
+            p5.fill(Color.WHITE.alpha(opacity).value);
+            p5.stroke(Color.BLACK.alpha(opacity).value);
+            p5.strokeWeight(canvas.stroke);
+            p5.textSize(canvas.uiData.fontText)
+            p5.text(
+                'Reroll',
+                offsetX + canvas.itemSideSize / 4,
+                offsetY + canvas.itemSideSize / 8,
+            );
+
+        }
 
         this.options.forEach((option: DialogOption, index: number) => {
 
@@ -183,8 +220,6 @@ export class Dialog implements IDialog {
 
             if (!(option instanceof ItemDialogOption) && !(option instanceof PassiveDialogOption)) {
 
-                const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
-
                 startShadow(drawingContext);
 
                 p5.noStroke();
@@ -212,7 +247,7 @@ export class Dialog implements IDialog {
 
                 p5.fill(Color.WHITE.alpha(opacity).value);
                 p5.stroke(Color.BLACK.alpha(opacity).value);
-                p5.strokeWeight(3);
+                p5.strokeWeight(canvas.stroke);
                 p5.textSize(canvas.uiData.fontText)
                 p5.text(
                     option.text,
@@ -224,7 +259,7 @@ export class Dialog implements IDialog {
                     let subOffset: number = (option.subsubtext ? 0 : 1) * canvas.margin;
 
                     p5.fill(Color.WHITE_1.alpha(opacity).value);
-                    p5.strokeWeight(2);
+                    p5.strokeWeight(canvas.stroke);
                     p5.textSize(canvas.uiData.fontSubText)
                     p5.text(
                         insertLineBreaks(option.subtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(option.subtext), 0, option.subtext.length)),
@@ -235,7 +270,7 @@ export class Dialog implements IDialog {
 
                 if (option.subsubtext) {
                     p5.fill(Color.WHITE_1.alpha(opacity).value);
-                    p5.strokeWeight(2);
+                    p5.strokeWeight(canvas.stroke);
                     p5.textSize(canvas.uiData.fontSubText)
                     p5.text(
                         insertLineBreaks(option.subsubtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(option.subsubtext), 0, option.subsubtext.length)),
@@ -279,7 +314,7 @@ export class Dialog implements IDialog {
                 const textMargin: number = cumulativeMarginY + (optionHeight / 2);
                 p5.fill(Color.WHITE.alpha(opacity).value);
                 p5.stroke(Color.BLACK.alpha(opacity).value);
-                p5.strokeWeight(3);
+                p5.strokeWeight(canvas.stroke);
                 p5.textSize(canvas.uiData.fontText)
                 p5.text(
                     text,
@@ -289,7 +324,7 @@ export class Dialog implements IDialog {
 
                 if (subtext) {
                     p5.fill(Color.WHITE_1.alpha(opacity).value);
-                    p5.strokeWeight(2);
+                    p5.strokeWeight(canvas.stroke);
                     p5.textSize(canvas.uiData.fontSubText)
                     p5.text(
                         insertLineBreaks(subtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(subtext), 0, subtext.length)),
@@ -320,7 +355,7 @@ export class Dialog implements IDialog {
                 if (!option.item) {
                     p5.fill(Color.WHITE.alpha(opacity).value);
                     p5.stroke(Color.BLACK.alpha(opacity).value);
-                    p5.strokeWeight(3);
+                    p5.strokeWeight(canvas.stroke);
                     p5.textSize(canvas.uiData.fontText)
                     p5.text(
                         'Select passive',
