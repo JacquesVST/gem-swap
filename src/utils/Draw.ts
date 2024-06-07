@@ -1,6 +1,6 @@
 import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
-import { Frequency } from "../interfaces";
+import { Frequency, IUnlocks } from "../interfaces";
 import { Color } from "../models/Color";
 import { ItemDialogOption } from "../models/Dialog";
 import { Item } from "../models/Item";
@@ -8,10 +8,12 @@ import { Limits } from "../models/Limits";
 import { Position } from "../models/Position";
 import { Run } from "../models/Run";
 import { countOcurrences, insertLineBreaks } from "./General";
+import { getUnlocks } from "./LocalStorage";
 
 export function drawItem(item: Item, margin: Position, sideSize: Position, relativeFade: number = 0, run?: Run, option?: ItemDialogOption, hideDescription?: boolean) {
     const canvas: Canvas = Canvas.getInstance();
     const p5: P5 = canvas.p5
+    const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
 
     const color: Color = Item.rarityColors[item.rarity].color;
     const limits: Limits = drawClickableBox(
@@ -79,7 +81,6 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
                 break;
         }
 
-
         fillStroke(item.unique ? Color.YELLOW : Color.ORANGE, 255 + relativeFade);
         p5.textAlign(p5.RIGHT, p5.TOP);
         p5.textSize(canvas.uiData.fontDetail);
@@ -92,8 +93,11 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
 
     if (item.price) {
         let canAfford: boolean = true;
+        let owned: boolean;
         if (run?.player && option) {
             canAfford = run?.player.gold >= item.price;
+            owned = run?.player.hasItem(item.name) && item.unique;
+            canAfford = !owned;
             option.disabled = !canAfford;
         }
 
@@ -101,11 +105,48 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
         p5.textAlign(p5.CENTER, p5.BOTTOM);
         p5.textSize(canvas.uiData.fontSubText);
         p5.text(
-            `$ ${Math.floor(item.price)}`,
+            owned ? 'Owned' : `$ ${Math.floor(item.price)}`,
             margin.x + (sideSize.x / 2),
             margin.y + sideSize.y - canvas.padding
         );
 
+    }
+
+    if (item.rarity === 'Passive') {
+        const unlocks: IUnlocks[] = getUnlocks();
+
+        let unlock = unlocks.find((unlock: IUnlocks) => unlock.item === item.name);
+
+        if (unlock) {
+            startShadow(drawingContext);
+
+            fillFlat(Color.GREEN.alpha(255 + relativeFade))
+            p5.ellipse(
+                margin.x + canvas.margin,
+                margin.y + sideSize.y - canvas.margin,
+                canvas.margin
+            );
+
+            if (unlock.tier > 0) {
+                fillFlat(Color.YELLOW.alpha(255 + relativeFade))
+                p5.ellipse(
+                    margin.x + canvas.margin * 2.5,
+                    margin.y + sideSize.y - canvas.margin,
+                    canvas.margin
+                );
+            }
+
+            if (unlock.tier > 1) {
+                fillFlat(Color.RED.alpha(255 + relativeFade))
+                p5.ellipse(
+                    margin.x + canvas.margin * 4,
+                    margin.y + sideSize.y - canvas.margin,
+                    canvas.margin
+                );
+            }
+
+            endShadow(drawingContext);
+        }
     }
 }
 

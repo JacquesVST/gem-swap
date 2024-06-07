@@ -180,11 +180,7 @@ export class Grid extends EventEmitter implements IGrid {
             horizontalCenterPadding = canvas.playfield.x - (this.width * this.sideSize) - (this.width * canvas.padding) - canvas.padding;
             verticalCenterPadding = canvas.playfield.y - canvas.uiData.topUiSize - canvas.uiData.bottomUiSize - (this.height * this.sideSize) - (this.height * canvas.padding) - canvas.padding;
 
-            //  if (canvas.horizontalLayout) {
             horizontalCenterPadding -= (canvas.itemSideSize + canvas.margin) * 2
-            /// } else {
-            //verticalCenterPadding -= (canvas.itemSideSize + canvas.margin) * 2
-            //  }
 
         } while (horizontalCenterPadding - this.width >= 0 && verticalCenterPadding - this.height >= 0);
 
@@ -193,13 +189,8 @@ export class Grid extends EventEmitter implements IGrid {
             let currentXMargin = (horizontalCenterPadding / 2) + (position.x * this.sideSize) + ((position.x + 1) * canvas.padding) + canvas.margin;
             let currentYMargin = canvas.uiData.topUiSize + (verticalCenterPadding / 2) + (position.y * this.sideSize) + ((position.y + 1) * canvas.padding) + canvas.margin;
 
-
-
-            //if (canvas.horizontalLayout) {
             currentXMargin += canvas.itemSideSize + canvas.margin;
-            //} else {
-            // currentYMargin += canvas.itemSideSize + canvas.margin;
-            //}
+
             if (position.checksum === 'X0Y0') {
                 marginLeft = currentXMargin;
                 marginTop = currentYMargin;
@@ -231,7 +222,6 @@ export class Grid extends EventEmitter implements IGrid {
             possibleShapes: run.possibleShapes,
             player: run.player
         } as Run;
-        console.log(this.runSnapshot)
     }
 
     reapplyPositionsToPieces(): void {
@@ -426,6 +416,28 @@ export class Grid extends EventEmitter implements IGrid {
     }
 
     validateSwap(position1: Position, position2: Position): boolean {
+
+        if (this.runSnapshot.player.hasItem('Another Fair Trade')) {
+            const triggerChance: number = Math.random();
+            const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Another Fair Trade').length
+            if (triggerChance > itemCount * 0.10) {
+                this.emit('AnotherFairTrade', Math.random() > 0.5)
+            }
+        }
+
+        if (this.runSnapshot.player.hasItem('Fair Trade')) {
+            const triggerChance: number = Math.random();
+            const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Fair Trade').length
+            if (triggerChance > itemCount * 0.10) {
+                let choice: boolean = Math.random() > 0.5
+                if (choice) {
+                    return false;
+                } else {
+                    this.emit('FairTrade')
+                }
+            }
+        }
+
         if (position1.checksum === position2.checksum) {
             return false;
         }

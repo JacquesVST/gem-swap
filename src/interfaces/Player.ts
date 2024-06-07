@@ -52,6 +52,7 @@ export interface IDamageBoostTimerData {
     label: string;
     hasMoved: boolean;
     color: IColor;
+    interval: NodeJS.Timeout
 }
 
 export interface IDamageData {

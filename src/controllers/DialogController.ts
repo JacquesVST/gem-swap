@@ -60,7 +60,7 @@ export class DialogController extends EventEmitter {
                     }
                 }
 
-                if (this.currentDialog?.rerollButton?.contains(click) && run.player.itemData.rerolls > 0){
+                if (this.currentDialog?.rerollButton?.contains(click) && run.player.itemData.rerolls > 0) {
                     this.emit('Reroll', this.currentDialog)
                 }
             }, 0);

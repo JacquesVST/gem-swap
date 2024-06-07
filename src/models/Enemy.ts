@@ -88,10 +88,10 @@ export class MiniBossEnemy extends Enemy {
         const miniBossMultiplier = 1.5 * (floorIndex + 1);
         this.gold = Math.floor(Math.random() * (25 - 11) + 10);
 
-        const maxHealth: number = 2000 * miniBossMultiplier * (1 + floorIndex);
-        const minHealth: number = 1500 * miniBossMultiplier * (1 + floorIndex);
+        const maxHealth: number = 1800 * miniBossMultiplier * (1 + floorIndex);
+        const minHealth: number = 1200 * miniBossMultiplier * (1 + floorIndex);
 
-        const enemyBaseAttack: number = 15;
+        const enemyBaseAttack: number = 12;
         const enemyBaseHealth: number = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth);
 
         this.attack = Math.floor(enemyBaseAttack * (1 + ((floorIndex ** 1.2) / 2)) * (1 + (stageIndex / 2)));
@@ -123,7 +123,7 @@ export class BossEnemy extends Enemy {
         const maxHealth: number = 4000 * bossMultiplier * (1 + floorIndex);
         const minHealth: number = 2000 * bossMultiplier * (1 + floorIndex);
 
-        const enemyBaseAttack: number = 12;
+        const enemyBaseAttack: number = 15;
         const enemyBaseHealth: number = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth);
 
         this.attack = Math.floor(enemyBaseAttack * (1 + ((floorIndex ** 1.2) / 2)) * (1 + (stageIndex / 2)));

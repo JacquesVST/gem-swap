@@ -9,6 +9,14 @@ export function setBestNumbers(numbers: IBestNumbers): void {
     return localStorage.setItem('bests', JSON.stringify(numbers));
 }
 
+export function getXP(): number {
+    return JSON.parse(localStorage.getItem('xp'))
+}
+
+export function setXP(xp: number): void {
+    return localStorage.setItem('xp', JSON.stringify(xp));
+}
+
 export function getUnlocks(): IUnlocks[] {
     const unlocks: IUnlocks[] = JSON.parse(localStorage.getItem('unlocks'))
     return unlocks ? unlocks : [];

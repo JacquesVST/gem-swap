@@ -5,10 +5,12 @@ import { EventEmitter } from "../controllers/EventEmitter";
 import { Frequency, IDamageBoostTimerData, IDamageData, IPlayer, IPlayerItemData } from "../interfaces";
 import { drawItem, endShadow, fillFlat, fillStroke, rectWithStripes, startShadow } from "../utils/Draw";
 import { formatNumber, formatTimer, insertLineBreaks } from "../utils/General";
+import { getXP, setXP } from "../utils/LocalStorage";
 import { Color } from "./Color";
 import { Enemy } from "./Enemy";
 import { Item } from "./Item";
 import { Limits } from "./Limits";
+import { Piece } from "./Piece";
 import { Position } from "./Position";
 import { Run } from "./Run";
 import { Shape } from "./Shape";
@@ -22,10 +24,10 @@ export class Player extends EventEmitter implements IPlayer {
     defense: number;
 
     damageMultiplier: number = 1;
-    criticalMultiplier: number = 1.5;
+    criticalMultiplier: number = 1.75;
     critical: number = 1;
     gold: number = 0;
-    xp: number = 0;
+    xp: number;
 
     hasInventoryOpen: boolean = false;
     hasStatsOpen: boolean = false;
@@ -56,10 +58,11 @@ export class Player extends EventEmitter implements IPlayer {
         damageBoostTimer: {
             timer: 0,
             multiplier: 1,
-            label: '0.00 (X1)',
+            label: '0.00 (X0.5)',
             hasMoved: false,
-            color: Color.WHITE_1
-        }
+            color: Color.WHITE_1,
+            interval: undefined
+        },
     }
 
     constructor(health: number, moves: number, attack: number, defense: number, passive?: Item) {
@@ -72,6 +75,8 @@ export class Player extends EventEmitter implements IPlayer {
         this.passive = passive;
         this.moves = moves;
         this.health = health;
+
+        this.xp = getXP();
 
         this.configurePassive();
         this.configureListeners();
@@ -92,7 +97,7 @@ export class Player extends EventEmitter implements IPlayer {
                 this.itemData.criticalChance = 0.05;
                 break;
             case '4x4':
-                this.damageMultiplier = 3;
+                this.damageMultiplier = 4;
                 break;
             case 'Flexible':
                 this.itemData.diagonals = true;
@@ -125,12 +130,10 @@ export class Player extends EventEmitter implements IPlayer {
                 this.hasStatsOpen = !this.hasStatsOpen;
             }
 
-            if ((event.key === 'p' || event.key === 'P') && !run.hasDialogOpen) {
+            if ((event.key === 'p' || event.key === 'P') && !run.hasDialogOpen && !this.hasStatsOpen) {
                 this.hasPassiveDetailsOpen = !this.hasPassiveDetailsOpen;
             }
         });
-
-
 
         this.on('Main:KeyReleased', (event: KeyboardEvent, run: Run) => {
             if (event.key === ' ') {
@@ -161,7 +164,7 @@ export class Player extends EventEmitter implements IPlayer {
                 }
 
                 if (this.passive) {
-                    if (this.itemData.passiveLimits.contains(position)) {
+                    if (this.itemData.passiveLimits.contains(position) && !this.hasStatsOpen) {
                         this.hasPassiveDetailsOpen = !this.hasPassiveDetailsOpen;
                     }
                 }
@@ -182,12 +185,36 @@ export class Player extends EventEmitter implements IPlayer {
             }
         });
 
+        this.on('Map:NextStageReached', () => {
+            setXP(this.xp);
+        });
+
+        this.on('Map:NextFloorReached', () => {
+            setXP(this.xp);
+        });
+
+        this.on('Enemy:EnemyDied', (enemy: Enemy) => {
+            this.xp += enemy.attack;
+        });
+
         this.on('Grid:OmniMoveDone', () => {
             this.itemData.omniMoves--;
         });
 
         this.on('Run:MidasTouched', (gold: number) => {
             this.addGold(gold)
+        });
+
+        this.on('Grid:FairTrade', () => {
+            this.heal(this.maxHealth * 0.01);
+        });
+
+        this.on('Grid:AnotherFairTrade', (choice: boolean) => {
+            if (choice) {
+                this.damage({ damage: this.maxHealth * 0.01, shielded: false })
+            } else {
+                this.updateMoves(this.moves + 2);
+            }
         });
     }
 
@@ -219,42 +246,80 @@ export class Player extends EventEmitter implements IPlayer {
         }
     }
 
-    resetTimer(): void {
-        if (this.passive?.name === 'Think Fast') {
-            this.itemData.damageBoostTimer.timer = 15000;
-            const updateInterval: number = 10;
-            const timerInterval: NodeJS.Timeout = setInterval(() => {
-                if (this.itemData.damageBoostTimer.hasMoved) {
-                    this.itemData.damageBoostTimer.hasMoved = false;
-                    clearInterval(timerInterval)
-                }
-
-                let multiplier: number = 1;
-                let color: Color = Color.WHITE_1;
-                if (this.timeLeft > 0) {
-                    if (this.timeLeft > 13000) {
-                        multiplier = 5;
-                        color = Color.GREEN;
-                    } else if (this.timeLeft > 10000) {
-                        multiplier = 4;
-                        color = Color.YELLOW;
-                    } else if (this.timeLeft > 5000) {
-                        multiplier = 3;
-                        color = Color.ORANGE;
-                    } else {
-                        multiplier = 2;
-                        color = Color.WHITE;
-                    }
-                    this.itemData.damageBoostTimer.timer -= updateInterval;
-                } else {
-                    clearInterval(timerInterval);
-
-                }
-                this.itemData.damageBoostTimer.multiplier = multiplier;
-                this.itemData.damageBoostTimer.color = color;
-                this.itemData.damageBoostTimer.label = formatTimer(this.timeLeft, multiplier);
-            }, updateInterval)
+    clearTimer(): void {
+        this.itemData.damageBoostTimer = {
+            timer: 0,
+            multiplier: 1,
+            label: '0.00 (X0.75)',
+            hasMoved: false,
+            color: Color.WHITE_1,
+            interval: undefined
         }
+    }
+
+    incrementTimer(matches: Piece[][], run: Run): void {
+        
+        if (this.passive?.name === 'Think Fast') {
+            let timeToAdd: number = 0;
+            matches.forEach((match: Piece[]) => {
+                switch (match.length) {
+                    case 0:
+                    case 1:
+                    case 2:
+                        timeToAdd += 0;
+                        break;
+                    case 3:
+                        timeToAdd += 1.5;
+                        break;
+                    case 4:
+                        timeToAdd += 3;
+                        break;
+                    case 5:
+                        timeToAdd += 5;
+                        break;
+                    default:
+                        timeToAdd += 7.5;
+                        break;
+                }
+            });
+
+            this.itemData.damageBoostTimer.timer += timeToAdd * 1000;
+            const updateInterval: number = 10;
+            if (!this.itemData.damageBoostTimer.interval) {
+                this.itemData.damageBoostTimer.interval = setInterval(() => {
+                    let multiplier: number = 0.5;
+                    let color: Color = Color.WHITE_1;
+                    if (this.timeLeft > 0) {
+                        if (this.timeLeft > 30000) {
+                            multiplier = 5;
+                            color = Color.GREEN;
+                        } else if (this.timeLeft > 18000) {
+                            multiplier = 4;
+                            color = Color.YELLOW;
+                        } else if (this.timeLeft > 9000) {
+                            multiplier = 3;
+                            color = Color.YELLOW;
+                        } else if (this.timeLeft > 3000) {
+                            multiplier = 2;
+                            color = Color.ORANGE;
+                        } else {
+                            multiplier = 1;
+                            color = Color.WHITE;
+                        }
+                        if (!run.hasDialogOpen && !run.inAnimation) {
+                            this.itemData.damageBoostTimer.timer -= updateInterval;
+                        }
+                    } else {
+                        clearInterval(this.itemData.damageBoostTimer.interval);
+                        this.itemData.damageBoostTimer.interval = undefined;
+                    }
+                    this.itemData.damageBoostTimer.multiplier = multiplier;
+                    this.itemData.damageBoostTimer.color = color;
+                    this.itemData.damageBoostTimer.label = formatTimer(this.timeLeft, multiplier);
+                }, updateInterval)
+            }
+        }
+
     }
 
     get timeLeft(): number {
@@ -774,7 +839,6 @@ export interface PlayerItemData extends IPlayerItemData {
 export interface DamageBoostTimerData extends IDamageBoostTimerData {
     color: Color;
 }
-
 
 export interface StatData {
     label: string,

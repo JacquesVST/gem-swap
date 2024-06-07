@@ -104,8 +104,8 @@ export class ItemPools {
         let passivePool: Item[] = [
             new Item(
                 'Passive',
-                '4x3',
-                'Can only match 4 pieces or more, but damage is tripled',
+                '4x4',
+                'Can only match 4 pieces or more, but damage is quadrupled',
                 () => { }
             ),
             new Item(
@@ -291,7 +291,8 @@ export class ItemPools {
                         run.emit('Item:BanShape', shape.id);
                     }).bind(run),
                     Frequency.PASSIVE,
-                    price
+                    price,
+                    true
                 ));
             });
         }
@@ -417,6 +418,14 @@ export class ItemPools {
             ),
             new Item(
                 'Common',
+                'Maybe More Options',
+                '+1 Reroll',
+                (() => {
+                    run.player.itemData.rerolls += 1;
+                }).bind(run),
+            ),
+            new Item(
+                'Common',
                 'Crit Chance',
                 'Matches have +1% chance of critting',
                 (() => {
@@ -432,7 +441,7 @@ export class ItemPools {
                 }).bind(run),
             ),
             new Item(
-                'Common',
+                'Rare',
                 'Teleport',
                 'Make a match anywhere',
                 (() => {
@@ -509,6 +518,22 @@ export class ItemPools {
             ),
             new Item(
                 'Rare',
+                'Fair Trade',
+                '10% chance of failing a move or healing 1',
+                (() => { 
+
+                }).bind(run)
+            ),
+            new Item(
+                'Rare',
+                'Another Fair Trade',
+                '10% chance of losing 1% health or recovering this move + 1',
+                (() => { 
+
+                }).bind(run)
+            ),
+            new Item(
+                'Rare',
                 'Move Saver',
                 '10% chance of not consuming moves',
                 (() => {
@@ -566,7 +591,7 @@ export class ItemPools {
 
         run.possibleShapes.forEach((shape: Shape) => {
             defaultPool.push(new Item(
-                'Rare',
+                'Common',
                 `Eliminate all ${shape.id} pieces`,
                 `Remove current ${shape.id} pieces`,
                 (() => {

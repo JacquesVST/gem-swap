@@ -4,10 +4,10 @@ import { DialogController } from "../controllers/DialogController";
 import { EventEmitter } from "../controllers/EventEmitter";
 import { ProgressBarController } from "../controllers/ProgressBarController";
 import { TextController } from "../controllers/TextController";
-import { DialogType, Difficulty, IBestNumbers, IDamageData, IEventParams, IRun, IRunConfig, IRunItemData, ProgressBarIndexes } from "../interfaces";
+import { DialogType, Difficulty, IBestNumbers, IDamageData, IEventParams, IRun, IRunConfig, IRunItemData, IUnlocks, ProgressBarIndexes } from "../interfaces";
 import { endShadow, fillFlat, fillStroke, startShadow } from "../utils/Draw";
 import { formatNumber } from "../utils/General";
-import { getBestNumbers, setBestNumbers } from "../utils/LocalStorage";
+import { getBestNumbers, getUnlocks, setBestNumbers, setUnlocks } from "../utils/LocalStorage";
 import { Cell } from "./Cell";
 import { Color } from "./Color";
 import { DefaultDialogOption, Dialog, DialogOption, ItemDialogOption, NavigationDialogOption, PassiveDialogOption } from "./Dialog";
@@ -234,10 +234,6 @@ export class Run extends EventEmitter implements IRun {
         this.on('Grid:MoveDone', () => {
             if (this.combo > 0) {
                 this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
-                if (this.player?.passive?.name === 'Think Fast') {
-                    this.player.resetTimer();
-                    this.player.itemData.damageBoostTimer.hasMoved = true;
-                }
             } else {
                 this.map.grid.isUnstable = false;
             }
@@ -267,7 +263,6 @@ export class Run extends EventEmitter implements IRun {
         this.on('Grid:GridStabilized:Init', () => {
             this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
             this.updateTopProgressBars();
-            this.player.resetTimer();
 
             if (this.map.stage.number === 1 && this.map.floor.number > 1) {
                 TextController.getInstance().newFloorAnimation();
@@ -318,6 +313,27 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:MapEnded', () => {
+            const currentUnlock: IUnlocks = {
+                item: this.player?.passive.name,
+                date: new Date(),
+                tier: this.difficulty
+            }
+
+            const unlocks: IUnlocks[] = getUnlocks();
+
+            let index = unlocks.findIndex((unlock: IUnlocks) => {
+                return unlock.item === this.player?.passive.name
+            });
+
+            if (index === -1) {
+                unlocks.push(currentUnlock);
+            } else {
+                if (currentUnlock.tier > unlocks[index].tier) {
+                    unlocks[index] = currentUnlock;
+                }
+            }
+
+            setUnlocks(unlocks)
             this.emit('RunEnded', 'You won!', this.score, new Color(46, 204, 113));
         });
 
@@ -688,6 +704,11 @@ export class Run extends EventEmitter implements IRun {
         matches.forEach((match: Piece[]) => {
             totalDamage += this.updateScore(match);
         });
+
+        if (this.player?.passive?.name === 'Think Fast') {
+            this.player.incrementTimer(matches, this);
+        }
+
         this.damageEnemy(totalDamage);
     }
 
@@ -699,7 +720,7 @@ export class Run extends EventEmitter implements IRun {
         if (this.stackCombo) {
             this.combo += [...matches].length;
             if (this.combo > 1 && this.player.hasItem('Valuable combo')) {
-                let goldAmount: number = this.combo;
+                let goldAmount: number = 1;
                 this.player.addGold(goldAmount);
             }
         }
@@ -787,7 +808,6 @@ export class Run extends EventEmitter implements IRun {
 
             TextController.getInstance().damageAnimation(additiveScore, criticalInMatch, position, match[0]?.shape);
             this.updateDamage(additiveScore);
-            this.player.xp += match.length * (criticalInMatch ? 2 : 1);
         }
 
         return additiveScore;
@@ -856,19 +876,24 @@ export class Run extends EventEmitter implements IRun {
     }
 
     newRandomDropDialog(rarities: string[], callback: () => void): void {
-        let itemList: Item[] = Item.generateItemsBasedOnRarity(
+        let item: Item = Item.generateItemsBasedOnRarity(
             1,
             ItemPools.defaultPool(this),
             rarities,
             this.player
-        );
+        )[0];
 
         let dialog: Dialog = new Dialog(
             'Enemy Loot',
             'You may take it',
-            ItemDialogOption.itemListToDialogOption(itemList, this, callback),
+            ItemDialogOption.itemListToDialogOption([item], this, callback),
             DialogType.SKIPPABLE_ITEM,
-            callback
+            () => {
+                this.player.addGold(item.rarity === 'Common' ? 10 : 25);
+                if (callback) {
+                    callback();
+                }
+            }
         );
 
         this.itemData.lastDialogParams = {
@@ -906,7 +931,7 @@ export class Run extends EventEmitter implements IRun {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(
             amount,
             ItemPools.shopPool(this),
-            ['Common', 'Rare', 'Epic'],
+            ['Rare', 'Epic'],
             this.player,
             true
         );

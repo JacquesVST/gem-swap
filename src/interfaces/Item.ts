@@ -20,6 +20,7 @@ export enum Frequency {
 }
 
 export interface IUnlocks {
-    name: string;
+    item: string;
     date: Date;
+    tier: number;
 }
