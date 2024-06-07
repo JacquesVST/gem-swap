@@ -11,7 +11,7 @@ import { Limits } from "./Limits";
 import { FallPieceAnimationParams, Piece, RemovePieceAnimationParams, SwapPieceAnimationParams } from "./Piece";
 import { Position } from "./Position";
 import { Run, RunConfig } from "./Run";
-import { CommonEnemyStage, EnemyStage, Stage } from "./Stage";
+import { CommonEnemyStage, EnemyStage, ItemStage, ShopStage, Stage } from "./Stage";
 
 export class Map extends EventEmitter implements IMap {
     floorCount: number;
@@ -262,6 +262,46 @@ export class Map extends EventEmitter implements IMap {
         }
         return undefined;
     }
+
+    debugEnemies() {
+        console.log('Map')
+        this.floors.forEach((floor: Floor, iFloor: number) => {
+            console.log('Floor', iFloor + 1)
+            let floorEnemies = [];
+            floor.stages.forEach((stages: Stage[], iStages: number) => {
+                console.log('Floor', iFloor + 1, ',', iStages + 1, 'Options')
+                stages.forEach((stage: Stage, iStage: number) => {
+                    console.log('Stage Option', iStage + 1)
+                    if (stage instanceof ShopStage) {
+                        console.log('Shop Stage')
+                    }
+
+                    if (stage instanceof ItemStage) {
+                        console.log('item Stage')
+                    }
+
+                    if (stage instanceof EnemyStage) {
+                        let enemies = []
+                        stage.enemies.forEach((enemy: Enemy) => {
+                            let simpleEnemy = { n: enemy.name, h: enemy.maxHealth, a: enemy.attack, s: iStages + 1 }
+                            enemies.push(simpleEnemy)
+                            floorEnemies.push(simpleEnemy)
+                        });
+                        console.table(enemies)
+                        console.log('Average Health:', this.averageProperty(enemies, "h"), 'Average Attack:', this.averageProperty(enemies, "a"))
+                    }
+                })
+            })
+            console.table(floorEnemies)
+            console.log('Average Health:', this.averageProperty(floorEnemies, "h"), 'Average Attack:', this.averageProperty(floorEnemies, "a"))
+        })
+    }
+
+    averageProperty(arr, prop) {
+        const sum = arr.reduce((total, obj) => total + obj[prop], 0);
+        return sum / arr.length;
+    }
+
 
     findNextEnemy(): Enemy {
         const stage: Stage = this.stage;

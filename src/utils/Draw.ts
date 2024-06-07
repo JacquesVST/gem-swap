@@ -96,8 +96,10 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
         let owned: boolean;
         if (run?.player && option) {
             canAfford = run?.player.gold >= item.price;
-            owned = run?.player.hasItem(item.name) && item.unique;
-            canAfford = !owned;
+            if (item.unique) {
+                owned = run?.player.hasItem(item.name);
+                canAfford = !owned;
+            }
             option.disabled = !canAfford;
         }
 

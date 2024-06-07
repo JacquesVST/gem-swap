@@ -417,27 +417,6 @@ export class Grid extends EventEmitter implements IGrid {
 
     validateSwap(position1: Position, position2: Position): boolean {
 
-        if (this.runSnapshot.player.hasItem('Another Fair Trade')) {
-            const triggerChance: number = Math.random();
-            const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Another Fair Trade').length
-            if (triggerChance > itemCount * 0.10) {
-                this.emit('AnotherFairTrade', Math.random() > 0.5)
-            }
-        }
-
-        if (this.runSnapshot.player.hasItem('Fair Trade')) {
-            const triggerChance: number = Math.random();
-            const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Fair Trade').length
-            if (triggerChance > itemCount * 0.10) {
-                let choice: boolean = Math.random() > 0.5
-                if (choice) {
-                    return false;
-                } else {
-                    this.emit('FairTrade')
-                }
-            }
-        }
-
         if (position1.checksum === position2.checksum) {
             return false;
         }
@@ -799,9 +778,53 @@ export class Grid extends EventEmitter implements IGrid {
 
     playerSwap(position1: Position, position2: Position): void {
         let validatedSwap: boolean = this.validateSwap(position1, position2);
+        
+        if (this.runSnapshot.player.hasItem('Another Fair Trade')) {
+            const triggerChance: number = Math.random();
+            const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Another Fair Trade').length
+            if (triggerChance < itemCount * 0.10) {
+                this.emit('AnotherFairTrade', Math.random() > 0.5)
+            }
+        }
+
+        if (this.runSnapshot.player.hasItem('Fair Trade')) {
+            const triggerChance: number = Math.random();
+            const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Fair Trade').length
+            if (triggerChance < itemCount * 0.10) {
+                let choice: boolean = Math.random() > 0.5
+                if (choice) {
+                    validatedSwap = false;
+                } else {
+                    this.emit('FairTrade')
+                }
+            }
+        }
+        
         this.emit('SwapValidated', validatedSwap);
 
         if (validatedSwap) {
+
+            if (this.runSnapshot.player.hasItem('Another Fair Trade')) {
+                const triggerChance: number = Math.random();
+                const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Another Fair Trade').length
+                if (triggerChance < itemCount * 0.10) {
+                    this.emit('AnotherFairTrade', Math.random() > 0.5)
+                }
+            }
+    
+            if (this.runSnapshot.player.hasItem('Fair Trade')) {
+                const triggerChance: number = Math.random();
+                const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Fair Trade').length
+                if (triggerChance < itemCount * 0.10) {
+                    let choice: boolean = Math.random() > 0.5
+                    if (choice) {
+                        return 
+                    } else {
+                        this.emit('FairTrade');
+                    }
+                }
+            }
+
             let swapData: SwapData = this.getSwapDataFromPositions(position1, position2);
 
             if (swapData.piece1) {

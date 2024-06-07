@@ -258,7 +258,7 @@ export class Player extends EventEmitter implements IPlayer {
     }
 
     incrementTimer(matches: Piece[][], run: Run): void {
-        
+
         if (this.passive?.name === 'Think Fast') {
             let timeToAdd: number = 0;
             matches.forEach((match: Piece[]) => {
@@ -284,6 +284,10 @@ export class Player extends EventEmitter implements IPlayer {
             });
 
             this.itemData.damageBoostTimer.timer += timeToAdd * 1000;
+
+            if (this.timeLeft > 40000) {
+                this.itemData.damageBoostTimer.timer = 40000;
+            } 
             const updateInterval: number = 10;
             if (!this.itemData.damageBoostTimer.interval) {
                 this.itemData.damageBoostTimer.interval = setInterval(() => {
@@ -666,10 +670,13 @@ export class Player extends EventEmitter implements IPlayer {
 
             if (this.items.some((item: Item) => item.name.endsWith('Color Boost'))) {
                 this.items.filter((item: Item) => item.name.endsWith('Color Boost')).forEach((item: Item) => {
-                    statsData.push({
-                        label: item.name,
-                        value: `+${Math.floor(this.itemData.colorDamageBosts[item.name.split(' ')[0].toLowerCase()].itemData.bonusDamage)}`,
-                    })
+                    if (!statsData.map((statData: StatData) => statData.label).includes(item.name)) {
+
+                        statsData.push({
+                            label: item.name,
+                            value: `+${Math.floor(this.itemData.colorDamageBosts[item.name.split(' ')[0].toLowerCase()].itemData.bonusDamage)}`,
+                        })
+                    }
                 })
 
             }

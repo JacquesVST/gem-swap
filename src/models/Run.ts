@@ -263,6 +263,7 @@ export class Run extends EventEmitter implements IRun {
         this.on('Grid:GridStabilized:Init', () => {
             this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
             this.updateTopProgressBars();
+            this.map.debugEnemies();
 
             if (this.map.stage.number === 1 && this.map.floor.number > 1) {
                 TextController.getInstance().newFloorAnimation();
