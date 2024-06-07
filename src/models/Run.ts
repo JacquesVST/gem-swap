@@ -1006,7 +1006,7 @@ export class Run extends EventEmitter implements IRun {
         });
 
         return new Dialog(
-            'Select a passive ability to build arround',
+            'Select a passive ability to build around',
             'You can switch freely before starting the run',
             options,
             DialogType.SKIPPABLE_ITEM,
