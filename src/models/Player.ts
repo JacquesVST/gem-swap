@@ -314,7 +314,7 @@ export class Player extends EventEmitter implements IPlayer {
                             multiplier = 0.75;
                             color = Color.WHITE_1;
                         }
-                        if (!run.hasDialogOpen && !run.gridClearAnimation) {
+                        if (!run.hasDialogOpen && !run.pauseTimerAnimation) {
                             this.itemData.damageBoostTimer.timer -= updateInterval;
                         }
                     } else {

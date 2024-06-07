@@ -264,37 +264,41 @@ export class Map extends EventEmitter implements IMap {
     }
 
     debugEnemies() {
-        console.log('Map')
-        this.floors.forEach((floor: Floor, iFloor: number) => {
-            console.log('Floor', iFloor + 1)
-            let floorEnemies = [];
-            floor.stages.forEach((stages: Stage[], iStages: number) => {
-                console.log('Floor', iFloor + 1, ',', iStages + 1, 'Options')
-                stages.forEach((stage: Stage, iStage: number) => {
-                    console.log('Stage Option', iStage + 1)
-                    if (stage instanceof ShopStage) {
-                        console.log('Shop Stage')
-                    }
+        if (!!localStorage.getItem('dev')) {
 
-                    if (stage instanceof ItemStage) {
-                        console.log('item Stage')
-                    }
 
-                    if (stage instanceof EnemyStage) {
-                        let enemies = []
-                        stage.enemies.forEach((enemy: Enemy) => {
-                            let simpleEnemy = { n: enemy.name, h: enemy.maxHealth, a: enemy.attack, s: iStages + 1 }
-                            enemies.push(simpleEnemy)
-                            floorEnemies.push(simpleEnemy)
-                        });
-                        console.table(enemies)
-                        console.log('Average Health:', this.averageProperty(enemies, "h"), 'Average Attack:', this.averageProperty(enemies, "a"))
-                    }
+            console.log('Map')
+            this.floors.forEach((floor: Floor, iFloor: number) => {
+                console.log('Floor', iFloor + 1)
+                let floorEnemies = [];
+                floor.stages.forEach((stages: Stage[], iStages: number) => {
+                    console.log('Floor', iFloor + 1, ',', iStages + 1, 'Options')
+                    stages.forEach((stage: Stage, iStage: number) => {
+                        console.log('Stage Option', iStage + 1)
+                        if (stage instanceof ShopStage) {
+                            console.log('Shop Stage')
+                        }
+
+                        if (stage instanceof ItemStage) {
+                            console.log('item Stage')
+                        }
+
+                        if (stage instanceof EnemyStage) {
+                            let enemies = []
+                            stage.enemies.forEach((enemy: Enemy) => {
+                                let simpleEnemy = { n: enemy.name, h: enemy.maxHealth, a: enemy.attack, s: iStages + 1 }
+                                enemies.push(simpleEnemy)
+                                floorEnemies.push(simpleEnemy)
+                            });
+                            console.table(enemies)
+                            console.log('Average Health:', this.averageProperty(enemies, "h"), 'Average Attack:', this.averageProperty(enemies, "a"))
+                        }
+                    })
                 })
+                console.table(floorEnemies)
+                console.log('Average Health:', this.averageProperty(floorEnemies, "h"), 'Average Attack:', this.averageProperty(floorEnemies, "a"))
             })
-            console.table(floorEnemies)
-            console.log('Average Health:', this.averageProperty(floorEnemies, "h"), 'Average Attack:', this.averageProperty(floorEnemies, "a"))
-        })
+        }
     }
 
     averageProperty(arr, prop) {

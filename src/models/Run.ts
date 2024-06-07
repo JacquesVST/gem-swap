@@ -40,7 +40,7 @@ export class Run extends EventEmitter implements IRun {
     possibleShapes: Shape[] = [];
     possibleEffects: Effect[] = [];
     inAnimation: boolean = false;
-    gridClearAnimation: boolean = false;
+    pauseTimerAnimation: boolean = false;
     stackCombo: boolean = false;
     enemyDetailsOpen: boolean = false;
 
@@ -147,6 +147,7 @@ export class Run extends EventEmitter implements IRun {
             this.player.updateMoves(this.player.totalMoves);
 
             if (stage instanceof EnemyStage) {
+                this.pauseTimerAnimation = true;
                 this.emit('InitGrid', this);
             }
 
@@ -262,6 +263,7 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:GridStabilized:Init', () => {
+            this.pauseTimerAnimation = false
             this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
             this.updateTopProgressBars();
             this.map.debugEnemies();
@@ -283,7 +285,6 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:NextStage', () => {
-            this.gridClearAnimation = false;
             if (this.map.stage instanceof MiniBossStage) {
                 this.newPercDialog(() => {
                     this.sounds['item'].play();
@@ -299,7 +300,6 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:NextFloor', () => {
-            this.gridClearAnimation = false;
             this.newShopDialog(3, true, () => {
                 this.sounds['item'].play();
 
@@ -316,7 +316,7 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:MapEnded', () => {
-            this.gridClearAnimation = false;
+            this.pauseTimerAnimation = false;
             const currentUnlock: IUnlocks = {
                 item: this.player?.passive.name,
                 date: new Date(),
@@ -342,22 +342,22 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:PlayerDied', () => {
-            this.gridClearAnimation = false;
+            this.pauseTimerAnimation = false;
             this.emit('RunEnded', 'You Lost!', this.score, new Color(231, 76, 60));
         });
 
         this.on('Grid:ClearingGrid:GridCleared:NextStage', () => {
-            this.gridClearAnimation = true;
+            this.pauseTimerAnimation = true;
             this.sounds['bossDefeat'].play();
         });
 
         this.on('Grid:ClearingGrid:GridCleared:NextFloor', () => {
-            this.gridClearAnimation = true;
+            this.pauseTimerAnimation = true;
             this.sounds['newFloor'].play();
         });
 
         this.on('Grid:ClearingGrid:GridCleared:MapEnded', () => {
-            this.gridClearAnimation = true;
+            this.pauseTimerAnimation = true;
             this.sounds['newFloor'].play();
         });
 

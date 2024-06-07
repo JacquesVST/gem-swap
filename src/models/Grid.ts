@@ -63,7 +63,7 @@ export class Grid extends EventEmitter implements IGrid {
             }
 
             piece.renewPosition(newPosition);
-            piece.setupFallAnimation(10 * distance, relativeEndPosition, params);
+            piece.setupFallAnimation(Math.floor(10 * distance), relativeEndPosition, params);
         });
     }
 
@@ -107,7 +107,7 @@ export class Grid extends EventEmitter implements IGrid {
 
         setTimeout(() => {
             piece.renewPosition(newPosition);
-            piece.setupFallAnimation(10 * distance, relativeEndPosition, eventParams);
+            piece.setupFallAnimation(Math.floor(10 * distance), relativeEndPosition, eventParams);
         }, 1 * 15);
     }
 
@@ -678,6 +678,10 @@ export class Grid extends EventEmitter implements IGrid {
             const color1: Color = critical ? new Color(203, 67, 53) : new Color(136, 78, 160);
             const color2: Color = critical ? new Color(236, 112, 99) : new Color(175, 122, 197);
 
+            if (cell.piece) {
+                cell.piece.mouseOver = highlight;
+            }
+
             if (cell?.piece?.effect) {
                 if (['Vertical AOE', 'Horizontal AOE'].includes(cell.piece.effect.id)) {
                     rectWithStripes(
@@ -778,32 +782,11 @@ export class Grid extends EventEmitter implements IGrid {
 
     playerSwap(position1: Position, position2: Position): void {
         let validatedSwap: boolean = this.validateSwap(position1, position2);
-        
-        if (this.runSnapshot.player.hasItem('Another Fair Trade')) {
-            const triggerChance: number = Math.random();
-            const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Another Fair Trade').length
-            if (triggerChance < itemCount * 0.10) {
-                this.emit('AnotherFairTrade', Math.random() > 0.5)
-            }
+        if (!this.runSnapshot.player.hasItem('Fair Trade')){
+            this.emit('SwapValidated', validatedSwap);
         }
-
-        if (this.runSnapshot.player.hasItem('Fair Trade')) {
-            const triggerChance: number = Math.random();
-            const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Fair Trade').length
-            if (triggerChance < itemCount * 0.10) {
-                let choice: boolean = Math.random() > 0.5
-                if (choice) {
-                    validatedSwap = false;
-                } else {
-                    this.emit('FairTrade')
-                }
-            }
-        }
-        
-        this.emit('SwapValidated', validatedSwap);
 
         if (validatedSwap) {
-
             if (this.runSnapshot.player.hasItem('Another Fair Trade')) {
                 const triggerChance: number = Math.random();
                 const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Another Fair Trade').length
@@ -811,17 +794,18 @@ export class Grid extends EventEmitter implements IGrid {
                     this.emit('AnotherFairTrade', Math.random() > 0.5)
                 }
             }
-    
+
             if (this.runSnapshot.player.hasItem('Fair Trade')) {
                 const triggerChance: number = Math.random();
                 const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Fair Trade').length
                 if (triggerChance < itemCount * 0.10) {
                     let choice: boolean = Math.random() > 0.5
                     if (choice) {
-                        return 
+                        return
                     } else {
                         this.emit('FairTrade');
                     }
+                    this.emit('SwapValidated', !choice);
                 }
             }
 
