@@ -17,7 +17,7 @@ export function formatTimer(ms: number, multi: number): string {
     text = `${seconds}.${milliseconds.toString().padStart(2, '0')}`;
 
     if (!isNaN(multi)) {
-        text += ` (X${multi})`;
+        text += ` (x${multi})`;
     }
 
     return text;

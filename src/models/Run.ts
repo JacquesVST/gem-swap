@@ -40,6 +40,7 @@ export class Run extends EventEmitter implements IRun {
     possibleShapes: Shape[] = [];
     possibleEffects: Effect[] = [];
     inAnimation: boolean = false;
+    gridClearAnimation: boolean = false;
     stackCombo: boolean = false;
     enemyDetailsOpen: boolean = false;
 
@@ -282,7 +283,7 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:NextStage', () => {
-
+            this.gridClearAnimation = false;
             if (this.map.stage instanceof MiniBossStage) {
                 this.newPercDialog(() => {
                     this.sounds['item'].play();
@@ -298,6 +299,7 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:NextFloor', () => {
+            this.gridClearAnimation = false;
             this.newShopDialog(3, true, () => {
                 this.sounds['item'].play();
 
@@ -314,6 +316,7 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:MapEnded', () => {
+            this.gridClearAnimation = false;
             const currentUnlock: IUnlocks = {
                 item: this.player?.passive.name,
                 date: new Date(),
@@ -339,18 +342,22 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:PlayerDied', () => {
+            this.gridClearAnimation = false;
             this.emit('RunEnded', 'You Lost!', this.score, new Color(231, 76, 60));
         });
 
         this.on('Grid:ClearingGrid:GridCleared:NextStage', () => {
+            this.gridClearAnimation = true;
             this.sounds['bossDefeat'].play();
         });
 
         this.on('Grid:ClearingGrid:GridCleared:NextFloor', () => {
+            this.gridClearAnimation = true;
             this.sounds['newFloor'].play();
         });
 
         this.on('Grid:ClearingGrid:GridCleared:MapEnded', () => {
+            this.gridClearAnimation = true;
             this.sounds['newFloor'].play();
         });
 
@@ -615,7 +622,7 @@ export class Run extends EventEmitter implements IRun {
         const canvas: Canvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
 
-        if (this.enemyDetailsOpen) {
+        if (this.enemyDetailsOpen && this.map.stage instanceof EnemyStage) {
 
             let slotX: number = canvas.windowSize.x - canvas.margin - ((canvas.margin * 1.5 + canvas.itemSideSize + canvas.gridData.horizontalCenterPadding / 2 - canvas.padding) / 2) - (canvas.itemSideSize / 2);
             let slotY: number = canvas.uiData.topUiSize + canvas.margin * 2 + canvas.padding;

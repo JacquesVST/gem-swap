@@ -17,7 +17,7 @@ export class Floor implements IFloor {
 
     setupStages(stageCount: number, enemyCount: number): void {
         let finalStageCount: number = stageCount + this.number - 1;
-        let branchCount: number = 10 + Math.ceil(this.number / 2);
+        let branchCount: number = 2 + Math.ceil(this.number / 2);
 
         let stageTree: Stage[][] = [];
 

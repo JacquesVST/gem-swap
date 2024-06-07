@@ -34,44 +34,7 @@ export class Player extends EventEmitter implements IPlayer {
     hasPassiveDetailsOpen: boolean = false;
 
     passive: Item;
-    items: Item[] = [
-        new Item(
-            'Common',
-            'Instant Health',
-            '+10% HP',
-            undefined
-        ),
-        new Item(
-            'Common',
-            'Instant Health',
-            '+10% HP',
-            undefined
-        ),
-        new Item(
-            'Common',
-            'Instant Halth',
-            '+10% HP',
-            undefined
-        ),
-        new Item(
-            'Rare',
-            '4+ Match Regeneration',
-            'Gain 1% HP every 4+ match',
-            (() => { })
-        ),
-        new Item(
-            'Rare',
-            '4+ Match Regeneration',
-            'Gain 1% HP every 4+ match',
-            (() => { })
-        ),
-        new Item(
-            'Rare',
-            '4+ Match Regeneration',
-            'Gain 1% HP every 4+ match',
-            (() => { })
-        ),
-    ];
+    items: Item[] = [];
 
     itemData: PlayerItemData = {
         activeItem: undefined,
@@ -95,7 +58,7 @@ export class Player extends EventEmitter implements IPlayer {
         damageBoostTimer: {
             timer: 0,
             multiplier: 1,
-            label: '0.00 (X0.5)',
+            label: '0.00 (x0.75)',
             hasMoved: false,
             color: Color.WHITE_1,
             interval: undefined
@@ -228,6 +191,9 @@ export class Player extends EventEmitter implements IPlayer {
 
         this.on('Map:NextFloorReached', () => {
             setXP(this.xp);
+            if (this.passive?.name === 'Think Fast'){
+                this.itemData.damageBoostTimer.timer = 0;
+            }
         });
 
         this.on('Enemy:EnemyDied', (enemy: Enemy) => {
@@ -295,7 +261,6 @@ export class Player extends EventEmitter implements IPlayer {
     }
 
     incrementTimer(matches: Piece[][], run: Run): void {
-
         if (this.passive?.name === 'Think Fast') {
             let timeToAdd: number = 0;
             matches.forEach((match: Piece[]) => {
@@ -305,49 +270,51 @@ export class Player extends EventEmitter implements IPlayer {
                     case 2:
                         timeToAdd += 0;
                         break;
-                    case 3:
-                        timeToAdd += 1.5;
+                    case 3: 
+                        timeToAdd += 1.25; 
                         break;
                     case 4:
-                        timeToAdd += 3;
+                        timeToAdd += 2.5;
                         break;
-                    case 5:
-                        timeToAdd += 5;
-                        break;
-                    default:
-                        timeToAdd += 7.5;
+                    default: 
+                        timeToAdd += 4;
                         break;
                 }
             });
 
             this.itemData.damageBoostTimer.timer += timeToAdd * 1000;
 
-            if (this.timeLeft > 40000) {
-                this.itemData.damageBoostTimer.timer = 40000;
+            //cap de 60 s
+            if (this.timeLeft > 60000) {
+                this.itemData.damageBoostTimer.timer = 60000;
             }
+
             const updateInterval: number = 10;
             if (!this.itemData.damageBoostTimer.interval) {
                 this.itemData.damageBoostTimer.interval = setInterval(() => {
-                    let multiplier: number = 0.5;
+                    let multiplier: number = 0.75;
                     let color: Color = Color.WHITE_1;
                     if (this.timeLeft > 0) {
-                        if (this.timeLeft > 30000) {
-                            multiplier = 5;
-                            color = Color.GREEN;
-                        } else if (this.timeLeft > 18000) {
+                        if (this.timeLeft > 45000) {
                             multiplier = 4;
-                            color = Color.YELLOW;
-                        } else if (this.timeLeft > 9000) {
+                            color = Color.GREEN;
+                        } else if (this.timeLeft > 30000) {
                             multiplier = 3;
                             color = Color.YELLOW;
-                        } else if (this.timeLeft > 3000) {
+                        } else if (this.timeLeft > 18000) {
                             multiplier = 2;
+                            color = Color.YELLOW;
+                        } else if (this.timeLeft > 9000) {
+                            multiplier = 1.5;
                             color = Color.ORANGE;
-                        } else {
+                        } else if (this.timeLeft > 3000) {
                             multiplier = 1;
                             color = Color.WHITE;
+                        } else {
+                            multiplier = 0.75;
+                            color = Color.WHITE_1;
                         }
-                        if (!run.hasDialogOpen && !run.inAnimation) {
+                        if (!run.hasDialogOpen && !run.gridClearAnimation) {
                             this.itemData.damageBoostTimer.timer -= updateInterval;
                         }
                     } else {
@@ -631,7 +598,7 @@ export class Player extends EventEmitter implements IPlayer {
 
                     fillStroke(timerColor);
                     p5.textAlign(p5.CENTER, p5.CENTER)
-                    p5.textSize(canvas.uiData.fontText);
+                    p5.textSize(canvas.uiData.fontSubText);
                     p5.text(
                         this.itemData.damageBoostTimer.label,
                         passiveSlotX + compactItemSideSize / 2,
@@ -817,7 +784,7 @@ export class Player extends EventEmitter implements IPlayer {
 
             this.items.forEach((item: Item) => item.price = undefined)
 
-            const itemShowcase: Item[] = this.countDuplicates( this.items);
+            const itemShowcase: Item[] = this.countDuplicates(this.items);
 
             itemShowcase.forEach((item: Item, index: number) => {
                 let cumulativeMarginX: number = margin.x + ((index % lengthOffSet) * (sideSize + canvas.margin)) + canvas.margin;
