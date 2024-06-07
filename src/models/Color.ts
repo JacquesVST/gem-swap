@@ -21,6 +21,7 @@ export class Color implements IColor {
     static GRAY_1: Color = new Color(20, 20, 20);
     static GRAY_2: Color = new Color(40, 40, 40);
     static GRAY_3: Color = new Color(60, 60, 60);
+    static GRAY_4: Color = new Color(80, 80, 80);
 
     static DISABLED: Color = new Color(86, 101, 115);
     static DIM: Color = new Color(50, 50, 50, 100);

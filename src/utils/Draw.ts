@@ -63,6 +63,17 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
         margin.y + canvas.padding
     );
 
+    if (item.count >= 2) {
+        fillStroke(color, 255 + relativeFade);
+        p5.textAlign(p5.RIGHT, p5.BOTTOM);
+        p5.textSize(canvas.uiData.fontText);
+        p5.text(
+            `x${Math.floor(item.count)}`,
+            margin.x + sideSize.x - canvas.padding,
+            margin.y + sideSize.y - canvas.padding
+        );
+    }
+
     if (item.unique || item.frequency !== Frequency.PASSIVE) {
         let frequency: string;
 
@@ -98,7 +109,9 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
             canAfford = run?.player.gold >= item.price;
             if (item.unique) {
                 owned = run?.player.hasItem(item.name);
-                canAfford = !owned;
+                if (canAfford && owned) {
+                    canAfford = false;
+                }
             }
             option.disabled = !canAfford;
         }
@@ -119,12 +132,34 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
 
         let unlock = unlocks.find((unlock: IUnlocks) => unlock.item === item.name);
 
+
+        fillFlat(Color.GRAY_4.alpha(255 + relativeFade))
+        p5.ellipse(
+            margin.x + sideSize.x / 2 - canvas.margin * 1.5,
+            margin.y + sideSize.y - canvas.margin,
+            canvas.margin
+        );
+
+        fillFlat(Color.GRAY_4.alpha(255 + relativeFade))
+        p5.ellipse(
+            margin.x + sideSize.x / 2,
+            margin.y + sideSize.y - canvas.margin,
+            canvas.margin
+        );
+
+
+        fillFlat(Color.GRAY_4.alpha(255 + relativeFade))
+        p5.ellipse(
+            margin.x + sideSize.x / 2 + canvas.margin * 1.5,
+            margin.y + sideSize.y - canvas.margin,
+            canvas.margin
+        );
+
         if (unlock) {
             startShadow(drawingContext);
-
             fillFlat(Color.GREEN.alpha(255 + relativeFade))
             p5.ellipse(
-                margin.x + canvas.margin,
+                margin.x + sideSize.x / 2 - canvas.margin * 1.5,
                 margin.y + sideSize.y - canvas.margin,
                 canvas.margin
             );
@@ -132,7 +167,7 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
             if (unlock.tier > 0) {
                 fillFlat(Color.YELLOW.alpha(255 + relativeFade))
                 p5.ellipse(
-                    margin.x + canvas.margin * 2.5,
+                    margin.x + sideSize.x / 2,
                     margin.y + sideSize.y - canvas.margin,
                     canvas.margin
                 );
@@ -141,7 +176,7 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
             if (unlock.tier > 1) {
                 fillFlat(Color.RED.alpha(255 + relativeFade))
                 p5.ellipse(
-                    margin.x + canvas.margin * 4,
+                    margin.x + sideSize.x / 2 + canvas.margin * 1.5,
                     margin.y + sideSize.y - canvas.margin,
                     canvas.margin
                 );

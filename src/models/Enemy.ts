@@ -120,7 +120,7 @@ export class BossEnemy extends Enemy {
         const bossMultiplier = 2 * (floorIndex + 1);
         this.gold = Math.floor(Math.random() * (25 - 11) + 10);
 
-        const maxHealth: number = 3500 * bossMultiplier * (1 + floorIndex);
+        const maxHealth: number = 3000 * bossMultiplier * (1 + floorIndex);
         const minHealth: number = 2500 * bossMultiplier * (1 + floorIndex);
 
         const enemyBaseAttack: number = 20;

@@ -34,7 +34,44 @@ export class Player extends EventEmitter implements IPlayer {
     hasPassiveDetailsOpen: boolean = false;
 
     passive: Item;
-    items: Item[] = [];
+    items: Item[] = [
+        new Item(
+            'Common',
+            'Instant Health',
+            '+10% HP',
+            undefined
+        ),
+        new Item(
+            'Common',
+            'Instant Health',
+            '+10% HP',
+            undefined
+        ),
+        new Item(
+            'Common',
+            'Instant Halth',
+            '+10% HP',
+            undefined
+        ),
+        new Item(
+            'Rare',
+            '4+ Match Regeneration',
+            'Gain 1% HP every 4+ match',
+            (() => { })
+        ),
+        new Item(
+            'Rare',
+            '4+ Match Regeneration',
+            'Gain 1% HP every 4+ match',
+            (() => { })
+        ),
+        new Item(
+            'Rare',
+            '4+ Match Regeneration',
+            'Gain 1% HP every 4+ match',
+            (() => { })
+        ),
+    ];
 
     itemData: PlayerItemData = {
         activeItem: undefined,
@@ -287,7 +324,7 @@ export class Player extends EventEmitter implements IPlayer {
 
             if (this.timeLeft > 40000) {
                 this.itemData.damageBoostTimer.timer = 40000;
-            } 
+            }
             const updateInterval: number = 10;
             if (!this.itemData.damageBoostTimer.interval) {
                 this.itemData.damageBoostTimer.interval = setInterval(() => {
@@ -780,7 +817,9 @@ export class Player extends EventEmitter implements IPlayer {
 
             this.items.forEach((item: Item) => item.price = undefined)
 
-            this.items.forEach((item: Item, index: number) => {
+            const itemShowcase: Item[] = this.countDuplicates( this.items);
+
+            itemShowcase.forEach((item: Item, index: number) => {
                 let cumulativeMarginX: number = margin.x + ((index % lengthOffSet) * (sideSize + canvas.margin)) + canvas.margin;
                 let cumulativeMarginY: number = margin.y + (Math.floor(index / lengthOffSet) * (sideSize + canvas.margin)) + (canvas.margin * textMarginCount);
 
@@ -830,6 +869,21 @@ export class Player extends EventEmitter implements IPlayer {
                 slotY + canvas.itemSideSize / 6
             );
         }
+    }
+
+    countDuplicates(items: Item[]): Item[] {
+        const itemMap: { [key: string]: Item } = {};
+
+        items.forEach(item => {
+            if (itemMap[item.name]) {
+                itemMap[item.name].count++;
+            } else {
+                item.count = 1;
+                itemMap[item.name] = { ...item };
+            }
+        });
+
+        return Object.values(itemMap);
     }
 }
 

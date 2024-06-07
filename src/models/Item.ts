@@ -11,6 +11,7 @@ export class Item implements IItem {
     description: string;
     effect: () => void;
     price: number;
+    count: number = 0;
 
     frequency: Frequency;
     unique: boolean;
@@ -153,7 +154,7 @@ export class ItemPools {
             new Item(
                 'Passive',
                 'Think Fast',
-                'Has a timer that resets every move that multiplies your damage the faster you act',
+                'Making matches fills a timer that multiplies damage',
                 () => { }
             )
         ]
@@ -520,9 +521,7 @@ export class ItemPools {
                 'Rare',
                 'Fair Trade',
                 '10% chance of failing a move or healing 1',
-                (() => { 
-
-                }).bind(run)
+                (() => { }).bind(run)
             ),
             new Item(
                 'Rare',
