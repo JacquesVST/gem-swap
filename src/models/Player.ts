@@ -93,7 +93,7 @@ export class Player extends EventEmitter implements IPlayer {
     configurePassive(): void {
         switch (this.passive?.name) {
             case 'Natural Crit':
-                this.criticalMultiplier = 2;
+                this.criticalMultiplier = 2.5;
                 this.itemData.criticalChance = 0.05;
                 break;
             case '4x4':
@@ -191,7 +191,7 @@ export class Player extends EventEmitter implements IPlayer {
 
         this.on('Map:NextFloorReached', () => {
             setXP(this.xp);
-            if (this.passive?.name === 'Think Fast'){
+            if (this.passive?.name === 'Think Fast') {
                 this.itemData.damageBoostTimer.timer = 0;
             }
         });
@@ -270,13 +270,13 @@ export class Player extends EventEmitter implements IPlayer {
                     case 2:
                         timeToAdd += 0;
                         break;
-                    case 3: 
-                        timeToAdd += 1.25; 
+                    case 3:
+                        timeToAdd += 1.25;
                         break;
                     case 4:
                         timeToAdd += 2.5;
                         break;
-                    default: 
+                    default:
                         timeToAdd += 4;
                         break;
                 }
@@ -638,10 +638,6 @@ export class Player extends EventEmitter implements IPlayer {
                     label: 'Multiplier',
                     value: `${Math.floor((this.damageMultiplier) * 100)}%`,
                 },
-                {
-                    label: 'XP',
-                    value: `${Math.floor(this.xp)}`
-                }
             ]
 
             if (this.itemData?.criticalChance > 0) {
@@ -682,8 +678,12 @@ export class Player extends EventEmitter implements IPlayer {
                         })
                     }
                 })
-
             }
+
+            statsData.push({
+                label: 'XP',
+                value: `${Math.floor(this.xp)}`
+            })
 
             startShadow(drawingContext);
             rectWithStripes(

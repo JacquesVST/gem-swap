@@ -741,9 +741,10 @@ export class Run extends EventEmitter implements IRun {
 
     updateScore(match: Piece[]): number {
         let bonusDamage: number = 0;
-        if (match[0]?.shape) {
-            bonusDamage = match[0].shape.itemData.bonusDamage;
-        }
+
+        match.forEach((piece: Piece) => {
+            bonusDamage += piece.shape?.itemData?.bonusDamage ?? 0;
+        })
 
         let criticalInMatch: boolean = match.some((piece: Piece) => piece.critical);
 
@@ -797,7 +798,7 @@ export class Run extends EventEmitter implements IRun {
             this.sounds['match'].play();
         }
 
-        let additiveScore: number = (this.player.attack + bonusDamage) * lengthMultiplier * damageMultiplier;
+        let additiveScore: number = (((this.player.attack) * lengthMultiplier) + bonusDamage) * damageMultiplier;
         additiveScore *= this.player.hasItem('Combos multiply DMG') ? this.combo : 1;
         additiveScore *= criticalInMatch ? criticalMultiplier : 1;
 
@@ -884,20 +885,20 @@ export class Run extends EventEmitter implements IRun {
     }
 
     newRandomDropDialog(rarities: string[], callback: () => void): void {
-        let item: Item = Item.generateItemsBasedOnRarity(
+        let items: Item[] = Item.generateItemsBasedOnRarity(
             1,
             ItemPools.defaultPool(this),
             rarities,
             this.player
-        )[0];
+        );
 
         let dialog: Dialog = new Dialog(
             'Enemy Loot',
             'You may take it',
-            ItemDialogOption.itemListToDialogOption([item], this, callback),
+            ItemDialogOption.itemListToDialogOption(items, this, callback),
             DialogType.SKIPPABLE_ITEM,
             () => {
-                this.player.addGold(item.rarity === 'Common' ? 10 : 25);
+                this.player.addGold(items[0].rarity === 'Common' ? 10 : 25);
                 if (callback) {
                     callback();
                 }

@@ -106,7 +106,7 @@ export class ItemPools {
             new Item(
                 'Passive',
                 '4x4',
-                'Can only match 4 pieces or more, but damage is quadrupled',
+                'Can only match 4 pieces or more, damage is quadrupled, extra moves',
                 () => { }
             ),
             new Item(
@@ -136,7 +136,7 @@ export class ItemPools {
             new Item(
                 'Passive',
                 'Natural Crit',
-                'Inate 5% critical chance on every match, +50% critical multiplier',
+                'Inate 5% critical chance on every match, +75% critical multiplier',
                 () => { }
             ),
             new Item(
