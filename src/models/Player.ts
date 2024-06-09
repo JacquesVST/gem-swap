@@ -197,7 +197,11 @@ export class Player extends EventEmitter implements IPlayer {
         });
 
         this.on('Enemy:EnemyDied', (enemy: Enemy) => {
-            this.xp += enemy.attack;
+            let amount = enemy.attack
+            if (this.hasItem('XP Boost')) {
+                amount *= 1.5;
+            }
+            this.xp += amount;
         });
 
         this.on('Grid:OmniMoveDone', () => {

@@ -153,7 +153,7 @@ export class Run extends EventEmitter implements IRun {
             }
 
             if (stage instanceof ShopStage) {
-                this.newShopDialog(2, false, () => {
+                this.newShopDialog(2, true, () => {
                     this.sounds['item'].play();
 
                     this.updateHealth();
