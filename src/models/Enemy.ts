@@ -76,7 +76,7 @@ export class MiniBossEnemy extends Enemy {
 
         this.name = 'Mini Boss';
         this.color = new Color(235, 152, 78);
-        this.hasDrop = Math.random() > 0.20;
+        this.hasDrop = Math.random() > 0.80;
 
         this.calculateStats(stage);
     }
