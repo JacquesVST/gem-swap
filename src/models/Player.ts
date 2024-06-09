@@ -135,11 +135,11 @@ export class Player extends EventEmitter implements IPlayer {
                 this.hasStatsOpen = !this.hasStatsOpen;
             }
 
-            if ((event.key === 'p' || event.key === 'P') && !run.hasDialogOpen && !this.hasStatsOpen) {
+            if ((event.key === 'p' || event.key === 'P') && !this.hasStatsOpen) {
                 this.hasPassiveDetailsOpen = !this.hasPassiveDetailsOpen;
             }
 
-            if ((event.key === 'r' || event.key === 'R') && !run.hasDialogOpen && !this.hasStatsOpen) {
+            if ((event.key === 'r' || event.key === 'R') && !this.hasStatsOpen) {
                 this.hasRelicDetailsOpen = !this.hasRelicDetailsOpen;
             }
         });
