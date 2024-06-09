@@ -788,7 +788,7 @@ export class Grid extends EventEmitter implements IGrid {
 
         if (validatedSwap) {
             const anotherFairTradeStack: number = this.runSnapshot.player.hasItem('Another Fair Trade')
-            if (anotherFairTradeStack) {
+            if (anotherFairTradeStack && this.runSnapshot.player.itemData.omniMoves <= 0) {
                 const triggerChance: number = Math.random();
                 if (triggerChance < anotherFairTradeStack * 0.10) {
                     this.emit('AnotherFairTrade', Math.random() > 0.5)
@@ -796,7 +796,7 @@ export class Grid extends EventEmitter implements IGrid {
             }
 
             const fairTradeStack: number = this.runSnapshot.player.hasItem('Fair Trade')
-            if (fairTradeStack) {
+            if (fairTradeStack && this.runSnapshot.player.itemData.omniMoves <= 0) {
                 let valid = true;
                 const triggerChance: number = Math.random();
                 if (triggerChance < fairTradeStack * 0.10) {
@@ -810,6 +810,7 @@ export class Grid extends EventEmitter implements IGrid {
                 }
                 this.emit('SwapValidated', valid);
                 if (!valid) {
+                    this.emit('SwapDone');
                     return
                 }
             }

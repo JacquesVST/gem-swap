@@ -106,8 +106,8 @@ export class Map extends EventEmitter implements IMap {
                 return;
             }
 
-            this.grid.setRunSnapshot(run);
             let clickFound: boolean;
+            this.grid.setRunSnapshot(run);
             this.grid.iterateXtoY((position: Position) => {
                 const cell: Cell = this.grid.getCellbyPosition(position);
                 const limits: Limits = new Limits(Position.of(cell.canvasPosition.x, cell.canvasPosition.y), Position.of(cell.canvasPosition.x + this.grid.sideSize, cell.canvasPosition.y + this.grid.sideSize))
