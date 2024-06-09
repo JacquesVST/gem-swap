@@ -112,6 +112,12 @@ export class ItemPools {
             ),
             new Item(
                 'Passive',
+                'Collector',
+                'Start with a relic and +20% increase on relic effects',
+                () => { }
+            ),
+            new Item(
+                'Passive',
                 'Flexible',
                 'Can move diagonals, but they deal -10% damage',
                 () => { }

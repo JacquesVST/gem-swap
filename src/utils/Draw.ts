@@ -136,28 +136,33 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
 
         p5.textAlign(p5.CENTER, p5.CENTER);
         fillFlat(Color.GRAY_4.alpha(255 + relativeFade))
-        icon(Icon.MEDAL, Position.of(margin.x + sideSize.x / 2 - canvas.margin * 1.5, margin.y + sideSize.y - canvas.margin))
+        icon(Icon.MEDAL, Position.of(margin.x + sideSize.x / 2 - canvas.margin * 2, margin.y + sideSize.y - canvas.margin))
 
-        icon(Icon.TROPHY, Position.of(margin.x + sideSize.x / 2, margin.y + sideSize.y - canvas.margin))
-        
-        icon(Icon.CROWN, Position.of( margin.x + sideSize.x / 2 + canvas.margin * 1.5, margin.y + sideSize.y - canvas.margin))
+        icon(Icon.TROPHY, Position.of(margin.x + sideSize.x / 2 - canvas.margin * 0.75, margin.y + sideSize.y - canvas.margin))
 
+        icon(Icon.CROWN, Position.of(margin.x + sideSize.x / 2 + canvas.margin * 0.75, margin.y + sideSize.y - canvas.margin))
+
+        icon(Icon.SKULL, Position.of(margin.x + sideSize.x / 2 + canvas.margin * 2, margin.y + sideSize.y - canvas.margin))
 
         if (unlock) {
             startShadow(drawingContext);
             fillFlat(Color.GREEN.alpha(255 + relativeFade))
-            icon(Icon.MEDAL, Position.of(margin.x + sideSize.x / 2 - canvas.margin * 1.5, margin.y + sideSize.y - canvas.margin))
+            icon(Icon.MEDAL, Position.of(margin.x + sideSize.x / 2 - canvas.margin * 2, margin.y + sideSize.y - canvas.margin))
 
 
             if (unlock.tier > 0) {
                 fillFlat(Color.YELLOW.alpha(255 + relativeFade))
-                icon(Icon.TROPHY, Position.of(margin.x + sideSize.x / 2, margin.y + sideSize.y - canvas.margin))
-
+                icon(Icon.TROPHY, Position.of(margin.x + sideSize.x / 2 - canvas.margin * 0.75, margin.y + sideSize.y - canvas.margin))
             }
 
             if (unlock.tier > 1) {
                 fillFlat(Color.RED.alpha(255 + relativeFade))
-                icon(Icon.CROWN, Position.of( margin.x + sideSize.x / 2 + canvas.margin * 1.5, margin.y + sideSize.y - canvas.margin))
+                icon(Icon.CROWN, Position.of(margin.x + sideSize.x / 2 + canvas.margin * 0.75, margin.y + sideSize.y - canvas.margin))
+            }
+
+            if (unlock.tier > 2) {
+                fillFlat(Color.PURPLE.alpha(255 + relativeFade))
+                icon(Icon.CROWN, Position.of(margin.x + sideSize.x / 2 + canvas.margin * 2, margin.y + sideSize.y - canvas.margin))
             }
 
             endShadow(drawingContext);

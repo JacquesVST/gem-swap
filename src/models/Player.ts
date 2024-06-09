@@ -287,7 +287,21 @@ export class Player extends EventEmitter implements IPlayer {
         const stats: IStat[] = [this.relic.stat1, this.relic.stat2, this.relic.stat3];
         stats.forEach((stat: IStat) => {
             this[stat.name] += stat.bonus;
+
+            if (stat.name === 'maxMoves') {
+                let moves = this.moves + stat.bonus;
+                if (moves > this.maxMoves) {
+                    moves = this.maxMoves
+                }
+
+                this.updateMoves(moves);
+            }
+
+            if (stat.name === 'maxHealth') {
+                this.heal(this.health + stat.bonus);
+            }
         });
+
     }
 
     useActiveItem(run: Run): void {
@@ -682,7 +696,7 @@ export class Player extends EventEmitter implements IPlayer {
                 p5.textAlign(p5.CENTER, p5.CENTER);
                 p5.textSize(canvas.uiData.fontSubText);
 
-                let name: string = insertLineBreaks(this.passive.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.passive.name), 0, this.passive.name.length));
+                let name: string = insertLineBreaks(this.passive.name, p5.map(compactItemSideSize - canvas.margin, 0, p5.textWidth(this.passive.name), 0, this.passive.name.length));
 
                 fillStroke();
                 p5.text(
@@ -723,7 +737,11 @@ export class Player extends EventEmitter implements IPlayer {
                         passiveSlotX + compactItemSideSize / 2,
                         passiveSlotY + compactItemSideSize + canvas.margin + canvas.itemSideSize / 8
                     );
+
+                    this.drawPassiveDetail();
                 }
+
+
 
             }
 
@@ -739,10 +757,19 @@ export class Player extends EventEmitter implements IPlayer {
                 );
                 endShadow(drawingContext);
 
+                p5.textAlign(p5.CENTER, p5.TOP)
+                fillStroke(Color.WHITE_1)
+                p5.textSize(canvas.uiData.fontDetail)
+                p5.text(
+                    'Power: ' + Math.floor(this.relic.power),
+                    relicSlotX + (compactItemSideSize / 2),
+                    relicSlotY + (canvas.padding),
+                );
+
                 p5.textAlign(p5.CENTER, p5.CENTER);
                 p5.textSize(canvas.uiData.fontSubText);
 
-                let name: string = insertLineBreaks(this.relic.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.relic.name), 0, this.relic.name.length));
+                let name: string = insertLineBreaks(this.relic.name, p5.map(compactItemSideSize - canvas.margin, 0, p5.textWidth(this.relic.name), 0, this.relic.name.length));
 
                 fillStroke();
                 p5.text(
@@ -759,7 +786,7 @@ export class Player extends EventEmitter implements IPlayer {
                     relicSlotX + compactItemSideSize / 2,
                     relicSlotY + compactItemSideSize - canvas.padding
                 );
-
+                this.drawRelicDetail();
             }
         }
 
@@ -949,49 +976,80 @@ export class Player extends EventEmitter implements IPlayer {
 
         }
 
-        this.drawPassiveDetail();
-        this.drawRelicDetail();
     }
 
     drawRelicDetail() {
         const canvas: Canvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
-/*
+
         if (this.hasRelicDetailsOpen && this.relic) {
 
+            const height: number = canvas.itemSideSize / 2
+
             const slotX: number = ((canvas.gridData.marginLeft - canvas.margin) / 2) + canvas.margin - canvas.itemSideSize / 2
-            const slotY: number = (canvas.windowSize.y / 2) - (canvas.itemSideSize / 2) + canvas.itemSideSize + (canvas.margin * 2) + canvas.itemSideSize / 6 * 4;
+            const slotY: number = (canvas.windowSize.y / 2) + (canvas.itemSideSize / 2) - height - canvas.itemSideSize - (canvas.margin * 2) - canvas.itemSideSize / 6 * 4;
 
             fillFlat(Color.GRAY_3.alpha(200));
             p5.rect(
                 slotX,
                 slotY,
                 canvas.itemSideSize,
-                canvas.itemSideSize / 3,
+                canvas.itemSideSize / 2,
                 canvas.radius
             );
 
             p5.triangle(
                 slotX + canvas.itemSideSize / 2 - canvas.margin,
-                slotY,
+                slotY + height,
                 slotX + canvas.itemSideSize / 2 + canvas.margin,
-                slotY,
+                slotY + height,
                 slotX + canvas.itemSideSize / 2,
-                slotY - canvas.margin,
+                slotY + height + canvas.margin,
             );
 
-            p5.textAlign(p5.CENTER, p5.CENTER)
-            p5.textSize(canvas.uiData.fontDetail);
-            let description: string = insertLineBreaks(this.passive.description, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.passive.description), 0, this.passive.description.length));
-
+            p5.textAlign(p5.LEFT, p5.CENTER)
             fillStroke(Color.WHITE_1)
+            p5.textSize(canvas.uiData.fontDetail)
             p5.text(
-                description,
-                slotX + canvas.itemSideSize / 2,
-                slotY + canvas.itemSideSize / 6
+                this.relic.stat1.label,
+                slotX + canvas.padding,
+                slotY + height / 2 - canvas.margin * 1.5
+            );
+
+            p5.text(
+                this.relic.stat2.label,
+                slotX + canvas.padding,
+                slotY + height / 2
+            );
+
+            p5.text(
+                this.relic.stat3.label,
+                slotX + canvas.padding,
+                slotY + height / 2 + canvas.margin * 1.5
+            );
+
+            p5.textAlign(p5.RIGHT, p5.CENTER)
+            fillStroke(Color.WHITE_1)
+            p5.textSize(canvas.uiData.fontDetail)
+            p5.text(
+                '+' + this.relic.stat1.bonus + (this.relic.stat1.isPercent ? '%' : ''),
+                slotX + canvas.itemSideSize - canvas.padding,
+                slotY + height / 2 - canvas.margin * 1.5
+            );
+
+            p5.text(
+                '+' + this.relic.stat2.bonus + (this.relic.stat2.isPercent ? '%' : ''),
+                slotX + canvas.itemSideSize - canvas.padding,
+                slotY + height / 2
+            );
+
+            p5.text(
+                '+' + this.relic.stat3.bonus + (this.relic.stat3.isPercent ? '%' : ''),
+                slotX + canvas.itemSideSize - canvas.padding,
+                slotY + height / 2 + canvas.margin * 1.5
             );
         }
-            */
+
     }
 
     drawPassiveDetail() {

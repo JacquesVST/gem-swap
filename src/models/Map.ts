@@ -1,6 +1,6 @@
 import { DialogController } from "../controllers/DialogController";
 import { EventEmitter } from "../controllers/EventEmitter";
-import { IMap } from "../interfaces";
+import { Difficulty, IMap } from "../interfaces";
 import { Cell } from "./Cell";
 import { DialogOption, NavigationDialogOption } from "./Dialog";
 import { EffectParams } from "./Effect";
@@ -20,6 +20,7 @@ export class Map extends EventEmitter implements IMap {
     gridX: number;
     gridY: number;
     run: Run;
+    difficulty: Difficulty;
 
     winState: boolean;
     floors: Floor[];
@@ -41,6 +42,7 @@ export class Map extends EventEmitter implements IMap {
             config.gridY -= 1;
         }
 
+        this.difficulty = config.difficulty;
         this.gridX = config.gridX;
         this.gridY = config.gridY;
         this.run = run;
@@ -311,7 +313,7 @@ export class Map extends EventEmitter implements IMap {
         const floors: Floor[] = [...Array(this.floorCount)].map(
             (_: Floor, index: number) => {
                 let floor: Floor = new Floor(index + 1, { ...this });
-                floor.setupStages(this.stageCount, this.enemyCount);
+                floor.setupStages(this.stageCount, this.enemyCount, this.difficulty);
                 return floor;
             }
         );

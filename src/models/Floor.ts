@@ -1,5 +1,6 @@
-import { IFloor } from "../interfaces";
+import { Difficulty, IFloor } from "../interfaces";
 import { Map } from "./Map";
+import { RunConfig } from "./Run";
 import { BossStage, CommonEnemyStage, ItemStage, MiniBossStage, ShopStage, Stage } from "./Stage";
 
 export class Floor implements IFloor {
@@ -15,9 +16,13 @@ export class Floor implements IFloor {
         this.map = map;
     }
 
-    setupStages(stageCount: number, enemyCount: number): void {
+    setupStages(stageCount: number, enemyCount: number, difficulty: Difficulty): void {
         let finalStageCount: number = stageCount;
         let branchCount: number = 2 + Math.ceil(this.number / 2);
+
+        if (difficulty === Difficulty.MASTER) {
+            branchCount = 3;
+        }
 
         let stageTree: Stage[][] = [];
 

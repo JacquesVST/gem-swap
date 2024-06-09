@@ -68,6 +68,10 @@ export class Run extends EventEmitter implements IRun {
             this.possibleShapes = this.possibleShapes.filter((shape: Shape) => shape.id !== this.possibleShapes[index].id);
         }
 
+        if (config?.item?.name === 'Collector') {
+            this.player.changeRelic(this.generateRelic());
+        }
+
         this.canvas = Canvas.getInstance();
         this.map = new Map(config, this);
 
@@ -941,6 +945,11 @@ export class Run extends EventEmitter implements IRun {
 
         const stats: IStat[] = chosenStats.map((statRange: IStatRange) => {
             let currentPower: number = p5.random(0, 100) * (1 + (this.player.xp / 44444));
+
+            if (this.player.passive?.name === 'Collector') {
+                currentPower = currentPower * 1.2;
+            }
+
             power += currentPower
             return {
                 name: statRange.name,
@@ -1146,7 +1155,7 @@ export class Run extends EventEmitter implements IRun {
 
                     })
                 },
-                new Color(46, 204, 113),
+                Color.GREEN,
                 'Easy',
                 '3 Floors',
                 '12x8 Grid',
@@ -1165,7 +1174,7 @@ export class Run extends EventEmitter implements IRun {
                         item
                     })
                 },
-                new Color(244, 208, 63),
+                Color.YELLOW,
                 'Normal',
                 '5 Floors',
                 '10x8 Grid',
@@ -1184,11 +1193,30 @@ export class Run extends EventEmitter implements IRun {
                         item
                     })
                 },
-                new Color(231, 76, 60),
+                Color.RED,
                 'Hard',
                 '8 Floors',
                 '8x6 Grid',
                 Icon.CROWN
+            ),
+            new DefaultDialogOption(
+                () => {
+                    dialogController.emit('DifficultyChosen', {
+                        enemies: 10,
+                        stages: 5,
+                        floors: 10,
+                        gridX: 6,
+                        gridY: 5,
+                        costMultiplier: 3,
+                        difficulty: Difficulty.MASTER,
+                        item
+                    })
+                },
+                Color.PURPLE,
+                'Master',
+                '10 Floors',
+                '6x5 Grid',
+                Icon.SKULL
             ),
         ];
 
