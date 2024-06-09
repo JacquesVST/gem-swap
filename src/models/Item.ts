@@ -315,7 +315,7 @@ export class ItemPools {
             `All owned color damage boosts goes to ${shape.id}`,
             (() => run.emit('Item:ConcentrateColor', shape.id)).bind(run),
             Frequency.PASSIVE,
-            100,
+            50,
         ));
 
         const uniqueItems = [

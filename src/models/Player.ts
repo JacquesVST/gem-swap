@@ -276,6 +276,10 @@ export class Player extends EventEmitter implements IPlayer {
         return this.moves === 0;
     }
 
+    get maxRelicPower(): number {
+        return Math.floor(300 * (1 + (this.xp / 44444)) * (this.passive?.name === 'Collector' ? 1.2 : 1));
+    }
+
     changeRelic(relic: Relic): void {
         if (this.relic) {
             const stats: IStat[] = [this.relic.stat1, this.relic.stat2, this.relic.stat3];
@@ -740,9 +744,6 @@ export class Player extends EventEmitter implements IPlayer {
 
                     this.drawPassiveDetail();
                 }
-
-
-
             }
 
             if (this.relic) {
@@ -761,7 +762,7 @@ export class Player extends EventEmitter implements IPlayer {
                 fillStroke(Color.WHITE_1)
                 p5.textSize(canvas.uiData.fontDetail)
                 p5.text(
-                    'Power: ' + Math.floor(this.relic.power),
+                    `Power: ${Math.floor(this.relic.power)}`,
                     relicSlotX + (compactItemSideSize / 2),
                     relicSlotY + (canvas.padding),
                 );
@@ -862,9 +863,14 @@ export class Player extends EventEmitter implements IPlayer {
             }
 
             statsData.push({
+                label: 'Max Relic Power',
+                value: `${this.maxRelicPower}`
+            });
+
+            statsData.push({
                 label: 'XP',
                 value: `${Math.floor(this.xp)}`
-            })
+            });
 
             startShadow(drawingContext);
             rectWithStripes(

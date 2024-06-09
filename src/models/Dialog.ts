@@ -421,7 +421,7 @@ export class Dialog implements IDialog {
                         fillStroke(Color.WHITE, opacity)
                         p5.textSize(canvas.uiData.fontDetail)
                         p5.text(
-                            'Power: ' + Math.floor(option.relic.power),
+                            `Power: ${Math.floor(option.relic.power)}`,
                             cumulativeMarginX + (optionWidth / 2),
                             cumulativeMarginY + optionHeight - (canvas.padding),
                         );

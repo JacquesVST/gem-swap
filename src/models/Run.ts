@@ -941,6 +941,11 @@ export class Run extends EventEmitter implements IRun {
                 min: 2,
                 max: 10,
             },
+            {
+                name: 'defense',
+                min: 2,
+                max: 10,
+            },
         ];
 
         const chosenStats: IStatRange[] = possibleStats.sort(() => Math.random() - Math.random()).slice(0, 3);
@@ -1001,7 +1006,7 @@ export class Run extends EventEmitter implements IRun {
         if (isRelic) {
             dialog = new Dialog(
                 'Enemy Relic',
-                'You can only have one',
+                `Max Relic Power: ${this.player.maxRelicPower}`,
                 [RelicDialogOption.relicToDialogOption(this.generateRelic(), this, callback)],
                 DialogType.ITEM,
                 () => {
