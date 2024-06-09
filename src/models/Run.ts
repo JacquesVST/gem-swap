@@ -226,7 +226,10 @@ export class Run extends EventEmitter implements IRun {
                 let isMiniBoss = enemy instanceof MiniBossEnemy;
                 let rarities: string[] = isMiniBoss ? ['Common', 'Rare', 'Epic'] : ['Common', 'Rare'];
 
-                const isRelic: boolean = Math.random() > 0.1;
+                let isRelic: boolean = Math.random() < 0.1;
+                if (this.player.passive?.name === 'Collector') {
+                    isRelic = Math.random() < 0.2;
+                }
 
                 this.newRandomDropDialog(isRelic, rarities, () => {
                     this.sounds['item'].play();
