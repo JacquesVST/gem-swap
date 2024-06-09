@@ -361,7 +361,7 @@ export class ItemPools {
             new Item(
                 'Common',
                 'Extra Piece',
-                '10% chance of matches removing a piece of the same color',
+                'Matches can remove a random piece of the same color',
                 (() => { }).bind(run),
             ),
             new Item(
@@ -391,7 +391,7 @@ export class ItemPools {
             new Item(
                 'Common',
                 'Crit Multiplier',
-                '+50% crit multiplier',
+                '+0.5 crit multiplier',
                 (() => {
                     run.player.criticalMultiplier += 0.5;
                 }).bind(run)
@@ -413,6 +413,7 @@ export class ItemPools {
                 (() => {
                     run.player.defense += 5;
                 }).bind(run)
+
             ),
             new Item(
                 'Common',
@@ -432,6 +433,14 @@ export class ItemPools {
             ),
 
             // Rare
+            new Item(
+                'Rare',
+                'Defense Boost',
+                '+10 defense',
+                (() => {
+                    run.player.defense += 10;
+                }).bind(run)
+            ),
             new Item(
                 'Rare',
                 'Teleport',
@@ -454,7 +463,7 @@ export class ItemPools {
             new Item(
                 'Rare',
                 '4+ Match Regeneration',
-                'Gain 1 HP every 4+ match',
+                'Gain 1% HP every 4+ match',
                 (() => { }).bind(run)
             ),
             new Item(
@@ -524,38 +533,32 @@ export class ItemPools {
                 'Matches have +10% chance of critting',
                 (() => run.player.itemData.criticalChance += 0.10).bind(run),
             ),
-            new Item(
-                'Epic',
-                'XP Boost',
-                '+50% XP',
-                (() => { }).bind(run),
-            ),
         ];
 
         run.possibleShapes.forEach((shape: Shape) => {
             defaultPool.push(new Item(
                 'Common',
-                `Eliminate all ${shape.id} pieces`,
-                `Remove current ${shape.id} pieces`,
+                `${shape.id.charAt(0).toUpperCase() + shape.id.slice(1)} Color Boost`,
+                `+50 base DMG on ${shape.id} shapes`,
                 (() => {
-                    run.stackCombo = true;
-                    run.emit('Item:EliminateShape', shape.id);
-                }).bind(run),
-                Frequency.SINGLE_USE
+                    run.emit('Item:ColorDamageBoost', shape.id, 50);
+                }).bind(run)
             ));
+
         });
 
         const random: number = Math.floor(Math.random() * run.possibleShapes.length);
-        const shape: Shape =  run.possibleShapes[random];
+        const shape: Shape = run.possibleShapes[random]
         defaultPool.push(new Item(
             'Common',
-            `${shape.id.charAt(0).toUpperCase() + shape.id.slice(1)} Color Boost`,
-            `+50 base DMG on ${shape.id} shapes`,
+            `Eliminate all ${shape.id} pieces`,
+            `Remove current ${shape.id} pieces`,
             (() => {
-                run.emit('Item:ColorDamageBoost', shape.id, 50);
-            }).bind(run)
+                run.stackCombo = true;
+                run.emit('Item:EliminateShape', shape.id);
+            }).bind(run),
+            Frequency.SINGLE_USE
         ));
-
 
         let uniqueItems = [
             new Item(
@@ -570,7 +573,7 @@ export class ItemPools {
             new Item(
                 'Rare',
                 'Hit Streak',
-                'Bonus DMG for Consecutive matches of the same color',
+                'Bonus DMG for Consecutive matches',
                 (() => { run.consecutiveCombo = 0; }).bind(run),
                 undefined,
                 undefined,
