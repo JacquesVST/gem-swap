@@ -212,7 +212,6 @@ export class Run extends EventEmitter implements IRun {
 
             if (enemy instanceof BossEnemy) {
                 this.player.itemData.bonusMoves -= this.player.itemData.bossMoves;
-                this.player.maxMoves = this.player.totalMoves;
                 this.player.moves = this.player.totalMoves;
                 this.updateMoves();
             }
