@@ -214,6 +214,48 @@ export class ItemPools {
                 Frequency.PASSIVE,
                 75,
             ),
+            (() => {
+                let name: string = 'Vertical AOE';
+                return new Item(
+                    'Rare',
+                    name,
+                    '+3% chance of column clearing pieces',
+                    (() => {
+                        let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
+
+                        if (effectIndex === -1) {
+                            run.possibleEffects.push(new Effect(name, (params: EffectParams) => {
+                                run.emit('Item:ClearColumn', params);
+                            }, 0.03));
+                        } else {
+                            run.possibleEffects[effectIndex].chance += 0.03;
+                        }
+                    }).bind(run),
+                    Frequency.PASSIVE,
+                    100
+                );
+            })(),
+            (() => {
+                let name: string = 'Horizontal AOE';
+                return new Item(
+                    'Rare',
+                    name,
+                    '+3% chance of row clearing pieces',
+                    (() => {
+                        let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
+
+                        if (effectIndex === -1) {
+                            run.possibleEffects.push(new Effect(name, (params: EffectParams) => {
+                                run.emit('Item:ClearRow', params);
+                            }, 0.03))
+                        } else {
+                            run.possibleEffects[effectIndex].chance += 0.03;
+                        }
+                    }).bind(run),
+                    Frequency.PASSIVE,
+                    100
+                );
+            })(),
 
             //Epic
             new Item(
@@ -259,6 +301,17 @@ export class ItemPools {
             });
         }
 
+        const random: number = Math.floor(Math.random() * run.possibleShapes.length);
+        const shape: Shape = run.possibleShapes[random]
+        shopPool.push(new Item(
+            'Rare',
+            `${shape.id.charAt(0).toUpperCase() + shape.id.slice(1)} Damage Concentration`,
+            `All owned color damage boosts goes to ${shape.id}`,
+            (() => run.emit('Item:ConcentrateColor', shape.id)).bind(run),
+            Frequency.PASSIVE,
+            100,
+        ));
+
         const uniqueItems = [
             new Item(
                 'Rare',
@@ -283,10 +336,12 @@ export class ItemPools {
         shopPool = shopPool.concat(uniqueItems.filter((item: Item) => !run.player.hasItem(item.name)));
 
         shopPool.forEach((item: Item) => {
-            if (!item.name.startsWith('Ban')) {
+            if (!item.name.startsWith('Ban') && !item.name.endsWith('AOE')) {
                 item.price = item.price * run.costMultiplier * (1 + (run.player.hasItem(item.name) * 0.25));
+            } else if (item.name.endsWith('AOE')) {
+                item.price = item.price * run.costMultiplier * (1 + (run.player.hasItem(item.name) * 0.5));
             } else {
-                item.price = item.price * run.costMultiplier * (1 + (run.player.items.filter((playerItem: Item) => playerItem.name.startsWith('Ban')).length * 0.25));
+                item.price = item.price * run.costMultiplier * (1 + (run.player.items.filter((playerItem: Item) => playerItem.name.startsWith('Ban')).length * 0.4));
             }
             item.price = Math.floor(item.price);
         });
@@ -298,44 +353,6 @@ export class ItemPools {
         let defaultPool: Item[] = [
 
             // Items with Effects
-            (() => {
-                let name: string = 'Vertical AOE';
-                return new Item(
-                    'Rare',
-                    name,
-                    '+2% chance of column clearing pieces',
-                    (() => {
-                        let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
-
-                        if (effectIndex === -1) {
-                            run.possibleEffects.push(new Effect(name, (params: EffectParams) => {
-                                run.emit('Item:ClearColumn', params);
-                            }, 0.02));
-                        } else {
-                            run.possibleEffects[effectIndex].chance += 0.02;
-                        }
-                    }).bind(run)
-                );
-            })(),
-            (() => {
-                let name: string = 'Horizontal AOE';
-                return new Item(
-                    'Rare',
-                    name,
-                    '+2% chance of row clearing pieces',
-                    (() => {
-                        let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
-
-                        if (effectIndex === -1) {
-                            run.possibleEffects.push(new Effect(name, (params: EffectParams) => {
-                                run.emit('Item:ClearRow', params);
-                            }, 0.02))
-                        } else {
-                            run.possibleEffects[effectIndex].chance += 0.02;
-                        }
-                    }).bind(run)
-                );
-            })(),
             (() => {
                 let name: string = 'Money';
                 return new Item(
@@ -377,7 +394,7 @@ export class ItemPools {
                 'Crit Chance',
                 'Matches have +1% chance of critting',
                 (() => {
-                    run.player.itemData.criticalChance += 0.01;
+                    run.player.criticalChance += 1;
                 }).bind(run),
             ),
             new Item(
@@ -391,9 +408,9 @@ export class ItemPools {
             new Item(
                 'Common',
                 'Crit Multiplier',
-                '+0.5 crit multiplier',
+                '+50% crit multiplier',
                 (() => {
-                    run.player.criticalMultiplier += 0.5;
+                    run.player.criticalMultiplier += 50;
                 }).bind(run)
             ),
             new Item(
@@ -409,9 +426,9 @@ export class ItemPools {
             new Item(
                 'Common',
                 'Defense Gain',
-                '+5 Defense',
+                '+3 Defense',
                 (() => {
-                    run.player.defense += 5;
+                    run.player.defense += 3;
                 }).bind(run)
 
             ),
@@ -436,9 +453,9 @@ export class ItemPools {
             new Item(
                 'Rare',
                 'Defense Boost',
-                '+10 defense',
+                '+8 defense',
                 (() => {
-                    run.player.defense += 10;
+                    run.player.defense += 8;
                 }).bind(run)
             ),
             new Item(
@@ -481,8 +498,8 @@ export class ItemPools {
             new Item(
                 'Rare',
                 'Move Saver',
-                '10% chance of not consuming moves',
-                (() => run.player.itemData.moveSaverChance += 0.10).bind(run)
+                '8% chance of not consuming moves',
+                (() => run.player.itemData.moveSaverChance += 0.08).bind(run)
             ),
             new Item(
                 'Rare',
@@ -508,30 +525,46 @@ export class ItemPools {
             ),
             new Item(
                 'Epic',
+                'All Stats Up',
+                'Small Increase on all stats',
+                (() => {
+                    run.emit('Item:AllStatsUp')
+                }).bind(run)
+            ),
+            new Item(
+                'Epic',
+                'All Stats Down?',
+                'Small Decrease on all stats but +150 attack',
+                (() => {
+                    run.emit('Item:AllStatsDown')
+                }).bind(run)
+            ),
+            new Item(
+                'Epic',
                 'Big Crit Boost',
                 '+2 crits on grid and +100% multiplier',
                 (() => {
-                    run.player.criticalMultiplier += 1;
+                    run.player.criticalMultiplier += 100;
                     run.player.critical += 2;
                 }).bind(run)
             ),
             new Item(
                 'Epic',
                 'Big Damage Boost',
-                'x1.5 DMG multiplier',
-                (() => run.player.damageMultiplier *= 1.5).bind(run)
+                '+75% DMG multiplier',
+                (() => run.player.damageMultiplier += 75).bind(run)
             ),
             new Item(
                 'Epic',
-                '20% Sale',
+                '10% Sale',
                 'Shop prices discounted',
-                (() => run.costMultiplier *= 0.8).bind(run)
+                (() => run.costMultiplier *= 0.9).bind(run)
             ),
             new Item(
                 'Epic',
                 'Big Crit Chance',
                 'Matches have +10% chance of critting',
-                (() => run.player.itemData.criticalChance += 0.10).bind(run),
+                (() => run.player.criticalChance += 10).bind(run),
             ),
         ];
 
@@ -602,8 +635,8 @@ export class ItemPools {
                 '2 Crits, 1 Move',
                 'Extra move for every 2 Crits you have',
                 (() => {
-                    run.player.moves += run.player.critical;
-                    run.player.itemData.bonusMoves = Math.ceil(run.player.critical / 2);
+                    run.player.moves += Math.floor(run.player.critical / 2);
+                    run.player.itemData.bonusMoves = Math.floor(run.player.critical / 2);
                     run.updateMoves();
                 }).bind(run),
                 undefined,

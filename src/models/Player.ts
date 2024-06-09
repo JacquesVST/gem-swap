@@ -2,7 +2,7 @@ import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
 import { DialogController } from "../controllers/DialogController";
 import { EventEmitter } from "../controllers/EventEmitter";
-import { Frequency, IDamageBoostTimerData, IDamageData, IPlayer, IPlayerItemData } from "../interfaces";
+import { Frequency, IDamageBoostTimerData, IDamageData, IPlayer, IPlayerItemData, IStat } from "../interfaces";
 import { drawItem, endShadow, fillFlat, fillStroke, rectWithStripes, startShadow } from "../utils/Draw";
 import { formatNumber, formatTimer, insertLineBreaks } from "../utils/General";
 import { getXP, setXP } from "../utils/LocalStorage";
@@ -12,6 +12,7 @@ import { Item } from "./Item";
 import { Limits } from "./Limits";
 import { Piece } from "./Piece";
 import { Position } from "./Position";
+import { Relic } from "./Relic";
 import { Run } from "./Run";
 import { Shape } from "./Shape";
 
@@ -23,8 +24,9 @@ export class Player extends EventEmitter implements IPlayer {
     attack: number;
     defense: number;
 
-    damageMultiplier: number = 1;
-    criticalMultiplier: number = 1.75;
+    damageMultiplier: number = 100;
+    criticalChance: number = 0;
+    criticalMultiplier: number = 175;
     critical: number = 1;
     gold: number = 0;
     xp: number;
@@ -32,8 +34,10 @@ export class Player extends EventEmitter implements IPlayer {
     hasInventoryOpen: boolean = false;
     hasStatsOpen: boolean = false;
     hasPassiveDetailsOpen: boolean = false;
+    hasRelicDetailsOpen: boolean = false;
 
     passive: Item;
+    relic: Relic;
     items: Item[] = [];
 
     itemData: PlayerItemData = {
@@ -44,7 +48,6 @@ export class Player extends EventEmitter implements IPlayer {
         bonusMoves: 0,
         bossCrits: 0,
         bossMoves: 0,
-        criticalChance: 0,
         diagonals: false,
         goldAddCount: 0,
         hasShield: false,
@@ -52,6 +55,7 @@ export class Player extends EventEmitter implements IPlayer {
         moveSaverChance: 0,
         omniMoves: 0,
         passiveLimits: undefined,
+        relicLimits: undefined,
         reach: 1,
         rerolls: 0,
         colorDamageBosts: {},
@@ -93,11 +97,12 @@ export class Player extends EventEmitter implements IPlayer {
     configurePassive(): void {
         switch (this.passive?.name) {
             case 'Natural Crit':
-                this.criticalMultiplier = 2.5;
-                this.itemData.criticalChance = 0.05;
+                this.criticalMultiplier = 250;
+                this.criticalChance = 5;
                 break;
             case '4x4':
-                this.damageMultiplier = 4;
+                this.damageMultiplier = 400;
+                this.itemData.moveSaverChance = 0.16;
                 break;
             case 'Flexible':
                 this.itemData.diagonals = true;
@@ -118,7 +123,7 @@ export class Player extends EventEmitter implements IPlayer {
 
     configureListeners(): void {
         this.on('Main:KeyPressed', (event: KeyboardEvent, run: Run) => {
-            if ((event.key === 'i' || event.key === 'I') && !run.hasDialogOpen) {
+            if ((event.key === 'i' || event.key === 'I')) {
                 this.hasInventoryOpen = !this.hasInventoryOpen;
             }
 
@@ -132,6 +137,10 @@ export class Player extends EventEmitter implements IPlayer {
 
             if ((event.key === 'p' || event.key === 'P') && !run.hasDialogOpen && !this.hasStatsOpen) {
                 this.hasPassiveDetailsOpen = !this.hasPassiveDetailsOpen;
+            }
+
+            if ((event.key === 'r' || event.key === 'R') && !run.hasDialogOpen && !this.hasStatsOpen) {
+                this.hasRelicDetailsOpen = !this.hasRelicDetailsOpen;
             }
         });
 
@@ -152,20 +161,26 @@ export class Player extends EventEmitter implements IPlayer {
                 }
 
                 if (this.itemData.activeItem) {
-                    if (this.itemData.activeItemLimits.contains(position)) {
+                    if (this.itemData?.activeItemLimits?.contains(position)) {
                         this.useActiveItem(run);
                     }
                 }
 
                 if (this.itemData.activeItem2) {
-                    if (this.itemData.activeItem2Limits.contains(position)) {
+                    if (this.itemData?.activeItem2Limits?.contains(position)) {
                         this.useActiveItem2(run);
                     }
                 }
 
                 if (this.passive) {
-                    if (this.itemData.passiveLimits.contains(position) && !this.hasStatsOpen) {
+                    if (this.itemData?.passiveLimits?.contains(position) && !this.hasStatsOpen) {
                         this.hasPassiveDetailsOpen = !this.hasPassiveDetailsOpen;
+                    }
+                }
+
+                if (this.relic) {
+                    if (this.itemData?.relicLimits?.contains(position) && !this.hasStatsOpen) {
+                        this.hasRelicDetailsOpen = !this.hasRelicDetailsOpen;
                     }
                 }
             }, 0);
@@ -223,10 +238,56 @@ export class Player extends EventEmitter implements IPlayer {
                 this.updateMoves(this.moves + 2);
             }
         });
+
+        this.on('Run:Item:AllStatsUp', () => {
+            this.maxHealth += 10;
+            this.attack += 10;
+            this.defense += 2;
+            this.critical += 1;
+            this.maxMoves += 1;
+
+            this.damageMultiplier += 10;
+            this.criticalMultiplier += 10;
+            this.criticalChance += 2;
+
+            this.addGold(10);
+            this.updateMoves(this.moves + 1 <= this.maxMoves ? this.moves + 1 : this.maxMoves);
+            this.heal(10);
+        });
+
+        this.on('Run:Item:AllStatsDown', () => {
+            this.attack += 150;
+
+            this.defense = this.defense < 2 ? 0 : this.defense - 2;
+            this.maxHealth -= 10;
+            this.critical -= 1;
+            this.maxMoves -= 1;
+
+            this.damageMultiplier -= 10;
+            this.criticalMultiplier -= 10;
+            this.criticalChance -= 2;
+
+            this.updateMoves(this.moves - 1);
+            this.damage({ damage: 10, shielded: false });
+        });
     }
 
     get movesEnded(): boolean {
         return this.moves === 0;
+    }
+
+    changeRelic(relic: Relic): void {
+        if (this.relic) {
+            const stats: IStat[] = [this.relic.stat1, this.relic.stat2, this.relic.stat3];
+            stats.forEach((stat: IStat) => {
+                this[stat.name] -= stat.bonus;
+            });
+        }
+        this.relic = relic;
+        const stats: IStat[] = [this.relic.stat1, this.relic.stat2, this.relic.stat3];
+        stats.forEach((stat: IStat) => {
+            this[stat.name] += stat.bonus;
+        });
     }
 
     useActiveItem(run: Run): void {
@@ -425,31 +486,56 @@ export class Player extends EventEmitter implements IPlayer {
             const activeSlotX: number = itemLeft
             const activeSlotY: number = (canvas.windowSize.y / 2) - (canvas.itemSideSize / 2);
 
-            const activeSlotX2: number = itemLeft + canvas.itemSideSize / 6;
-            const activeSlotY2: number = activeSlotY - canvas.margin - (canvas.itemSideSize / 6 * 4)
+            const activeSlotX2: number = itemLeft
+            const activeSlotY2: number = (canvas.windowSize.y / 2) + (canvas.margin / 2);
 
             const passiveSlotX: number = itemLeft + canvas.itemSideSize / 6;
             const passiveSlotY: number = activeSlotY + canvas.itemSideSize + canvas.margin;
 
+            const relicSlotX: number = itemLeft + canvas.itemSideSize / 6;
+            const relicSlotY: number = activeSlotY - canvas.margin - (canvas.itemSideSize / 6 * 4)
+
             this.itemData.activeItemLimits = Position.of(activeSlotX, activeSlotY).toLimits(Position.of(canvas.itemSideSize, canvas.itemSideSize));
             this.itemData.activeItem2Limits = Position.of(activeSlotX2, activeSlotY2).toLimits(Position.of(compactItemSideSize, compactItemSideSize));
             this.itemData.passiveLimits = Position.of(passiveSlotX, passiveSlotY).toLimits(Position.of(compactItemSideSize, compactItemSideSize));
+            this.itemData.relicLimits = Position.of(relicSlotX, relicSlotY).toLimits(Position.of(compactItemSideSize, compactItemSideSize));
 
             const opacity1: number = this.itemData.activeItemLimits.contains(canvas.mousePosition) ? 200 : 255;
             const opacity2: number = this.itemData.activeItem2Limits.contains(canvas.mousePosition) ? 200 : 255;
             const opacity3: number = this.itemData.passiveLimits.contains(canvas.mousePosition) ? 200 : 255;
+            const opacity4: number = this.itemData.relicLimits.contains(canvas.mousePosition) ? 200 : 255;
 
             drawingContext.setLineDash([10, 10])
             startShadow(drawingContext);
 
-            p5.fill(Color.GRAY_3.alpha(opacity1).value);
-            p5.rect(
-                activeSlotX,
-                activeSlotY,
-                canvas.itemSideSize,
-                canvas.itemSideSize,
-                canvas.radius
-            );
+            if (this.hasItem('Extra Active Item')) {
+                p5.fill(Color.GRAY_3.alpha(opacity1).value);
+                p5.rect(
+                    activeSlotX,
+                    activeSlotY,
+                    canvas.itemSideSize,
+                    canvas.itemSideSize / 2 - canvas.margin / 2,
+                    canvas.radius
+                );
+
+                p5.fill(Color.GRAY_3.alpha(opacity2).value);
+                p5.rect(
+                    activeSlotX2,
+                    activeSlotY2,
+                    canvas.itemSideSize,
+                    canvas.itemSideSize / 2 - canvas.margin / 2,
+                    canvas.radius
+                );
+            } else {
+                p5.fill(Color.GRAY_3.alpha(opacity1).value);
+                p5.rect(
+                    activeSlotX,
+                    activeSlotY,
+                    canvas.itemSideSize,
+                    canvas.itemSideSize,
+                    canvas.radius
+                );
+            }
 
             p5.fill(Color.GRAY_3.alpha(opacity3).value);
             p5.rect(
@@ -460,16 +546,14 @@ export class Player extends EventEmitter implements IPlayer {
                 canvas.radius
             );
 
-            if (this.hasItem('Extra Active Item')) {
-                p5.fill(Color.GRAY_3.alpha(opacity2).value);
-                p5.rect(
-                    activeSlotX2,
-                    activeSlotY2,
-                    compactItemSideSize,
-                    compactItemSideSize,
-                    canvas.radius
-                );
-            }
+            p5.fill(Color.GRAY_3.alpha(opacity4).value);
+            p5.rect(
+                relicSlotX,
+                relicSlotY,
+                compactItemSideSize,
+                compactItemSideSize,
+                canvas.radius
+            );
 
             drawingContext.setLineDash([])
             endShadow(drawingContext);
@@ -478,37 +562,69 @@ export class Player extends EventEmitter implements IPlayer {
             if (this.itemData.activeItem) {
                 const color: Color = this.itemData.activeItem.disabled ? Color.GRAY_3 : Item.rarityColors[this.itemData.activeItem.rarity].color.alpha(opacity1);
 
-                startShadow(drawingContext);
-                fillFlat(color)
-                p5.rect(
-                    activeSlotX,
-                    activeSlotY,
-                    canvas.itemSideSize,
-                    canvas.itemSideSize,
-                    canvas.radius
-                );
-                endShadow(drawingContext)
+                if (!this.hasItem('Extra Active Item')) {
+                    startShadow(drawingContext);
+                    fillFlat(color)
+                    p5.rect(
+                        activeSlotX,
+                        activeSlotY,
+                        canvas.itemSideSize,
+                        canvas.itemSideSize,
+                        canvas.radius
+                    );
+                    endShadow(drawingContext)
 
-                p5.textAlign(p5.CENTER, p5.CENTER)
-                p5.textSize(canvas.uiData.fontText)
-                let name: string = insertLineBreaks(this.itemData.activeItem.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.itemData.activeItem.name), 0, this.itemData.activeItem.name.length));
+                    p5.textAlign(p5.CENTER, p5.CENTER)
+                    p5.textSize(canvas.uiData.fontText)
+                    let name: string = insertLineBreaks(this.itemData.activeItem.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.itemData.activeItem.name), 0, this.itemData.activeItem.name.length));
 
-                fillStroke();
-                p5.text(
-                    name,
-                    activeSlotX + canvas.itemSideSize / 2,
-                    canvas.windowSize.y / 2,
-                );
+                    fillStroke();
+                    p5.text(
+                        name,
+                        activeSlotX + canvas.itemSideSize / 2,
+                        canvas.windowSize.y / 2,
+                    );
 
-                p5.textAlign(p5.CENTER, p5.BOTTOM)
-                fillStroke(Color.WHITE_1)
-                p5.textSize(canvas.uiData.fontSubText)
-                p5.text(
-                    'Space',
-                    activeSlotX + canvas.itemSideSize / 2,
-                    activeSlotY + canvas.itemSideSize + - canvas.padding
-                );
+                    p5.textAlign(p5.CENTER, p5.BOTTOM)
+                    fillStroke(Color.WHITE_1)
+                    p5.textSize(canvas.uiData.fontSubText)
+                    p5.text(
+                        'Space',
+                        activeSlotX + canvas.itemSideSize / 2,
+                        activeSlotY + canvas.itemSideSize + - canvas.padding
+                    );
+                } else {
+                    startShadow(drawingContext);
+                    fillFlat(color)
+                    p5.rect(
+                        activeSlotX,
+                        activeSlotY,
+                        canvas.itemSideSize,
+                        canvas.itemSideSize / 2 - canvas.margin / 2,
+                        canvas.radius
+                    );
+                    endShadow(drawingContext)
 
+                    p5.textAlign(p5.CENTER, p5.CENTER)
+                    p5.textSize(canvas.uiData.fontSubText)
+                    let name: string = insertLineBreaks(this.itemData.activeItem.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.itemData.activeItem.name), 0, this.itemData.activeItem.name.length));
+
+                    fillStroke();
+                    p5.text(
+                        name,
+                        activeSlotX + canvas.itemSideSize / 2,
+                        activeSlotY + canvas.margin * 2,
+                    );
+
+                    p5.textAlign(p5.CENTER, p5.BOTTOM)
+                    fillStroke(Color.WHITE_1)
+                    p5.textSize(canvas.uiData.fontDetail)
+                    p5.text(
+                        'Space',
+                        activeSlotX + canvas.itemSideSize / 2,
+                        activeSlotY + canvas.itemSideSize / 2 - canvas.margin
+                    );
+                }
             }
 
             // slot 2
@@ -520,8 +636,8 @@ export class Player extends EventEmitter implements IPlayer {
                 p5.rect(
                     activeSlotX2,
                     activeSlotY2,
-                    compactItemSideSize,
-                    compactItemSideSize,
+                    canvas.itemSideSize,
+                    canvas.itemSideSize / 2 - canvas.margin / 2,
                     canvas.radius
                 );
                 endShadow(drawingContext);
@@ -533,8 +649,8 @@ export class Player extends EventEmitter implements IPlayer {
                 fillStroke();
                 p5.text(
                     name,
-                    activeSlotX2 + compactItemSideSize / 2,
-                    activeSlotY2 + compactItemSideSize / 2,
+                    activeSlotX2 + canvas.itemSideSize / 2,
+                    activeSlotY2 + canvas.margin * 2,
                 );
 
                 p5.textAlign(p5.CENTER, p5.BOTTOM);
@@ -542,8 +658,8 @@ export class Player extends EventEmitter implements IPlayer {
                 p5.textSize(canvas.uiData.fontDetail);
                 p5.text(
                     'Enter',
-                    activeSlotX2 + compactItemSideSize / 2,
-                    activeSlotY2 + compactItemSideSize - canvas.padding
+                    activeSlotX2 + canvas.itemSideSize / 2,
+                    activeSlotY2 + canvas.itemSideSize / 2 - canvas.margin
                 );
 
             }
@@ -610,6 +726,41 @@ export class Player extends EventEmitter implements IPlayer {
                 }
 
             }
+
+            if (this.relic) {
+                startShadow(drawingContext);
+                fillFlat(Color.BLUE.alpha(opacity4));
+                p5.rect(
+                    relicSlotX,
+                    relicSlotY,
+                    compactItemSideSize,
+                    compactItemSideSize,
+                    canvas.radius
+                );
+                endShadow(drawingContext);
+
+                p5.textAlign(p5.CENTER, p5.CENTER);
+                p5.textSize(canvas.uiData.fontSubText);
+
+                let name: string = insertLineBreaks(this.relic.name, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.relic.name), 0, this.relic.name.length));
+
+                fillStroke();
+                p5.text(
+                    name,
+                    relicSlotX + compactItemSideSize / 2,
+                    relicSlotY + compactItemSideSize / 2,
+                );
+
+                p5.textAlign(p5.CENTER, p5.BOTTOM)
+                fillStroke(Color.WHITE_1);
+                p5.textSize(canvas.uiData.fontDetail)
+                p5.text(
+                    'Relic',
+                    relicSlotX + compactItemSideSize / 2,
+                    relicSlotY + compactItemSideSize - canvas.padding
+                );
+
+            }
         }
 
         if (this.hasStatsOpen) {
@@ -635,18 +786,18 @@ export class Player extends EventEmitter implements IPlayer {
                 },
                 {
                     label: 'Crit Damage',
-                    value: `${Math.floor((this.criticalMultiplier - 1) * 100)}%`,
+                    value: `${Math.floor((this.criticalMultiplier - 100))}%`,
                 },
                 {
                     label: 'Multiplier',
-                    value: `${Math.floor((this.damageMultiplier) * 100)}%`,
+                    value: `${Math.floor(this.damageMultiplier)}%`,
                 },
             ]
 
-            if (this.itemData?.criticalChance > 0) {
+            if (this.criticalChance > 0) {
                 statsData.push({
                     label: 'Crit Chance',
-                    value: `${Math.floor((this.itemData.criticalChance) * 100)}%`,
+                    value: `${Math.floor((this.criticalChance))}%`,
                 })
             }
 
@@ -799,6 +950,48 @@ export class Player extends EventEmitter implements IPlayer {
         }
 
         this.drawPassiveDetail();
+        this.drawRelicDetail();
+    }
+
+    drawRelicDetail() {
+        const canvas: Canvas = Canvas.getInstance();
+        const p5: P5 = canvas.p5;
+/*
+        if (this.hasRelicDetailsOpen && this.relic) {
+
+            const slotX: number = ((canvas.gridData.marginLeft - canvas.margin) / 2) + canvas.margin - canvas.itemSideSize / 2
+            const slotY: number = (canvas.windowSize.y / 2) - (canvas.itemSideSize / 2) + canvas.itemSideSize + (canvas.margin * 2) + canvas.itemSideSize / 6 * 4;
+
+            fillFlat(Color.GRAY_3.alpha(200));
+            p5.rect(
+                slotX,
+                slotY,
+                canvas.itemSideSize,
+                canvas.itemSideSize / 3,
+                canvas.radius
+            );
+
+            p5.triangle(
+                slotX + canvas.itemSideSize / 2 - canvas.margin,
+                slotY,
+                slotX + canvas.itemSideSize / 2 + canvas.margin,
+                slotY,
+                slotX + canvas.itemSideSize / 2,
+                slotY - canvas.margin,
+            );
+
+            p5.textAlign(p5.CENTER, p5.CENTER)
+            p5.textSize(canvas.uiData.fontDetail);
+            let description: string = insertLineBreaks(this.passive.description, p5.map(canvas.itemSideSize - canvas.margin, 0, p5.textWidth(this.passive.description), 0, this.passive.description.length));
+
+            fillStroke(Color.WHITE_1)
+            p5.text(
+                description,
+                slotX + canvas.itemSideSize / 2,
+                slotY + canvas.itemSideSize / 6
+            );
+        }
+            */
     }
 
     drawPassiveDetail() {
@@ -863,6 +1056,7 @@ export interface PlayerItemData extends IPlayerItemData {
     activeItem2: Item;
     activeItem2Limits: Limits;
     passiveLimits: Limits;
+    relicLimits: Limits
     colorDamageBosts: { [key: string]: Shape }
     damageBoostTimer: DamageBoostTimerData
 }

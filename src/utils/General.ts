@@ -1,3 +1,9 @@
+export function writeCamel(camel: string) {
+    const camelCase = camel.replace(/([a-z])([A-Z])/g, '$1 $2');
+    
+    return camelCase.charAt(0).toUpperCase() + camelCase.slice(1);
+}
+
 export function generateId(): string {
     return "id" + Math.random().toString(16).slice(2)
 }
@@ -8,7 +14,7 @@ export function formatNumber(number: number): string {
 
 export function formatTimer(ms: number, multi: number): string {
     let text: string = '';
-    
+
     if (ms === 0) {
         text = '0.00'
     }

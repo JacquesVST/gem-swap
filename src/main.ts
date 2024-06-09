@@ -75,8 +75,10 @@ const sketch = (p5Instance: p5) => {
 
     p5Instance.mousePressed = () => {
         let click: Position = Position.of(p5Instance.mouseX, p5Instance.mouseY)
-        dragController.add(new DragAnimation(click, 30))
-        dragController.isDragging = true;
+        if (dragController) {
+            dragController.add(new DragAnimation(click, 30))
+            dragController.isDragging = true;
+        }
         eventEmitter.emit('MouseClicked', click, run)
     }
 
@@ -96,13 +98,13 @@ const sketch = (p5Instance: p5) => {
     }
 
     p5Instance.keyReleased = (event: KeyboardEvent) => {
-        if (event.key === 'R' || event.key === 'r' && run) {
+        if (event.key === 'q' || event.key === 'Q' && run) {
             dialogController.clear();
             const score: number = run.score;
             run = undefined;
             setupGame('Run Restarted', score ? score : 0, Color.ORANGE);
         } else {
-            eventEmitter.emit('KeyReleased', event, run);
+            eventEmitter?.emit('KeyReleased', event, run);
         }
     }
     //other events

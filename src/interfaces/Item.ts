@@ -11,6 +11,28 @@ export interface IItem {
     effect: () => void;
 }
 
+export interface IRelic {
+    name: string;
+    power: number;
+    stat1: IStat;
+    stat2: IStat;
+    stat3: IStat;
+}
+
+export interface IStat {
+    name: string;
+    bonus: number;
+    rawBonus: number;
+    label?: string;
+    isPercent?: boolean;
+}
+
+export interface IStatRange {
+    name: string;
+    min: number;
+    max: number;
+}
+
 export enum Frequency {
     PASSIVE,
     SINGLE_USE,

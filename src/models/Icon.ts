@@ -17,4 +17,5 @@ export enum Icon {
     STORE = 'f54e',
     SWAP = 'f362',
     TROPHY = 'f091',
+    QUESTION = '3f'
 }

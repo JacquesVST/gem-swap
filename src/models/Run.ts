@@ -4,13 +4,13 @@ import { DialogController } from "../controllers/DialogController";
 import { EventEmitter } from "../controllers/EventEmitter";
 import { ProgressBarController } from "../controllers/ProgressBarController";
 import { TextController } from "../controllers/TextController";
-import { DialogType, Difficulty, IBestNumbers, IDamageData, IEventParams, IRun, IRunConfig, IRunItemData, IUnlocks, ProgressBarIndexes } from "../interfaces";
+import { DialogType, Difficulty, IBestNumbers, IDamageData, IEventParams, IRun, IRunConfig, IRunItemData, IStat, IStatRange, IUnlocks, ProgressBarIndexes } from "../interfaces";
 import { endShadow, fillFlat, fillStroke, icon, startShadow } from "../utils/Draw";
-import { formatNumber } from "../utils/General";
+import { formatNumber, writeCamel } from "../utils/General";
 import { getBestNumbers, getUnlocks, setBestNumbers, setUnlocks } from "../utils/LocalStorage";
 import { Cell } from "./Cell";
 import { Color } from "./Color";
-import { DefaultDialogOption, Dialog, DialogOption, ItemDialogOption, NavigationDialogOption, PassiveDialogOption } from "./Dialog";
+import { DefaultDialogOption, Dialog, DialogOption, ItemDialogOption, NavigationDialogOption, PassiveDialogOption, RelicDialogOption } from "./Dialog";
 import { Effect } from "./Effect";
 import { BossEnemy, Enemy, MiniBossEnemy } from "./Enemy";
 import { Floor } from "./Floor";
@@ -22,6 +22,7 @@ import { Player } from "./Player";
 import { Position } from "./Position";
 import { Shape } from "./Shape";
 import { EnemyStage, ItemStage, MiniBossStage, ShopStage, Stage } from "./Stage";
+import { Relic } from "./Relic";
 
 export class Run extends EventEmitter implements IRun {
     player: Player;
@@ -221,12 +222,13 @@ export class Run extends EventEmitter implements IRun {
                 let isMiniBoss = enemy instanceof MiniBossEnemy;
                 let rarities: string[] = isMiniBoss ? ['Common', 'Rare', 'Epic'] : ['Common', 'Rare'];
 
-                this.newRandomDropDialog(rarities, () => {
+                const isRelic: boolean = Math.random() > 0.1;
+
+                this.newRandomDropDialog(isRelic, rarities, () => {
+                    this.sounds['item'].play();
                     this.updateTopProgressBars();
                     this.updateHealth();
                     this.updateMoves();
-
-                    this.sounds['item'].play();
                     this.emit('Next');
                 });
             } else {
@@ -382,6 +384,31 @@ export class Run extends EventEmitter implements IRun {
             this.player.addGold(1)
         });
 
+        this.on('Run:Item:ConcentrateColor', (id: string) => {
+            const damageBoosts: number = this.player.items.filter((item: Item) => item.name.endsWith('Color Boost')).length
+            this.player.items = this.player.items.filter((item: Item) => !item.name.endsWith('Color Boost'));
+
+            this.possibleShapes.forEach((shape: Shape) => {
+                shape.itemData.bonusDamage = 0;
+                if (this.player.itemData.colorDamageBosts[shape.id]?.itemData?.bonusDamage) {
+                    this.player.itemData.colorDamageBosts[shape.id].itemData.bonusDamage = 0;
+                }
+            });
+
+            for (let index: number = 0; index < damageBoosts; index++) {
+                const item: Item = new Item(
+                    'Common',
+                    `${id.charAt(0).toUpperCase() + id.slice(1)} Color Boost`,
+                    `+50 base DMG on ${id} shapes`,
+                    () => {
+                        this.emit('Item:ColorDamageBoost', id, 50);
+                    }
+                );
+                this.player.items.push(item)
+                item.effect();
+            }
+        });
+
         this.on('DialogController:ItemPurchased', (price: number) => {
             this.player.addGold(-price);
         });
@@ -392,7 +419,11 @@ export class Run extends EventEmitter implements IRun {
             const params: any = this.itemData.lastDialogParams;
 
             if (dialog.type === DialogType.ITEM) {
-                this.newPercDialog(params.callback);
+                if (params.isRelic) {
+                    this.newRandomDropDialog(params.isRelic, params.rarities, params.callback);
+                } else {
+                    this.newPercDialog(params.callback);
+                }
             }
 
             if (dialog.type === DialogType.SHOP) {
@@ -403,7 +434,7 @@ export class Run extends EventEmitter implements IRun {
                 if (params.initial) {
                     this.newInitialItemDialog();
                 } else {
-                    this.newRandomDropDialog(params.rarities, params.callback);
+                    this.newRandomDropDialog(params.isRelic, params.rarities, params.callback);
                 }
             }
         });
@@ -431,7 +462,7 @@ export class Run extends EventEmitter implements IRun {
 
     updateMoves(): void {
         if (this.player.hasItem('2 Crits, 1 Move')) {
-            this.player.itemData.bonusMoves = Math.ceil(this.player.critical / 2)
+            this.player.itemData.bonusMoves = Math.floor(this.player.critical / 2)
         }
         this.emit('UpdateProgressBar', ProgressBarIndexes.MOVES, ProgressBarController.yourMovesBar(this.player.totalMoves, this.player.moves));
     }
@@ -764,7 +795,7 @@ export class Run extends EventEmitter implements IRun {
             this.itemData.wasDiagonalMove = false;
         }
 
-        if (Math.random() < this.player.itemData.criticalChance) {
+        if (Math.random() < (this.player.criticalChance / 100)) {
             criticalInMatch = true;
             if (this.player?.passive?.name === 'Natural Crit') {
                 damageMultiplier = damageMultiplier * 1.1;
@@ -802,9 +833,9 @@ export class Run extends EventEmitter implements IRun {
             this.sounds['match'].play();
         }
 
-        let additiveScore: number = (((this.player.attack) * lengthMultiplier) + bonusDamage) * damageMultiplier;
+        let additiveScore: number = (((this.player.attack) * lengthMultiplier) + bonusDamage) * damageMultiplier / 100;
         additiveScore *= this.player.hasItem('Combos Multiply DMG') ? this.combo : 1;
-        additiveScore *= criticalInMatch ? criticalMultiplier : 1;
+        additiveScore *= criticalInMatch ? criticalMultiplier / 100 : 1;
 
         additiveScore = Math.floor(additiveScore);
 
@@ -839,7 +870,6 @@ export class Run extends EventEmitter implements IRun {
     }
 
     damageEnemy(damage: number): void {
-        damage = damage * this.player.damageMultiplier;
         const enemy: Enemy = this.map.enemy;
         const finalDamage: number = enemy.simulateDamage(damage);
         this.updateEnemy(enemy.health - finalDamage, { useCase: 'DamageEnemy', data: { damage: finalDamage } });
@@ -863,6 +893,65 @@ export class Run extends EventEmitter implements IRun {
         this.sounds['defeat'].play();
         TextController.getInstance().damagePlayerAnimation(damage);
         this.updateHealth(this.player.health - damage.damage, { useCase: 'DamagePlayer', data: { damage: damage } })
+    }
+
+    generateRelic(): Relic {
+        const p5: P5 = Canvas.getInstance().p5;
+        let power: number = 0;
+
+        const possibleStats: IStatRange[] = [
+            {
+                name: 'maxHealth',
+                min: 3,
+                max: 15,
+            },
+            {
+                name: 'attack',
+                min: 5,
+                max: 50,
+            },
+            {
+                name: 'maxMoves',
+                min: 1,
+                max: 3,
+            },
+            {
+                name: 'damageMultiplier',
+                min: 20,
+                max: 100,
+            },
+            {
+                name: 'critical',
+                min: 1,
+                max: 5,
+            },
+            {
+                name: 'criticalMultiplier',
+                min: 20,
+                max: 100,
+            },
+            {
+                name: 'criticalChance',
+                min: 2,
+                max: 10,
+            },
+        ];
+
+        const chosenStats: IStatRange[] = possibleStats.sort(() => Math.random() - Math.random()).slice(0, 3);
+
+        const stats: IStat[] = chosenStats.map((statRange: IStatRange) => {
+            let currentPower: number = p5.random(0, 100) * (1 + (this.player.xp / 44444));
+            power += currentPower
+            return {
+                name: statRange.name,
+                bonus: Math.floor(p5.map(currentPower, 0, 100, statRange.min, statRange.max)),
+                rawBonus: currentPower,
+                label: writeCamel(statRange.name),
+                isPercent: ['criticalChance', 'criticalMultiplier', 'damageMultiplier'].includes(statRange.name)
+            }
+        })
+
+        return new Relic(Math.floor(power), ...stats);
     }
 
     newNavigationDialog(callback?: (index: number) => void): void {
@@ -889,7 +978,8 @@ export class Run extends EventEmitter implements IRun {
         DialogController.getInstance().dialogs.push(dialog);
     }
 
-    newRandomDropDialog(rarities: string[], callback: () => void): void {
+    newRandomDropDialog(isRelic: boolean, rarities: string[], callback: () => void): void {
+        let dialog: Dialog;
         let items: Item[] = Item.generateItemsBasedOnRarity(
             1,
             ItemPools.defaultPool(this),
@@ -897,20 +987,37 @@ export class Run extends EventEmitter implements IRun {
             this.player
         );
 
-        let dialog: Dialog = new Dialog(
-            'Enemy Loot',
-            'You may take it',
-            ItemDialogOption.itemListToDialogOption(items, this, callback),
-            DialogType.SKIPPABLE_ITEM,
-            () => {
-                this.player.addGold(items[0].rarity === 'Common' ? 10 : 25);
-                if (callback) {
-                    callback();
+        if (isRelic) {
+            dialog = new Dialog(
+                'Enemy Relic',
+                'You can only have one',
+                [RelicDialogOption.relicToDialogOption(this.generateRelic(), this, callback)],
+                DialogType.ITEM,
+                () => {
+                    if (callback) {
+                        callback();
+                    }
+                },
+                undefined,
+                this
+            );
+        } else {
+            dialog = new Dialog(
+                'Enemy Loot',
+                'You may take it',
+                ItemDialogOption.itemListToDialogOption(items, this, callback),
+                DialogType.SKIPPABLE_ITEM,
+                () => {
+                    this.player.addGold(items[0].rarity === 'Common' ? 10 : 25);
+                    if (callback) {
+                        callback();
+                    }
                 }
-            }
-        );
+            );
+        }
 
         this.itemData.lastDialogParams = {
+            isRelic,
             rarities,
             callback
         }

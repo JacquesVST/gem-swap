@@ -1,5 +1,5 @@
 import { IColor, ILimits } from "./General";
-import { IItem } from "./Item";
+import { IItem, IRelic } from "./Item";
 import { IShape } from "./Piece";
 
 export interface IPlayer {
@@ -11,6 +11,7 @@ export interface IPlayer {
     defense: number;
 
     damageMultiplier: number;
+    criticalChance: number;
     criticalMultiplier: number;
     critical: number;
     gold: number;
@@ -21,6 +22,7 @@ export interface IPlayer {
 
     items: IItem[];
     passive: IItem;
+    relic: IRelic;
     itemData: IPlayerItemData;
 }
 
@@ -30,6 +32,7 @@ export interface IPlayerItemData {
     activeItem2: IItem;
     activeItem2Limits: ILimits;
     passiveLimits: ILimits
+    relicLimits: ILimits
     bonusMoves: number;
     bossCrits: number;
     diagonals: boolean;
@@ -39,7 +42,6 @@ export interface IPlayerItemData {
     moveSaverChance: number;
     omniMoves: number;
     reach: number;
-    criticalChance: number;
     rerolls: number;
     bossMoves: number;
     colorDamageBosts: { [key: string]: IShape };

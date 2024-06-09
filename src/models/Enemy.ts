@@ -59,11 +59,11 @@ export class CommonEnemy extends Enemy {
         const maxHealth: number = 1500 * (1 + floorIndex);
         const minHealth: number = 500 * (1 + floorIndex);
 
-        const enemyBaseAttack: number = 10;
+        const enemyBaseAttack: number = 12;
         const enemyBaseHealth: number = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth);
 
-        this.attack = Math.floor(enemyBaseAttack * (1 + ((floorIndex ** 1.2) / 2)) * (1 + (stageIndex / 50)));
-        this.maxHealth = enemyBaseHealth * (1 + ((floorIndex ** 1.05) / 10)) * (1 + (stageIndex / 100));
+        this.attack = Math.floor(enemyBaseAttack * (1 + ((floorIndex ** 1.25) / 2)) * (1 + (stageIndex / 50)));
+        this.maxHealth = enemyBaseHealth * (1 + ((floorIndex ** 1.5) / 10)) * (1 + (stageIndex / 50));
         this.health = this.maxHealth;
     }
 
@@ -94,7 +94,7 @@ export class MiniBossEnemy extends Enemy {
         const enemyBaseAttack: number = 15;
         const enemyBaseHealth: number = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth);
 
-        this.attack = Math.floor(enemyBaseAttack * (1 + ((floorIndex ** 1.2) / 2)) * (1 + (stageIndex / 20)));
+        this.attack = Math.floor(enemyBaseAttack * (1 + ((floorIndex ** 1.25) / 2)) * (1 + (stageIndex / 10)));
         this.maxHealth = enemyBaseHealth * (1 + ((floorIndex ** 1.05) / 10)) * (1 + (stageIndex / 100));
 
         this.health = this.maxHealth;
@@ -126,8 +126,8 @@ export class BossEnemy extends Enemy {
         const enemyBaseAttack: number = 20;
         const enemyBaseHealth: number = Math.floor(Math.random() * (maxHealth - minHealth + 1) + minHealth);
 
-        this.attack = Math.floor(enemyBaseAttack * (1 + ((floorIndex ** 1.2) / 2)) * (1 + (stageIndex / 20)));
-        this.maxHealth = enemyBaseHealth * (1 + ((floorIndex ** 1.05) / 10)) * (1 + (stageIndex / 100));
+        this.attack = Math.floor(enemyBaseAttack * (1 + ((floorIndex ** 1.25) / 2)) * (1 + (stageIndex / 10)));
+        this.maxHealth = enemyBaseHealth * (1 + ((floorIndex ** 1.10) / 10)) * (1 + (stageIndex / 100));
 
         this.health = this.maxHealth;
     }

@@ -1,13 +1,14 @@
 import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
 import { AnimationStatus, DialogType, Frequency, IDialog, IDialogOption } from "../interfaces";
-import { drawItem, endShadow, fillFlat, fillStroke, icon, startShadow } from "../utils/Draw";
+import { drawClickableBox, drawItem, endShadow, fillFlat, fillStroke, icon, startShadow } from "../utils/Draw";
 import { generateId, insertLineBreaks } from "../utils/General";
 import { Color } from "./Color";
 import { Icon } from "./Icon";
 import { Item } from "./Item";
 import { Limits } from "./Limits";
 import { Position } from "./Position";
+import { Relic } from "./Relic";
 import { Run } from "./Run";
 import { BossStage, CommonEnemyStage, ItemStage, MiniBossStage, ShopStage, Stage } from "./Stage";
 
@@ -28,7 +29,7 @@ export class Dialog implements IDialog {
     relativeOpacitySpeed?: number = 0;
 
 
-    constructor(title: string, message: string, options: DialogOption[], type: DialogType, closeCallback?: (id?: string) => void, textColor?: Color) {
+    constructor(title: string, message: string, options: DialogOption[], type: DialogType, closeCallback?: (id?: string) => void, textColor?: Color, run?: Run) {
         this.title = title;
         this.message = message;
         this.options = options;
@@ -36,14 +37,14 @@ export class Dialog implements IDialog {
         this.type = type
         this.id = generateId();
 
-        this.setupAdditionalOptions(closeCallback);
+        this.setupAdditionalOptions(closeCallback, run);
     }
 
     get hasAdditionalButton(): boolean {
         return this.type === DialogType.SHOP || this.type === DialogType.SKIPPABLE_ITEM || this.type === DialogType.INITIAL;
     }
 
-    setupAdditionalOptions(closeCallback: (id?: string) => void): void {
+    setupAdditionalOptions(closeCallback: (id?: string) => void, run?: Run): void {
         if (this.type === DialogType.SHOP) {
             this.options.push(new DefaultDialogOption(
                 () => {
@@ -68,6 +69,18 @@ export class Dialog implements IDialog {
             ));
         }
 
+        if (this.options[0] instanceof RelicDialogOption && run) {
+            this.options.unshift(new RelicDialogOption(
+                () => {
+                    if (closeCallback) {
+                        closeCallback(this.id);
+                    }
+                },
+                Color.DISABLED,
+                run.player.relic,
+                'Your Relic'
+            ));
+        }
     }
 
     draw(run?: Run): void {
@@ -97,7 +110,6 @@ export class Dialog implements IDialog {
         }
 
         const textOffset: number = margin.y + (textMarginCount * canvas.margin / 2);
-
         this.drawDialogBackground(dimension, margin, textOffset);
         this.drawOptions(lengthOffSet, dimension, margin, run);
     }
@@ -188,14 +200,18 @@ export class Dialog implements IDialog {
 
         this.options.forEach((option: DialogOption, index: number) => {
 
+            let optionWidth: number = canvas.itemSideSize;
+            let optionHeight: number = canvas.itemSideSize;
+
+            if (option instanceof RelicDialogOption) {
+                optionWidth = canvas.itemSideSize * 1.5 + canvas.margin / 2;
+            }
+
             // option frame
-            let cumulativeMarginX: number = margin.x + (index % lengthOffSet * (canvas.itemSideSize + canvas.margin)) + canvas.margin;
+            let cumulativeMarginX: number = margin.x + (index % lengthOffSet * (optionWidth + canvas.margin)) + canvas.margin;
             let cumulativeMarginY: number = margin.y + (Math.floor(index / lengthOffSet) * (canvas.itemSideSize + canvas.margin)) + (canvas.margin * 8);
 
             cumulativeMarginX = this.options.length === (this.hasAdditionalButton ? 2 : 1) ? canvas.playfield.x / 2 - (canvas.itemSideSize / 2) : cumulativeMarginX;
-
-            let optionWidth: number = canvas.itemSideSize;
-            let optionHeight: number = canvas.itemSideSize;
 
             if (this.hasAdditionalButton && index === this.options.length - 1) {
                 optionWidth = (canvas.itemSideSize * 2) + canvas.margin;
@@ -219,7 +235,7 @@ export class Dialog implements IDialog {
 
             const opacityHightlight: number = (isMouseOver ? 255 : 200) + this.relativeOpacity
 
-            if (!(option instanceof ItemDialogOption) && !(option instanceof PassiveDialogOption)) {
+            if (!(option instanceof ItemDialogOption) && !(option instanceof PassiveDialogOption) && !(option instanceof RelicDialogOption)) {
 
                 startShadow(drawingContext);
 
@@ -345,6 +361,79 @@ export class Dialog implements IDialog {
                 }
             }
 
+            if (option instanceof RelicDialogOption) {
+                drawClickableBox(Position.of(cumulativeMarginX, cumulativeMarginY), Position.of(optionWidth, canvas.itemSideSize), Color.BLUE);
+
+                p5.textAlign(p5.CENTER, p5.TOP)
+                fillStroke(Color.WHITE, opacity)
+                p5.textSize(canvas.uiData.fontDetail)
+                p5.text(
+                    option.detail,
+                    cumulativeMarginX + (optionWidth / 2),
+                    cumulativeMarginY + (canvas.padding),
+                );
+
+                if (option.relic) {
+                    if (!option.blind) {
+                        p5.textAlign(p5.LEFT, p5.CENTER)
+                        fillStroke(Color.WHITE_1, opacity)
+                        p5.textSize(canvas.uiData.fontSubText)
+                        p5.text(
+                            option.relic.stat1.label,
+                            cumulativeMarginX + canvas.padding,
+                            cumulativeMarginY + optionHeight / 2 - canvas.margin * 1.5
+                        );
+
+                        p5.text(
+                            option.relic.stat2.label,
+                            cumulativeMarginX + canvas.padding,
+                            cumulativeMarginY + optionHeight / 2
+                        );
+
+                        p5.text(
+                            option.relic.stat3.label,
+                            cumulativeMarginX + canvas.padding,
+                            cumulativeMarginY + optionHeight / 2 + canvas.margin * 1.5
+                        );
+
+                        p5.textAlign(p5.RIGHT, p5.CENTER)
+                        fillStroke(Color.WHITE, opacity)
+                        p5.textSize(canvas.uiData.fontSubText)
+                        p5.text(
+                            '+' + option.relic.stat1.bonus + (option.relic.stat1.isPercent ? '%' : ''),
+                            cumulativeMarginX + optionWidth - canvas.padding,
+                            cumulativeMarginY + optionHeight / 2 - canvas.margin * 1.5
+                        );
+
+                        p5.text(
+                            '+' + option.relic.stat2.bonus + (option.relic.stat2.isPercent ? '%' : ''),
+                            cumulativeMarginX + optionWidth - canvas.padding,
+                            cumulativeMarginY + optionHeight / 2
+                        );
+
+                        p5.text(
+                            '+' + option.relic.stat3.bonus + (option.relic.stat3.isPercent ? '%' : ''),
+                            cumulativeMarginX + optionWidth - canvas.padding,
+                            cumulativeMarginY + optionHeight / 2 + canvas.margin * 1.5
+                        );
+
+                        p5.textAlign(p5.CENTER, p5.BOTTOM)
+                        fillStroke(Color.WHITE, opacity)
+                        p5.textSize(canvas.uiData.fontDetail)
+                        p5.text(
+                            'Power: ' + Math.floor(option.relic.power),
+                            cumulativeMarginX + (optionWidth / 2),
+                            cumulativeMarginY + optionHeight - (canvas.padding),
+                        );
+
+                    } else {
+                        fillStroke(Color.WHITE, opacity)
+                        p5.textSize(canvas.margin * 3)
+                        icon(Icon.QUESTION, Position.of(cumulativeMarginX + (optionWidth / 2), cumulativeMarginY + (optionHeight / 2)));
+                    }
+                }
+            }
+
             if (option instanceof ItemDialogOption) {
                 drawItem(option.item, Position.of(cumulativeMarginX, cumulativeMarginY), Position.of(canvas.itemSideSize, canvas.itemSideSize), this.relativeOpacity, run, option);
             }
@@ -461,6 +550,37 @@ export class ItemDialogOption extends DialogOption {
                     item,
                 )
             });
+    }
+}
+
+export class RelicDialogOption extends DialogOption {
+    relic: Relic;
+    detail: string;
+    blind: boolean;
+
+    constructor(action: () => void, color: Color, relic: Relic, detail?: string, blind: boolean = false, icon?: Icon) {
+        super(action, color, icon)
+        this.relic = relic;
+        this.detail = detail;
+        this.blind = blind;
+    }
+
+    static relicToDialogOption(relic: Relic, run: Run, callback?: () => void): RelicDialogOption {
+        let isBlind: boolean = Math.random() < 0.10;
+        return new RelicDialogOption(
+            () => {
+                if (relic.id !== run.player?.relic?.id) {
+                    run.player.changeRelic(relic)
+                }
+                if (callback) {
+                    callback();
+                }
+            },
+            Color.BLUE,
+            relic,
+            'New Relic',
+            isBlind
+        )
     }
 }
 
