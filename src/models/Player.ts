@@ -108,7 +108,7 @@ export class Player extends EventEmitter implements IPlayer {
                 this.itemData.diagonals = true;
                 break;
             case 'Gambler':
-                this.itemData.rerolls = 1
+                this.itemData.rerolls = 3
                 break;
             case 'No barriers':
                 this.itemData.reach = 2;

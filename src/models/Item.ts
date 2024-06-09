@@ -125,7 +125,7 @@ export class ItemPools {
             new Item(
                 'Passive',
                 'Gambler',
-                'Can reroll once every floor, unused rerolls will stack',
+                '+3 rerolls and +1 once every floor, unused rerolls will stack',
                 () => { }
             ),
             new Item(
