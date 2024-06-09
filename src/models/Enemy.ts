@@ -86,7 +86,7 @@ export class MiniBossEnemy extends Enemy {
         const floorIndex = stage.floor.number - 1;
 
         const miniBossMultiplier = 1.5 * (floorIndex + 1);
-        this.gold = Math.floor(Math.random() * (25 - 11) + 10);
+        this.gold = Math.floor(Math.random() * (10 - 1));
 
         const maxHealth: number = 1500 * miniBossMultiplier * (1 + floorIndex);
         const minHealth: number = 1000 * miniBossMultiplier * (1 + floorIndex);
