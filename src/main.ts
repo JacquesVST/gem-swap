@@ -66,6 +66,8 @@ const sketch = (p5Instance: p5) => {
         dialogController.draw(run);
         dragController.draw(run);
         textController.draw();
+
+        run?.player?.draw();
     }
 
     // mouse events

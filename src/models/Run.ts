@@ -479,7 +479,6 @@ export class Run extends EventEmitter implements IRun {
         this.map.grid?.drawPieces();
         this.drawNumbers();
         this.drawEnemyDetails();
-        this.player.draw();
     }
 
     drawNumbers(): void {
