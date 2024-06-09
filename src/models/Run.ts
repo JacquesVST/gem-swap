@@ -1210,7 +1210,7 @@ export class Run extends EventEmitter implements IRun {
                         floors: 10,
                         gridX: 6,
                         gridY: 5,
-                        costMultiplier: 3,
+                        costMultiplier: 2,
                         difficulty: Difficulty.MASTER,
                         item
                     })
