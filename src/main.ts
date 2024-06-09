@@ -100,7 +100,7 @@ const sketch = (p5Instance: p5) => {
     p5Instance.keyReleased = (event: KeyboardEvent) => {
         if (event.key === 'q' || event.key === 'Q' && run) {
             dialogController.clear();
-            const score: number = run.score;
+            const score: number = run?.score;
             run = undefined;
             setupGame('Run Restarted', score ? score : 0, Color.ORANGE);
         } else {
