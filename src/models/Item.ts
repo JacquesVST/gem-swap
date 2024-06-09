@@ -531,6 +531,14 @@ export class ItemPools {
             ),
             new Item(
                 'Epic',
+                'Free Relic',
+                'Gain a random Relic',
+                (() => {
+                    run.newRandomDropDialog(true, [], undefined);
+                }).bind(run)
+            ),
+            new Item(
+                'Epic',
                 'All Stats Up',
                 'Small Increase on all stats',
                 (() => {

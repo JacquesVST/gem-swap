@@ -995,13 +995,6 @@ export class Run extends EventEmitter implements IRun {
 
     newRandomDropDialog(isRelic: boolean, rarities: string[], callback: () => void): void {
         let dialog: Dialog;
-        let items: Item[] = Item.generateItemsBasedOnRarity(
-            1,
-            ItemPools.defaultPool(this),
-            rarities,
-            this.player
-        );
-
         if (isRelic) {
             dialog = new Dialog(
                 'Enemy Relic',
@@ -1017,6 +1010,13 @@ export class Run extends EventEmitter implements IRun {
                 this
             );
         } else {
+            let items: Item[] = Item.generateItemsBasedOnRarity(
+                1,
+                ItemPools.defaultPool(this),
+                rarities,
+                this.player
+            );
+
             dialog = new Dialog(
                 'Enemy Loot',
                 'You may take it',
