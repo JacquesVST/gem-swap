@@ -89,7 +89,7 @@ export class Map extends EventEmitter implements IMap {
             this.grid.applyCriticalInGrid(amount);
         });
 
-        this.on('Piece:FallAnimationEnded:Init', (params: FallPieceAnimationParams) => {
+        this.on('Piece:FallAnimationEnded', (params: FallPieceAnimationParams) => {
             this.grid.pullPieceDown(params);
         });
 
@@ -163,10 +163,6 @@ export class Map extends EventEmitter implements IMap {
             this.grid.stabilizeGrid('Loop', true);
         });
 
-        this.on('Piece:FallAnimationEnded:Loop', (params: FallPieceAnimationParams) => {
-            this.grid.pullPieceDown(params);
-        });
-
         this.on('Grid:GridStabilized:Loop', () => {
             this.grid.findMatches('Loop', true);
         });
@@ -179,10 +175,6 @@ export class Map extends EventEmitter implements IMap {
 
         this.on('Player:PlayerDied', () => {
             this.grid.clearGrid('GridCleared:PlayerDied');
-        });
-
-        this.on('Piece:FallAnimationEnded:Death', (params: FallPieceAnimationParams) => {
-            this.grid.pullPieceDown(params);
         });
 
         this.on('Piece:RemoveAnimationEnded:GridCleared:NextStage', (params: RemovePieceAnimationParams) => {

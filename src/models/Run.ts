@@ -5,7 +5,7 @@ import { EventEmitter } from "../controllers/EventEmitter";
 import { ProgressBarController } from "../controllers/ProgressBarController";
 import { TextController } from "../controllers/TextController";
 import { DialogType, Difficulty, IBestNumbers, IDamageData, IEventParams, IRun, IRunConfig, IRunItemData, IUnlocks, ProgressBarIndexes } from "../interfaces";
-import { endShadow, fillFlat, fillStroke, startShadow } from "../utils/Draw";
+import { endShadow, fillFlat, fillStroke, icon, startShadow } from "../utils/Draw";
 import { formatNumber } from "../utils/General";
 import { getBestNumbers, getUnlocks, setBestNumbers, setUnlocks } from "../utils/LocalStorage";
 import { Cell } from "./Cell";
@@ -14,6 +14,7 @@ import { DefaultDialogOption, Dialog, DialogOption, ItemDialogOption, Navigation
 import { Effect } from "./Effect";
 import { BossEnemy, Enemy, MiniBossEnemy } from "./Enemy";
 import { Floor } from "./Floor";
+import { Icon } from "./Icon";
 import { Item, ItemPools } from "./Item";
 import { Map } from "./Map";
 import { Piece } from "./Piece";
@@ -429,8 +430,8 @@ export class Run extends EventEmitter implements IRun {
     }
 
     updateMoves(): void {
-        if (this.player.hasItem('Moves as you Crits')) {
-            this.player.itemData.bonusMoves = this.player.critical
+        if (this.player.hasItem('2 Crits, 1 Move')) {
+            this.player.itemData.bonusMoves = Math.ceil(this.player.critical / 2)
         }
         this.emit('UpdateProgressBar', ProgressBarIndexes.MOVES, ProgressBarController.yourMovesBar(this.player.totalMoves, this.player.moves));
     }
@@ -599,23 +600,26 @@ export class Run extends EventEmitter implements IRun {
         // Info
 
         fillStroke();
+        p5.textAlign(p5.RIGHT, p5.CENTER);
+        icon(Icon.STATS, Position.of(canvas.windowSize.x / 2 - canvas.itemSideSize, canvas.windowSize.y - canvas.uiData.bottomUiSize))
+        icon(Icon.GRID, Position.of(canvas.windowSize.x / 2 + canvas.itemSideSize, canvas.windowSize.y - canvas.uiData.bottomUiSize))
+
         p5.textStyle(p5.ITALIC);
-        p5.textAlign(p5.CENTER, p5.CENTER);
+        p5.textAlign(p5.LEFT, p5.CENTER);
         p5.textSize(canvas.uiData.fontText);
 
         p5.text(
             '(S)tats',
-            canvas.windowSize.x / 2 - canvas.itemSideSize / 2,
+            canvas.windowSize.x / 2 - canvas.itemSideSize + canvas.margin,
             canvas.windowSize.y - canvas.uiData.bottomUiSize
         );
 
         p5.text(
             '(I)nventory',
-            canvas.windowSize.x / 2 + canvas.itemSideSize / 2,
+            canvas.windowSize.x / 2 + canvas.itemSideSize + canvas.margin,
             canvas.windowSize.y - canvas.uiData.bottomUiSize
         );
         p5.textStyle(p5.NORMAL);
-
     }
 
     drawEnemyDetails() {
@@ -696,11 +700,11 @@ export class Run extends EventEmitter implements IRun {
             this.itemData.lastShapeIds = shapeIds;
         }
 
-        if (this.player.hasItem('4+ Match Regeneration')) {
+        const matchRegenerationItemStack: number = this.player.hasItem('4+ Match Regeneration')
+        if (matchRegenerationItemStack) {
             matches.forEach((match: Piece[]) => {
                 if (match.length >= 4) {
-                    let itemStack: number = this.player.items.filter((item: Item) => item.name === '4+ Match Regeneration').length
-                    this.player.heal(itemStack);
+                    this.player.heal(matchRegenerationItemStack);
                     this.updateHealth();
                 }
             });
@@ -771,11 +775,11 @@ export class Run extends EventEmitter implements IRun {
             damageMultiplier = damageMultiplier * this.player.itemData.damageBoostTimer.multiplier;
         }
 
-        criticalInMatch = this.player.items.filter((item: Item) => item.name === 'tirC').length % 2 === 1 ? !criticalInMatch : criticalInMatch;
+        criticalInMatch = this.player.hasItem('tirC') % 2 === 1 ? !criticalInMatch : criticalInMatch;
 
         let criticalMultiplier: number = this.player.criticalMultiplier;
 
-        if (match.every((piece: Piece) => piece.critical) && this.player.items.filter((item: Item) => item.name === 'tirC').length % 2 === 0) {
+        if (match.every((piece: Piece) => piece.critical) && this.player.hasItem('tirC') % 2 === 0) {
             criticalMultiplier = Math.pow(criticalMultiplier, match.length);
         }
 
@@ -799,7 +803,7 @@ export class Run extends EventEmitter implements IRun {
         }
 
         let additiveScore: number = (((this.player.attack) * lengthMultiplier) + bonusDamage) * damageMultiplier;
-        additiveScore *= this.player.hasItem('Combos multiply DMG') ? this.combo : 1;
+        additiveScore *= this.player.hasItem('Combos Multiply DMG') ? this.combo : 1;
         additiveScore *= criticalInMatch ? criticalMultiplier : 1;
 
         additiveScore = Math.floor(additiveScore);
@@ -872,7 +876,8 @@ export class Run extends EventEmitter implements IRun {
                 },
                 stage.color,
                 stage,
-                index
+                index,
+                stage.icon
             ));
         let dialog: Dialog = new Dialog(
             'Choose your destination',
@@ -1037,7 +1042,8 @@ export class Run extends EventEmitter implements IRun {
                 new Color(46, 204, 113),
                 'Easy',
                 '3 Floors',
-                '12x8 grid'
+                '12x8 Grid',
+                Icon.MEDAL
             ),
             new DefaultDialogOption(
                 () => {
@@ -1055,7 +1061,8 @@ export class Run extends EventEmitter implements IRun {
                 new Color(244, 208, 63),
                 'Normal',
                 '5 Floors',
-                '10x8 grid'
+                '10x8 Grid',
+                Icon.TROPHY
             ),
             new DefaultDialogOption(
                 () => {
@@ -1073,7 +1080,8 @@ export class Run extends EventEmitter implements IRun {
                 new Color(231, 76, 60),
                 'Hard',
                 '8 Floors',
-                '8x6 grid'
+                '8x6 Grid',
+                Icon.CROWN
             ),
         ];
 

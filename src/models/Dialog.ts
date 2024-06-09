@@ -1,9 +1,10 @@
 import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
 import { AnimationStatus, DialogType, Frequency, IDialog, IDialogOption } from "../interfaces";
-import { drawItem, endShadow, fillFlat, startShadow } from "../utils/Draw";
+import { drawItem, endShadow, fillFlat, fillStroke, icon, startShadow } from "../utils/Draw";
 import { generateId, insertLineBreaks } from "../utils/General";
 import { Color } from "./Color";
+import { Icon } from "./Icon";
 import { Item } from "./Item";
 import { Limits } from "./Limits";
 import { Position } from "./Position";
@@ -125,9 +126,7 @@ export class Dialog implements IDialog {
 
         p5.textAlign(p5.CENTER, p5.CENTER);
 
-        p5.fill(this.textColor.alpha(opacity).value);
-        p5.stroke(Color.BLACK.alpha(opacity).value);
-        p5.strokeWeight(canvas.stroke);
+        fillStroke(this.textColor, opacity)
         p5.textSize(canvas.uiData.fontTitle)
         p5.text(
             this.title,
@@ -135,7 +134,7 @@ export class Dialog implements IDialog {
             textOffset - canvas.margin
         );
 
-        p5.fill(Color.WHITE_1.alpha(opacity).value);
+        fillStroke(Color.WHITE_1, opacity);
         p5.textSize(canvas.uiData.fontSubText)
         p5.strokeWeight(canvas.stroke);
         p5.text(
@@ -161,7 +160,6 @@ export class Dialog implements IDialog {
 
             startShadow(drawingContext);
 
-            p5.noStroke();
             fillFlat(Color.PURPLE);
             p5.rect(
                 offsetX,
@@ -173,9 +171,7 @@ export class Dialog implements IDialog {
 
             endShadow(drawingContext);
 
-            p5.fill(Color.WHITE.alpha(opacity).value);
-            p5.stroke(Color.BLACK.alpha(opacity).value);
-            p5.strokeWeight(canvas.stroke);
+            fillStroke(Color.WHITE, opacity)
             p5.textSize(canvas.uiData.fontText)
             p5.text(
                 'Reroll',
@@ -222,7 +218,6 @@ export class Dialog implements IDialog {
 
                 startShadow(drawingContext);
 
-                p5.noStroke();
                 fillFlat((option.disabled ? Color.DISABLED : option.color).alpha(opacityHightlight <= 0 ? 0 : opacityHightlight));
                 p5.rect(
                     cumulativeMarginX,
@@ -243,11 +238,14 @@ export class Dialog implements IDialog {
                 p5.textAlign(p5.CENTER, p5.CENTER)
 
                 const textMargin: number = cumulativeMarginY + (optionHeight / 2);
-                const mainOffset: number = (option.subsubtext ? -2 : option.subtext ? -1 : 0) * canvas.margin;
+                const mainOffset: number = (option.subsubtext || option.subtext ? -1 : 0) * canvas.margin;
 
-                p5.fill(Color.WHITE.alpha(opacity).value);
-                p5.stroke(Color.BLACK.alpha(opacity).value);
-                p5.strokeWeight(canvas.stroke);
+                if (option.icon) {
+                    fillStroke(Color.WHITE, opacity)
+                    icon(option.icon, Position.of(cumulativeMarginX + (optionWidth / 2), textMargin + mainOffset - canvas.margin * 2));
+                }
+
+                fillStroke(Color.WHITE, opacity)
                 p5.textSize(canvas.uiData.fontText)
                 p5.text(
                     option.text,
@@ -255,11 +253,19 @@ export class Dialog implements IDialog {
                     textMargin + mainOffset
                 );
 
-                if (option.subtext) {
-                    let subOffset: number = (option.subsubtext ? 0 : 1) * canvas.margin;
+                if (option.text === 'Close') {
+                    icon(Icon.CLOSE, Position.of(cumulativeMarginX + canvas.margin, textMargin + mainOffset));
+                }
 
-                    p5.fill(Color.WHITE_1.alpha(opacity).value);
-                    p5.strokeWeight(canvas.stroke);
+
+                if (option.text === 'Skip') {
+                    icon(Icon.SKIP, Position.of(cumulativeMarginX + canvas.margin, textMargin + mainOffset));
+                }
+
+                if (option.subtext) {
+                    let subOffset: number = canvas.margin / 2 + (option.subsubtext ? 0 : 1) * (canvas.margin * 0.5);
+
+                    fillStroke(Color.WHITE_1, opacity)
                     p5.textSize(canvas.uiData.fontSubText)
                     p5.text(
                         insertLineBreaks(option.subtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(option.subtext), 0, option.subtext.length)),
@@ -269,13 +275,12 @@ export class Dialog implements IDialog {
                 }
 
                 if (option.subsubtext) {
-                    p5.fill(Color.WHITE_1.alpha(opacity).value);
-                    p5.strokeWeight(canvas.stroke);
+                    fillStroke(Color.WHITE_1, opacity)
                     p5.textSize(canvas.uiData.fontSubText)
                     p5.text(
                         insertLineBreaks(option.subsubtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(option.subsubtext), 0, option.subsubtext.length)),
                         cumulativeMarginX + (optionWidth / 2),
-                        textMargin + (2 * canvas.margin)
+                        textMargin + (canvas.margin * 2)
                     );
                 }
             }
@@ -312,9 +317,11 @@ export class Dialog implements IDialog {
                 }
 
                 const textMargin: number = cumulativeMarginY + (optionHeight / 2);
-                p5.fill(Color.WHITE.alpha(opacity).value);
-                p5.stroke(Color.BLACK.alpha(opacity).value);
-                p5.strokeWeight(canvas.stroke);
+
+                fillStroke(Color.WHITE, opacity)
+                icon(option.icon, Position.of(cumulativeMarginX + (optionWidth / 2), textMargin - canvas.margin * 3));
+
+                fillStroke(Color.WHITE, opacity)
                 p5.textSize(canvas.uiData.fontText)
                 p5.text(
                     text,
@@ -323,8 +330,7 @@ export class Dialog implements IDialog {
                 );
 
                 if (subtext) {
-                    p5.fill(Color.WHITE_1.alpha(opacity).value);
-                    p5.strokeWeight(canvas.stroke);
+                    fillStroke(Color.WHITE_1, opacity)
                     p5.textSize(canvas.uiData.fontSubText)
                     p5.text(
                         insertLineBreaks(subtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(subtext), 0, subtext.length)),
@@ -353,9 +359,7 @@ export class Dialog implements IDialog {
                 (p5.drawingContext as CanvasRenderingContext2D).setLineDash([]);
 
                 if (!option.item) {
-                    p5.fill(Color.WHITE.alpha(opacity).value);
-                    p5.stroke(Color.BLACK.alpha(opacity).value);
-                    p5.strokeWeight(canvas.stroke);
+                    fillStroke(Color.WHITE, opacity)
                     p5.textSize(canvas.uiData.fontText)
                     p5.text(
                         'Select passive',
@@ -404,18 +408,20 @@ export class DialogOption implements IDialogOption {
     color: Color;
     disabled: boolean;
     limits: Limits;
+    icon: Icon;
 
-    constructor(action: () => void, color: Color) {
+    constructor(action: () => void, color: Color, icon?: Icon) {
         this.action = action;
         this.color = color;
+        this.icon = icon;
     }
 }
 
 export class ItemDialogOption extends DialogOption {
     item: Item;
 
-    constructor(action: () => void, color: Color, item: Item) {
-        super(action, color)
+    constructor(action: () => void, color: Color, item: Item, icon?: Icon) {
+        super(action, color, icon)
         this.item = item;
     }
 
@@ -458,8 +464,8 @@ export class DefaultDialogOption extends DialogOption {
     subtext: string;
     subsubtext: string;
 
-    constructor(action: () => void, color: Color, text: string, subtext?: string, subsubtext?: string) {
-        super(action, color)
+    constructor(action: () => void, color: Color, text: string, subtext?: string, subsubtext?: string, icon?: Icon) {
+        super(action, color, icon)
         this.text = text;
         this.subtext = subtext;
         this.subsubtext = subsubtext;
@@ -469,8 +475,8 @@ export class DefaultDialogOption extends DialogOption {
 export class PassiveDialogOption extends DialogOption {
     item: Item
 
-    constructor(action: () => void, color: Color, item?: Item) {
-        super(action, color)
+    constructor(action: () => void, color: Color, item?: Item, icon?: Icon) {
+        super(action, color, icon)
         this.item = item;
     }
 }
@@ -479,8 +485,8 @@ export class NavigationDialogOption extends DialogOption {
     stage: Stage;
     index: number;
 
-    constructor(action: () => void, color: Color, stage: Stage, index: number) {
-        super(action, color)
+    constructor(action: () => void, color: Color, stage: Stage, index: number, icon?: Icon) {
+        super(action, color, icon)
         this.stage = stage;
         this.index = index;
     }

@@ -284,7 +284,6 @@ export class Player extends EventEmitter implements IPlayer {
 
             this.itemData.damageBoostTimer.timer += timeToAdd * 1000;
 
-            //cap de 60 s
             if (this.timeLeft > 60000) {
                 this.itemData.damageBoostTimer.timer = 60000;
             }
@@ -334,8 +333,8 @@ export class Player extends EventEmitter implements IPlayer {
         return this.itemData.damageBoostTimer.timer;
     }
 
-    hasItem(name: string): boolean {
-        return this.items.map((item: Item) => item.name).includes(name);
+    hasItem(name: string): number {
+        return this.items.filter((item: Item) => item.name === name).length;
     }
 
     heal(heal: number): void {
@@ -723,6 +722,24 @@ export class Player extends EventEmitter implements IPlayer {
 
         if (this.hasInventoryOpen && this.items.length) {
 
+            let epicItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Epic');
+            let rareItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Rare');
+            let commonItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Common');
+
+            let sort: (a: Item, b: Item) => number = (a: Item, b: Item) => {
+                return a.name > b.name ? 1 : -1;
+            };
+
+            epicItems.sort(sort);
+            rareItems.sort(sort);
+            commonItems.sort(sort);
+
+            this.items = epicItems.concat(rareItems.concat(commonItems));
+
+            this.items.forEach((item: Item) => item.price = undefined)
+
+            const itemShowcase: Item[] = this.countDuplicates(this.items);
+
             fillFlat(Color.DIM);
             p5.rect(
                 0,
@@ -736,13 +753,13 @@ export class Player extends EventEmitter implements IPlayer {
             let margin: Position = Position.of(0, 0);
 
             let textMarginCount: number = 3;
-            let lengthOffSet: number = 4 + Math.ceil(this.items.length / 10);
-            let maxLength: number = this.items.length > lengthOffSet ? lengthOffSet : this.items.length
+            let lengthOffSet: number = 4 + Math.ceil(itemShowcase.length / 10);
+            let maxLength: number = itemShowcase.length > lengthOffSet ? lengthOffSet : itemShowcase.length
 
             dimension.x = maxLength * sideSize + ((maxLength + 1) * canvas.margin);
             margin.x = (canvas.playfield.x / 2) - (dimension.x / 2);
 
-            dimension.y = (Math.ceil(this.items.length / lengthOffSet) * sideSize) + ((Math.ceil(this.items.length / lengthOffSet) + textMarginCount) * canvas.margin);
+            dimension.y = (Math.ceil(itemShowcase.length / lengthOffSet) * sideSize) + ((Math.ceil(itemShowcase.length / lengthOffSet) + textMarginCount) * canvas.margin);
             margin.y = (canvas.playfield.y / 2) - (dimension.y / 2);
 
             startShadow(drawingContext);
@@ -767,24 +784,6 @@ export class Player extends EventEmitter implements IPlayer {
                 canvas.playfield.x / 2,
                 margin.y + (textMarginCount * canvas.margin / 2)
             );
-
-            let epicItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Epic');
-            let rareItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Rare');
-            let commonItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Common');
-
-            let sort: (a: Item, b: Item) => number = (a: Item, b: Item) => {
-                return a.name > b.name ? 1 : -1;
-            };
-
-            epicItems.sort(sort);
-            rareItems.sort(sort);
-            commonItems.sort(sort);
-
-            this.items = epicItems.concat(rareItems.concat(commonItems));
-
-            this.items.forEach((item: Item) => item.price = undefined)
-
-            const itemShowcase: Item[] = this.countDuplicates(this.items);
 
             itemShowcase.forEach((item: Item, index: number) => {
                 let cumulativeMarginX: number = margin.x + ((index % lengthOffSet) * (sideSize + canvas.margin)) + canvas.margin;

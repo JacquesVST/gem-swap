@@ -120,16 +120,18 @@ export class TextController extends EventEmitter {
     }
 
     playerHealedAnimaiton(amount: number): void {
-        amount = Math.floor(amount);
-        const animation: TextAnimation = new TextAnimation(
-            `+${amount}`,
-            Color.GREEN,
-            120,
-            Position.of(this.canvas.p5.mouseX, this.canvas.p5.mouseY),
-            Position.of(0, -200)
-        );
+        if (amount !== 0) {
+            amount = Math.floor(amount);
+            const animation: TextAnimation = new TextAnimation(
+                `+${amount}`,
+                Color.GREEN,
+                120,
+                Position.of(this.canvas.p5.mouseX, this.canvas.p5.mouseY),
+                Position.of(0, -200)
+            );
 
-        this.textAnimations.push(animation);
+            this.textAnimations.push(animation);
+        }
     }
 
     bossFightAnimation(): void {

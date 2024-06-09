@@ -1,5 +1,6 @@
 import { IEventParams, ProgressBarIndexes } from "../interfaces";
 import { Color } from "../models/Color";
+import { Icon } from "../models/Icon";
 import { Position } from "../models/Position";
 import { ProgressBar } from "../models/ProgressBar";
 import { Run } from "../models/Run";
@@ -73,7 +74,8 @@ export class ProgressBarController extends EventEmitter {
             'Floor',
             Color.YELLOW,
             true,
-            ProgressBarIndexes.FLOOR
+            ProgressBarIndexes.FLOOR,
+            Icon.LAYER
         );
     }
 
@@ -84,7 +86,8 @@ export class ProgressBarController extends EventEmitter {
             'Stage',
             Color.BLUE,
             true,
-            ProgressBarIndexes.STAGE
+            ProgressBarIndexes.STAGE,
+            Icon.STAGE
         );
     }
 
@@ -96,7 +99,8 @@ export class ProgressBarController extends EventEmitter {
                 run.map.enemy.name + ' Health (' + run.map.enemy.number + '/' + run.map.stage.enemies.length + ')',
                 run.map.enemy.color,
                 true,
-                ProgressBarIndexes.ENEMY
+                ProgressBarIndexes.ENEMY,
+                Icon.ENEMY
             );
 
         } else {
@@ -111,7 +115,8 @@ export class ProgressBarController extends EventEmitter {
             'Your Moves',
             moves <= 3 ? Color.RED : Color.GREEN,
             false,
-            ProgressBarIndexes.MOVES
+            ProgressBarIndexes.MOVES,
+            Icon.SWAP
         );
     }
 
@@ -122,7 +127,8 @@ export class ProgressBarController extends EventEmitter {
             'Your Health',
             Color.RED,
             false,
-            ProgressBarIndexes.HEALTH
+            ProgressBarIndexes.HEALTH,
+            Icon.HEART
         );
     }
 }

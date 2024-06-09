@@ -124,14 +124,13 @@ export class Piece extends EventEmitter implements IPiece {
         const canvas: Canvas = Canvas.getInstance();
         this.relativeLinearSizeSpeed = canvas.scale(0.001);
 
-        if (this.mouseOver && this.relativeLinearSize <= canvas.scale(0.008)) {
+        if (this.mouseOver && this.relativeLinearSize <= canvas.scale(0.005)) {
             this.relativeLinearSize += this.relativeLinearSizeSpeed
         }
 
         if (!this.mouseOver && this.relativeLinearSize > 0) {
             this.relativeLinearSize -= this.relativeLinearSizeSpeed
         }
-
 
         if (this.frames) {
             this.relativePositon = this.relativePositon.minus(this.relativePositonSpeed);
@@ -190,14 +189,14 @@ export interface FallPieceAnimationData {
     position: Position;
     newPosition: Position;
     allowMatches: boolean;
+    useCase: string;
 }
 
 export class FallPieceAnimationParams extends AnimationParams {
     data: FallPieceAnimationData;
 
-    constructor(useCase: string, data?: FallPieceAnimationData) {
+    constructor(data?: FallPieceAnimationData) {
         super('FallAnimationEnded');
-        this.useCase = useCase;
         this.data = data;
     }
 }

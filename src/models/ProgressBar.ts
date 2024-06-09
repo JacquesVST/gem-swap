@@ -2,9 +2,10 @@ import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
 import { EventEmitter } from "../controllers/EventEmitter";
 import { IEventParams, IProgressBar } from "../interfaces";
-import { endShadow, startShadow } from "../utils/Draw";
+import { endShadow, fillStroke, icon, startShadow } from "../utils/Draw";
 import { formatNumber } from "../utils/General";
 import { Color } from "./Color";
+import { Icon } from "./Icon";
 import { Limits } from "./Limits";
 import { Position } from "./Position";
 import { Run } from "./Run";
@@ -18,13 +19,14 @@ export class ProgressBar extends EventEmitter implements IProgressBar {
     index: number;
     top: boolean;
     limits: Limits;
+    icon: Icon;
 
     frames: number = 0;
     relativeLinearSizeSpeed: number = 0;
     relativeLinearSize: number = 0;
     initialLinearSize: number = 0;
 
-    constructor(maxValue: number, value: number, title: string, color: Color, top: boolean, index: number) {
+    constructor(maxValue: number, value: number, title: string, color: Color, top: boolean, index: number, icon?: Icon) {
         super('ProgressBar');
         this.maxValue = maxValue;
         this.value = value;
@@ -32,6 +34,7 @@ export class ProgressBar extends EventEmitter implements IProgressBar {
         this.color = color;
         this.top = top;
         this.index = index;
+        this.icon = icon;
 
         this.calculateSpeed()
     }
@@ -93,9 +96,7 @@ export class ProgressBar extends EventEmitter implements IProgressBar {
             canvas.radius + canvas.padding
         );
 
-        p5.fill(this.color.value);
-        p5.stroke(Color.BLACK.value);
-        p5.strokeWeight(canvas.stroke);
+        fillStroke(this.color)
         p5.textSize(canvas.uiData.fontText);
 
         p5.textAlign(p5.LEFT, p5.CENTER);
@@ -104,6 +105,11 @@ export class ProgressBar extends EventEmitter implements IProgressBar {
             canvas.margin * 3,
             commonMargin + (canvas.padding * 0.5),
         );
+
+        const width = p5.textWidth(this.title);
+
+        p5.textAlign(p5.LEFT, p5.CENTER);
+        icon(this.icon, Position.of(width + canvas.margin * 4, commonMargin + (canvas.padding * 0.5)));
 
         p5.textAlign(p5.RIGHT, p5.CENTER);
         p5.text(

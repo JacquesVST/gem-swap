@@ -40,7 +40,7 @@ export class Floor implements IFloor {
                         stage = new ShopStage(i + 1, { ...this });
                     } else if (chance < 0.15) {
                         stage = new ItemStage(i + 1, { ...this });
-                    } else if (chance < 0.45) {
+                    } else if (chance < 0.30) {
                         stage = new MiniBossStage(i + 1, { ...this });
                         (stage as MiniBossStage).setupBranchedStage(enemyCount + (this.number - 1));
                     } else {

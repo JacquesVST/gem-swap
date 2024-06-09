@@ -6,7 +6,6 @@ import { hasConsecutive } from "../utils/General";
 import { Cell } from "./Cell";
 import { Color } from "./Color";
 import { EffectParams } from "./Effect";
-import { Item } from "./Item";
 import { Limits } from "./Limits";
 import { FallPieceAnimationParams, Piece, RemovePieceAnimationData, RemovePieceAnimationParams } from "./Piece";
 import { Position } from "./Position";
@@ -53,12 +52,13 @@ export class Grid extends EventEmitter implements IGrid {
 
             const params: FallPieceAnimationParams = {
                 baseAction: 'FallAnimationEnded',
-                useCase,
+                useCase: '',
                 data: {
                     callNextAction: index === positionsToApplyGravity.length - 1,
                     position,
                     newPosition,
-                    allowMatches: allowMatches
+                    allowMatches,
+                    useCase
                 }
             }
 
@@ -282,9 +282,10 @@ export class Grid extends EventEmitter implements IGrid {
 
         matches = validate ? this.sanitizeMatches(matches) : matches;
 
-        if (this.runSnapshot.player.hasItem('Extra Piece')) {
+        const extraPieceStack: number = this.runSnapshot.player.hasItem('Extra Piece')
+        if (extraPieceStack) {
             matches.forEach((match: Piece[]) => {
-                let itemStack: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Extra Piece').length
+                let itemStack: number = extraPieceStack;
                 let chance: number = 0.10 * itemStack;
 
                 if (Math.random() < chance) {
@@ -339,7 +340,6 @@ export class Grid extends EventEmitter implements IGrid {
             match.sort(sort);
             match.sort((piece: Piece) => !!piece.effect ? -1 : 1);
         })
-
 
         return matches;
     }
@@ -505,7 +505,7 @@ export class Grid extends EventEmitter implements IGrid {
 
 
         if (params.data.callNextAction) {
-            this.stabilizeGrid(params.useCase, params.data.allowMatches);
+            this.stabilizeGrid(params.data.useCase, params.data.allowMatches);
         }
     }
 
@@ -782,30 +782,35 @@ export class Grid extends EventEmitter implements IGrid {
 
     playerSwap(position1: Position, position2: Position): void {
         let validatedSwap: boolean = this.validateSwap(position1, position2);
-        if (!this.runSnapshot.player.hasItem('Fair Trade')){
+        if (!this.runSnapshot.player.hasItem('Fair Trade')) {
             this.emit('SwapValidated', validatedSwap);
         }
 
         if (validatedSwap) {
-            if (this.runSnapshot.player.hasItem('Another Fair Trade')) {
+            const anotherFairTradeStack: number = this.runSnapshot.player.hasItem('Another Fair Trade')
+            if (anotherFairTradeStack) {
                 const triggerChance: number = Math.random();
-                const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Another Fair Trade').length
-                if (triggerChance < itemCount * 0.10) {
+                if (triggerChance < anotherFairTradeStack * 0.10) {
                     this.emit('AnotherFairTrade', Math.random() > 0.5)
                 }
             }
 
-            if (this.runSnapshot.player.hasItem('Fair Trade')) {
+            const fairTradeStack: number = this.runSnapshot.player.hasItem('Fair Trade')
+            if (fairTradeStack) {
+                let valid = true;
                 const triggerChance: number = Math.random();
-                const itemCount: number = this.runSnapshot.player.items.filter((item: Item) => item.name === 'Fair Trade').length
-                if (triggerChance < itemCount * 0.10) {
+                if (triggerChance < fairTradeStack * 0.10) {
                     let choice: boolean = Math.random() > 0.5
                     if (choice) {
-                        return
+                        valid = false
                     } else {
                         this.emit('FairTrade');
                     }
-                    this.emit('SwapValidated', !choice);
+
+                }
+                this.emit('SwapValidated', valid);
+                if (!valid) {
+                    return
                 }
             }
 

@@ -3,6 +3,7 @@ import { Color } from "./Color";
 import { BossEnemy, CommonEnemy, Enemy, MiniBossEnemy } from "./Enemy";
 import { Floor } from "./Floor";
 import { Grid } from "./Grid";
+import { Icon } from "./Icon";
 
 export class Stage implements IStage {
     number: number;
@@ -10,11 +11,13 @@ export class Stage implements IStage {
     grid: Grid;
     isLast: boolean;
     color: Color;
+    icon: Icon
 
-    constructor(number: number, floor: Floor, isLast: boolean = false) {
+    constructor(number: number, floor: Floor, isLast: boolean = false, icon?: Icon) {
         this.number = number;
         this.floor = floor;
         this.isLast = isLast;
+        this.icon = icon
     }
 
     initStage(x: number, y: number): void { }
@@ -23,7 +26,7 @@ export class Stage implements IStage {
 export class ItemStage extends Stage {
 
     constructor(number: number, floor: Floor) {
-        super(number, floor);
+        super(number, floor, false, Icon.STAR);
         this.color = Color.GREEN;
     }
 
@@ -35,7 +38,7 @@ export class ItemStage extends Stage {
 export class ShopStage extends Stage {
 
     constructor(number: number, floor: Floor) {
-        super(number, floor);
+        super(number, floor, false, Icon.STORE);
         this.color = Color.YELLOW;
     }
 
@@ -50,8 +53,8 @@ export class EnemyStage extends Stage implements IEnemyStage {
     currentEnemyIndex: number = 0;
     enemies: Enemy[] = [];
 
-    constructor(number: number, floor: Floor, isLast: boolean = false) {
-        super(number, floor, isLast);
+    constructor(number: number, floor: Floor, isLast: boolean = false, icon?: Icon) {
+        super(number, floor, isLast, icon);
     }
 
     setupBranchedStage(enemyCount: number): void {
@@ -65,7 +68,7 @@ export class EnemyStage extends Stage implements IEnemyStage {
 
 export class CommonEnemyStage extends EnemyStage {
     constructor(number: number, floor: Floor, isLast: boolean = false) {
-        super(number, floor, isLast);
+        super(number, floor, isLast, Icon.FIST);
         this.color = new Color(86, 101, 115);
     }
 
@@ -80,7 +83,7 @@ export class CommonEnemyStage extends EnemyStage {
 
 export class MiniBossStage extends EnemyStage {
     constructor(number: number, floor: Floor, isLast: boolean = false) {
-        super(number, floor, isLast);
+        super(number, floor, isLast, Icon.BOMB);
         this.color = new Color(235, 152, 78);
     }
 
@@ -96,7 +99,7 @@ export class MiniBossStage extends EnemyStage {
 
 export class BossStage extends EnemyStage {
     constructor(number: number, floor: Floor, isLast: boolean = false) {
-        super(number, floor, isLast);
+        super(number, floor, isLast, Icon.SKULL);
         this.color = new Color(87, 49, 214);
     }
 

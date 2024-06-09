@@ -108,7 +108,7 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
         if (run?.player && option) {
             canAfford = run?.player.gold >= item.price;
             if (item.unique) {
-                owned = run?.player.hasItem(item.name);
+                owned = !!run?.player.hasItem(item.name);
                 if (canAfford && owned) {
                     canAfford = false;
                 }
@@ -214,6 +214,17 @@ export function drawClickableBox(position: Position, size: Position, background:
     }
 
     return limits;
+}
+
+export function icon(icon: string, position: Position) {
+    const p5: P5 = Canvas.getInstance().p5;
+    p5.textFont('FontAwesome')
+    p5.text(
+        p5.char(parseInt(icon, 16)),
+        position.x,
+        position.y
+    );
+    p5.textFont('Open Sans')
 }
 
 export function startShadow(drawingContext: CanvasRenderingContext2D): void {
