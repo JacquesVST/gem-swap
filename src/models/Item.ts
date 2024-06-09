@@ -538,17 +538,19 @@ export class ItemPools {
                 }).bind(run),
                 Frequency.SINGLE_USE
             ));
-
-            defaultPool.push(new Item(
-                'Common',
-                `${shape.id.charAt(0).toUpperCase() + shape.id.slice(1)} Color Boost`,
-                `+50 base DMG on ${shape.id} shapes`,
-                (() => {
-                    run.emit('Item:ColorDamageBoost', shape.id, 50);
-                }).bind(run)
-            ));
-
         });
+
+        const random: number = Math.floor(Math.random() * run.possibleShapes.length);
+        const shape: Shape =  run.possibleShapes[random];
+        defaultPool.push(new Item(
+            'Common',
+            `${shape.id.charAt(0).toUpperCase() + shape.id.slice(1)} Color Boost`,
+            `+50 base DMG on ${shape.id} shapes`,
+            (() => {
+                run.emit('Item:ColorDamageBoost', shape.id, 50);
+            }).bind(run)
+        ));
+
 
         let uniqueItems = [
             new Item(
