@@ -20,9 +20,9 @@ import { Map } from "./Map";
 import { Piece } from "./Piece";
 import { Player } from "./Player";
 import { Position } from "./Position";
+import { Relic } from "./Relic";
 import { Shape } from "./Shape";
 import { EnemyStage, ItemStage, MiniBossStage, ShopStage, Stage } from "./Stage";
-import { Relic } from "./Relic";
 
 export class Run extends EventEmitter implements IRun {
     player: Player;
@@ -815,7 +815,7 @@ export class Run extends EventEmitter implements IRun {
 
         criticalInMatch = this.player.hasItem('tirC') % 2 === 1 ? !criticalInMatch : criticalInMatch;
 
-        let criticalMultiplier: number = this.player.criticalMultiplier;
+        let criticalMultiplier: number = this.player.criticalMultiplier / 100;
 
         if (match.every((piece: Piece) => piece.critical) && this.player.hasItem('tirC') % 2 === 0) {
             criticalMultiplier = Math.pow(criticalMultiplier, match.length);
@@ -842,7 +842,7 @@ export class Run extends EventEmitter implements IRun {
 
         let additiveScore: number = (((this.player.attack) * lengthMultiplier) + bonusDamage) * damageMultiplier / 100;
         additiveScore *= this.player.hasItem('Combos Multiply DMG') ? this.combo : 1;
-        additiveScore *= criticalInMatch ? criticalMultiplier / 100 : 1;
+        additiveScore *= criticalInMatch ? criticalMultiplier : 1;
 
         additiveScore = Math.floor(additiveScore);
 

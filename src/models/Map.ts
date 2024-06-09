@@ -103,7 +103,6 @@ export class Map extends EventEmitter implements IMap {
             }
 
             if (!this.grid.isFull || this.grid.isUnstable) {
-                this.grid.emit('SwapValidated', false);
                 return;
             }
 
