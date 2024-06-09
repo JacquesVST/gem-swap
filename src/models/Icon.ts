@@ -2,6 +2,7 @@ export enum Icon {
     BOMB = 'f1e2',
     CLOSE = 'f00d',
     CROWN = 'f521',
+    DICE = 'f522',
     ENEMY = 'f714',
     FIST = 'f6de',
     GRID = 'f84c',

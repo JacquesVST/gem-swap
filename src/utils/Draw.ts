@@ -9,6 +9,7 @@ import { Position } from "../models/Position";
 import { Run } from "../models/Run";
 import { countOcurrences, insertLineBreaks } from "./General";
 import { getUnlocks } from "./LocalStorage";
+import { Icon } from "../models/Icon";
 
 export function drawItem(item: Item, margin: Position, sideSize: Position, relativeFade: number = 0, run?: Run, option?: ItemDialogOption, hideDescription?: boolean) {
     const canvas: Canvas = Canvas.getInstance();
@@ -133,53 +134,30 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
         let unlock = unlocks.find((unlock: IUnlocks) => unlock.item === item.name);
 
 
+        p5.textAlign(p5.CENTER, p5.CENTER);
         fillFlat(Color.GRAY_4.alpha(255 + relativeFade))
-        p5.ellipse(
-            margin.x + sideSize.x / 2 - canvas.margin * 1.5,
-            margin.y + sideSize.y - canvas.margin,
-            canvas.margin
-        );
+        icon(Icon.MEDAL, Position.of(margin.x + sideSize.x / 2 - canvas.margin * 1.5, margin.y + sideSize.y - canvas.margin))
 
-        fillFlat(Color.GRAY_4.alpha(255 + relativeFade))
-        p5.ellipse(
-            margin.x + sideSize.x / 2,
-            margin.y + sideSize.y - canvas.margin,
-            canvas.margin
-        );
+        icon(Icon.TROPHY, Position.of(margin.x + sideSize.x / 2, margin.y + sideSize.y - canvas.margin))
+        
+        icon(Icon.CROWN, Position.of( margin.x + sideSize.x / 2 + canvas.margin * 1.5, margin.y + sideSize.y - canvas.margin))
 
-
-        fillFlat(Color.GRAY_4.alpha(255 + relativeFade))
-        p5.ellipse(
-            margin.x + sideSize.x / 2 + canvas.margin * 1.5,
-            margin.y + sideSize.y - canvas.margin,
-            canvas.margin
-        );
 
         if (unlock) {
             startShadow(drawingContext);
             fillFlat(Color.GREEN.alpha(255 + relativeFade))
-            p5.ellipse(
-                margin.x + sideSize.x / 2 - canvas.margin * 1.5,
-                margin.y + sideSize.y - canvas.margin,
-                canvas.margin
-            );
+            icon(Icon.MEDAL, Position.of(margin.x + sideSize.x / 2 - canvas.margin * 1.5, margin.y + sideSize.y - canvas.margin))
+
 
             if (unlock.tier > 0) {
                 fillFlat(Color.YELLOW.alpha(255 + relativeFade))
-                p5.ellipse(
-                    margin.x + sideSize.x / 2,
-                    margin.y + sideSize.y - canvas.margin,
-                    canvas.margin
-                );
+                icon(Icon.TROPHY, Position.of(margin.x + sideSize.x / 2, margin.y + sideSize.y - canvas.margin))
+
             }
 
             if (unlock.tier > 1) {
                 fillFlat(Color.RED.alpha(255 + relativeFade))
-                p5.ellipse(
-                    margin.x + sideSize.x / 2 + canvas.margin * 1.5,
-                    margin.y + sideSize.y - canvas.margin,
-                    canvas.margin
-                );
+                icon(Icon.CROWN, Position.of( margin.x + sideSize.x / 2 + canvas.margin * 1.5, margin.y + sideSize.y - canvas.margin))
             }
 
             endShadow(drawingContext);

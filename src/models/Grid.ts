@@ -48,7 +48,7 @@ export class Grid extends EventEmitter implements IGrid {
             let newPosition: Position = this.getNextAvailablePosition(position);
             let relativeEndPosition = this.getCellbyPosition(newPosition).canvasPosition.difference(this.getCellbyPosition(position).canvasPosition);
 
-            let distance: number = (newPosition.y - position.y) * 0.3;
+            let distance: number = (newPosition.y - position.y) * 0.2;
 
             const params: FallPieceAnimationParams = {
                 baseAction: 'FallAnimationEnded',
@@ -103,7 +103,7 @@ export class Grid extends EventEmitter implements IGrid {
         let piece: Piece = this.getPieceByPosition(position);
         let relativeEndPosition = this.getCellbyPosition(newPosition).canvasPosition.difference(this.getCellbyPosition(position).canvasPosition);
 
-        let distance = (newPosition.y - position.y) * 0.3;
+        let distance = (newPosition.y - position.y) * 0.2;
 
         setTimeout(() => {
             piece.renewPosition(newPosition);

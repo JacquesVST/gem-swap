@@ -151,7 +151,9 @@ export class Dialog implements IDialog {
 
         if (run?.player?.itemData?.rerolls > 0 && ![DialogType.INITIAL, DialogType.NAVIGATION].includes(this.type)) {
 
-            const offsetX: number = margin.x + dimension.x - canvas.margin - canvas.itemSideSize / 2;
+            const button: number = canvas.itemSideSize * 0.9;
+
+            const offsetX: number = margin.x + dimension.x - canvas.margin - button;
             const offsetY: number = margin.y + canvas.margin
 
             this.rerollButton = Position.of(offsetX, offsetY).toLimits(Position.of(canvas.itemSideSize / 2, canvas.itemSideSize / 4));
@@ -164,18 +166,21 @@ export class Dialog implements IDialog {
             p5.rect(
                 offsetX,
                 offsetY,
-                canvas.itemSideSize / 2,
+                button,
                 canvas.itemSideSize / 4,
                 canvas.radius * 2
             );
 
             endShadow(drawingContext);
-
             fillStroke(Color.WHITE, opacity)
+            p5.textAlign(p5.LEFT, p5.CENTER)
+            icon(Icon.DICE, Position.of(offsetX + canvas.margin, offsetY + canvas.itemSideSize / 8))
+
+            p5.textAlign(p5.RIGHT, p5.CENTER)
             p5.textSize(canvas.uiData.fontText)
             p5.text(
-                'Reroll',
-                offsetX + canvas.itemSideSize / 4,
+                `Reroll (${run.player.itemData.rerolls})`,
+                offsetX + button - canvas.margin,
                 offsetY + canvas.itemSideSize / 8,
             );
 

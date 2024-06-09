@@ -163,19 +163,15 @@ export class ItemPools {
     }
 
     static fullHealthShopItem(run: Run): Item {
-        let price: number = 20;
-        let name: string = '50% Instant health';
-        price = price * run.costMultiplier;
-        price = run.player.items.findIndex((item: Item) => item.name === name) !== -1 ? Math.floor(price * 1.25) : price;
         return new Item(
             'Common',
-            name,
+            '50% Instant health',
             'Heal 50% of max health',
             (() => {
                 run.player.heal(run.player.maxHealth / 2);
             }).bind(run),
             Frequency.PASSIVE,
-            price,
+            Math.floor(20 * run.costMultiplier * (1 + (run.player.hasItem('50% Instant health') * 0.25)))
         );
     }
 
@@ -249,7 +245,7 @@ export class ItemPools {
             ));
         }
 
-        if (run.possibleShapes.length >= 4) {
+        if (run.possibleShapes.length > 4) {
             run.possibleShapes.forEach((shape: Shape) => {
                 shopPool.push(new Item(
                     'Epic',
@@ -292,6 +288,7 @@ export class ItemPools {
             } else {
                 item.price = item.price * run.costMultiplier * (1 + (run.player.items.filter((playerItem: Item) => playerItem.name.startsWith('Ban')).length * 0.25));
             }
+            item.price = Math.floor(item.price);
         });
 
         return shopPool;
@@ -402,9 +399,9 @@ export class ItemPools {
             new Item(
                 'Common',
                 'Max Health Gain',
-                '+5% HP Max',
+                '+5 HP Max',
                 (() => {
-                    const health: number = (run.player.maxHealth / 20)
+                    const health: number = 5;
                     run.player.maxHealth += health;
                     run.player.heal(health);
                 }).bind(run)
@@ -494,9 +491,9 @@ export class ItemPools {
             new Item(
                 'Rare',
                 'Big Max Health Gain',
-                '+20% HP Max',
+                '+20 HP Max',
                 (() => {
-                    const health: number = (run.player.maxHealth / 5)
+                    const health: number = 20
                     run.player.maxHealth += health;
                     run.player.heal(health);
                 }).bind(run)

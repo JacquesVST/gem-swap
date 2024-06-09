@@ -16,7 +16,7 @@ export class Floor implements IFloor {
     }
 
     setupStages(stageCount: number, enemyCount: number): void {
-        let finalStageCount: number = stageCount + this.number - 1;
+        let finalStageCount: number = stageCount;
         let branchCount: number = 2 + Math.ceil(this.number / 2);
 
         let stageTree: Stage[][] = [];
@@ -28,7 +28,7 @@ export class Floor implements IFloor {
                 stageTree.push([finalStage]);
             } else if (i === 0) {
                 let firstStage: CommonEnemyStage = new CommonEnemyStage(i + 1, { ...this });
-                firstStage.setupBranchedStage(enemyCount + (this.number - 1));
+                firstStage.setupBranchedStage(enemyCount);
                 stageTree.push([firstStage]);
             } else {
                 let stages: Stage[] = [];
@@ -42,10 +42,10 @@ export class Floor implements IFloor {
                         stage = new ItemStage(i + 1, { ...this });
                     } else if (chance < 0.30) {
                         stage = new MiniBossStage(i + 1, { ...this });
-                        (stage as MiniBossStage).setupBranchedStage(enemyCount + (this.number - 1));
+                        (stage as MiniBossStage).setupBranchedStage(enemyCount);
                     } else {
                         stage = new CommonEnemyStage(i + 1, { ...this });
-                        (stage as CommonEnemyStage).setupBranchedStage(enemyCount + (this.number - 1));
+                        (stage as CommonEnemyStage).setupBranchedStage(enemyCount);
                     }
 
                     stages.push(stage);
