@@ -40,12 +40,12 @@ export class Floor implements IFloor {
                 for (let j: number = 0; j < branchCount; j++) {
                     let stage: Stage
                     const chance: number = Math.random();
-
+                    const miniBossChance: number = difficulty === Difficulty.MASTER ? 0.45 : 0.30;
                     if (chance < 0.05) {
                         stage = new ShopStage(i + 1, { ...this });
                     } else if (chance < 0.15) {
                         stage = new ItemStage(i + 1, { ...this });
-                    } else if (chance < 0.30) {
+                    } else if (chance < miniBossChance) {
                         stage = new MiniBossStage(i + 1, { ...this });
                         (stage as MiniBossStage).setupBranchedStage(enemyCount);
                     } else {
