@@ -428,6 +428,7 @@ export class Dialog implements IDialog {
 
                     } else {
                         fillStroke(Color.WHITE, opacity)
+                        p5.textAlign(p5.CENTER, p5.CENTER)
                         p5.textSize(canvas.margin * 3)
                         icon(Icon.QUESTION, Position.of(cumulativeMarginX + (optionWidth / 2), cumulativeMarginY + (optionHeight / 2)));
                     }
