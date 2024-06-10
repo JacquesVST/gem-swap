@@ -21,8 +21,12 @@ export class Shape implements IShape {
             new Shape('green', 4, Color.GREEN),
             new Shape('blue', 5, Color.BLUE),
             new Shape('yellow', 6, Color.YELLOW),
-            new Shape('orange', 7, Color.ORANGE),
-            new Shape('pink', 8, Color.PINK)
+            new Shape('pink', 7, Color.ORANGE),
+            new Shape('orange', 8, Color.PINK)
         ];
+    }
+
+    static extraShape(): Shape {
+        return new Shape('cyan', 9, Color.CYAN);
     }
 }

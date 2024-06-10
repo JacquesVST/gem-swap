@@ -232,10 +232,8 @@ export class Player extends EventEmitter implements IPlayer {
         });
 
         this.on('Grid:AnotherFairTrade', (choice: boolean) => {
-            if (choice) {
-                this.damage({ damage: this.maxHealth * 0.01, shielded: false })
-            } else {
-                this.updateMoves(this.moves + 2);
+            if (!choice) {
+                this.updateMoves(this.moves + 1);
             }
         });
 
@@ -277,7 +275,7 @@ export class Player extends EventEmitter implements IPlayer {
     }
 
     get maxRelicPower(): number {
-        return Math.floor(300 * (1 + (this.xp / 44444)) * (this.passive?.name === 'Collector' ? 1.2 : 1));
+        return Math.floor(300 * (this.passive?.name === 'Collector' ? 1.2 : 1));
     }
 
     changeRelic(relic: Relic): void {

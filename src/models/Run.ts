@@ -63,6 +63,10 @@ export class Run extends EventEmitter implements IRun {
         this.player = Player.defaultPlayerWith(config.item);
         this.possibleShapes = Shape.defaultShapes();
 
+        if (config.difficulty === Difficulty.MASTER) {
+            this.possibleShapes.push(Shape.extraShape());
+        }
+
         if (config?.item?.name === 'Less Is More') {
             const index = Math.floor(Math.random() * this.possibleShapes.length);
             this.possibleShapes = this.possibleShapes.filter((shape: Shape) => shape.id !== this.possibleShapes[index].id);
@@ -302,7 +306,7 @@ export class Run extends EventEmitter implements IRun {
                     this.updateHealth();
                     this.updateMoves();
                     this.emit('AllowNextStage');
-                })
+                }, true)
             } else {
                 this.emit('AllowNextStage');
             }
@@ -444,6 +448,16 @@ export class Run extends EventEmitter implements IRun {
                 }
             }
         });
+
+
+        this.on('Grid:AnotherFairTrade', (choice: boolean) => {
+            if (choice) {
+                this.sounds['defeat'].play();
+                TextController.getInstance().damagePlayerAnimation({ damage: Math.floor(this.player.maxHealth / 100), shielded: false });
+                this.updateHealth(this.player.health - Math.floor(this.player.maxHealth / 100), { useCase: 'DamagePlayer', data: { damage: Math.floor(this.player.maxHealth / 100) } })
+            }
+        });
+
     }
 
     updateTopProgressBars(): void {
@@ -950,7 +964,7 @@ export class Run extends EventEmitter implements IRun {
         const chosenStats: IStatRange[] = possibleStats.sort(() => Math.random() - Math.random()).slice(0, 3);
 
         const stats: IStat[] = chosenStats.map((statRange: IStatRange) => {
-            let currentPower: number = p5.random(0, 100) * (1 + (this.player.xp / 44444));
+            let currentPower: number = p5.random(0, 100);
 
             if (this.player.passive?.name === 'Collector') {
                 currentPower = currentPower * 1.2;
@@ -1040,13 +1054,17 @@ export class Run extends EventEmitter implements IRun {
         DialogController.getInstance().dialogs.unshift(dialog);
     }
 
-    newPercDialog(callback: () => void): void {
+    newPercDialog(callback: () => void, withRelic: boolean = false): void {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(
-            this.itemOptions,
+            withRelic ? this.itemOptions - 1 : this.itemOptions,
             ItemPools.defaultPool(this),
             ['Common', 'Rare'],
             this.player
         );
+
+        if (withRelic) {
+            itemList.push(ItemPools.freeRelicItem(this))
+        }
 
         let dialog: Dialog = new Dialog(
             'Pick an item',
@@ -1209,10 +1227,10 @@ export class Run extends EventEmitter implements IRun {
                 () => {
                     dialogController.emit('DifficultyChosen', {
                         enemies: 10,
-                        stages: 5,
+                        stages: 10,
                         floors: 10,
-                        gridX: 6,
-                        gridY: 5,
+                        gridX: 8,
+                        gridY: 6,
                         costMultiplier: 2,
                         difficulty: Difficulty.MASTER,
                         item
@@ -1221,7 +1239,7 @@ export class Run extends EventEmitter implements IRun {
                 Color.PURPLE,
                 'Master',
                 '10 Floors',
-                '6x5 Grid',
+                'Extra color',
                 Icon.SKULL
             ),
         ];

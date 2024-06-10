@@ -14,6 +14,7 @@ export class Color implements IColor {
     static ORANGE: Color = new Color(243, 156, 18);
     static PINK: Color = new Color(240, 98, 146);
     static PURPLE: Color = new Color(87, 49, 214);
+    static CYAN: Color = new Color(102, 205, 170)
 
     static WHITE: Color = new Color(255, 255, 255);
     static WHITE_1: Color = new Color(200, 200, 200);

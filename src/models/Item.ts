@@ -168,6 +168,17 @@ export class ItemPools {
         return passivePool;
     }
 
+    static freeRelicItem(run: Run): Item {
+        return new Item(
+            'Rare',
+            'Free Relic',
+            'Gain a random Relic',
+            (() => {
+                run.newRandomDropDialog(true, [], undefined);
+            }).bind(run)
+        );
+    }
+
     static fullHealthShopItem(run: Run): Item {
         return new Item(
             'Common',
@@ -527,14 +538,6 @@ export class ItemPools {
                     const health: number = 20
                     run.player.maxHealth += health;
                     run.player.heal(health);
-                }).bind(run)
-            ),
-            new Item(
-                'Epic',
-                'Free Relic',
-                'Gain a random Relic',
-                (() => {
-                    run.newRandomDropDialog(true, [], undefined);
                 }).bind(run)
             ),
             new Item(
