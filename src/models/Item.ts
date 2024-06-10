@@ -113,7 +113,7 @@ export class ItemPools {
             new Item(
                 'Passive',
                 'Collector',
-                'Start with a relic and +20% increase on relic effects',
+                'Start with a relic and +50% increase on relic effects',
                 () => { }
             ),
             new Item(

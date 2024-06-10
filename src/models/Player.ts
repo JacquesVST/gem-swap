@@ -275,7 +275,7 @@ export class Player extends EventEmitter implements IPlayer {
     }
 
     get maxRelicPower(): number {
-        return Math.floor(300 * (this.passive?.name === 'Collector' ? 1.2 : 1));
+        return Math.floor(300 * (this.passive?.name === 'Collector' ? 1.5 : 1));
     }
 
     changeRelic(relic: Relic): void {

@@ -967,7 +967,7 @@ export class Run extends EventEmitter implements IRun {
             let currentPower: number = p5.random(0, 100);
 
             if (this.player.passive?.name === 'Collector') {
-                currentPower = currentPower * 1.2;
+                currentPower = currentPower * 1.5;
             }
 
             power += currentPower
