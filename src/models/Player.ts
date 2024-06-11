@@ -2,7 +2,7 @@ import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
 import { DialogController } from "../controllers/DialogController";
 import { EventEmitter } from "../controllers/EventEmitter";
-import { Frequency, IDamageBoostTimerData, IDamageData, IPlayer, IPlayerItemData, IStat } from "../interfaces";
+import { Difficulty, Frequency, IDamageBoostTimerData, IDamageData, IPlayer, IPlayerItemData, IStat } from "../interfaces";
 import { drawItem, endShadow, fillFlat, fillStroke, rectWithStripes, startShadow } from "../utils/Draw";
 import { formatNumber, formatTimer, insertLineBreaks } from "../utils/General";
 import { getXP, setXP } from "../utils/LocalStorage";
@@ -14,21 +14,22 @@ import { Piece } from "./Piece";
 import { Position } from "./Position";
 import { Relic } from "./Relic";
 import { Run } from "./Run";
+import { RunConfig } from "./RunConfig";
 import { Shape } from "./Shape";
 
 export class Player extends EventEmitter implements IPlayer {
+    attack: number;
+    critical: number;
+    criticalChance: number ;
+    criticalMultiplier: number;
+    damageMultiplier: number;
+    defense: number;
+    difficulty: Difficulty;
+    gold: number;
     health: number;
     maxHealth: number;
-    moves: number;
     maxMoves: number;
-    attack: number;
-    defense: number;
-
-    damageMultiplier: number = 100;
-    criticalChance: number = 0;
-    criticalMultiplier: number = 175;
-    critical: number = 1;
-    gold: number = 0;
+    moves: number;
     xp: number;
 
     hasInventoryOpen: boolean = false;
@@ -48,6 +49,7 @@ export class Player extends EventEmitter implements IPlayer {
         bonusMoves: 0,
         bossCrits: 0,
         bossMoves: 0,
+        colorDamageBosts: {},
         diagonals: false,
         goldAddCount: 0,
         hasShield: false,
@@ -55,10 +57,10 @@ export class Player extends EventEmitter implements IPlayer {
         moveSaverChance: 0,
         omniMoves: 0,
         passiveLimits: undefined,
-        relicLimits: undefined,
         reach: 1,
+        relicLimits: undefined,
+        relicMultiplier: 1,
         rerolls: 0,
-        colorDamageBosts: {},
         damageBoostTimer: {
             timer: 0,
             multiplier: 1,
@@ -69,16 +71,23 @@ export class Player extends EventEmitter implements IPlayer {
         },
     }
 
-    constructor(health: number, moves: number, attack: number, defense: number, passive?: Item) {
+    constructor(runConfig: RunConfig) {
         super('Player');
-        this.maxHealth = health;
-        this.maxMoves = moves;
-        this.attack = attack;
-        this.defense = defense;
+        this.maxHealth = runConfig.player.maxHealth;
+        this.maxMoves = runConfig.player.maxMoves;
+        this.attack = runConfig.player.attack;
+        this.defense = runConfig.player.defense;
+        this.damageMultiplier = runConfig.player.multiplier;
+        this.critical = runConfig.player.critical;
+        this.criticalChance = runConfig.player.criticalChance;
+        this.criticalMultiplier = runConfig.player.criticalMultiplier;
+        this.gold = runConfig.player.gold;
 
-        this.passive = passive;
-        this.moves = moves;
-        this.health = health;
+        this.passive = runConfig.item;
+        this.itemData.relicMultiplier = runConfig.items.relicPowerMultiplier;
+
+        this.moves = this.maxMoves;
+        this.health = this.maxHealth;
 
         this.xp = getXP();
 
@@ -86,8 +95,8 @@ export class Player extends EventEmitter implements IPlayer {
         this.configureListeners();
     }
 
-    static defaultPlayerWith(item: Item): Player {
-        return new Player(100, 10, 100, 0, item);
+    static defaultPlayerWith(config: RunConfig): Player {
+        return new Player(config);
     }
 
     get totalMoves(): number {
@@ -96,14 +105,6 @@ export class Player extends EventEmitter implements IPlayer {
 
     configurePassive(): void {
         switch (this.passive?.name) {
-            case 'Natural Crit':
-                this.criticalMultiplier = 250;
-                this.criticalChance = 5;
-                break;
-            case '4x4':
-                this.damageMultiplier = 400;
-                this.itemData.moveSaverChance = 0.16;
-                break;
             case 'Flexible':
                 this.itemData.diagonals = true;
                 break;
@@ -112,11 +113,6 @@ export class Player extends EventEmitter implements IPlayer {
                 break;
             case 'No barriers':
                 this.itemData.reach = 2;
-                break;
-            case 'Tank':
-                this.defense = 10;
-                this.maxMoves -= 2;
-                this.moves -= 2;
                 break;
         }
     }
@@ -212,11 +208,24 @@ export class Player extends EventEmitter implements IPlayer {
         });
 
         this.on('Enemy:EnemyDied', (enemy: Enemy) => {
-            let amount = enemy.attack
+            let amount: number = enemy.attack
             if (this.hasItem('XP Boost')) {
                 amount *= 1.5;
             }
-            this.xp += amount;
+
+            if (this.difficulty === Difficulty.EASY) {
+                amount *= 0.33
+            } else if (this.difficulty === Difficulty.MEDIUM) {
+                amount *= 0.5
+            } else if (this.difficulty === Difficulty.HARD) {
+                amount *= 1
+            } else if (this.difficulty === Difficulty.MASTER) {
+                amount *= 1.25
+            } else {
+                amount = 0;
+            }
+
+            this.xp += Math.floor(amount);
         });
 
         this.on('Grid:OmniMoveDone', () => {
@@ -275,7 +284,11 @@ export class Player extends EventEmitter implements IPlayer {
     }
 
     get maxRelicPower(): number {
-        return Math.floor(300 * (this.passive?.name === 'Collector' ? 1.5 : 1));
+        return Math.floor(300 * this.relicPowerMultiplier)
+    }
+
+    get relicPowerMultiplier(): number {
+        return this.itemData.relicMultiplier * (1 + (this.xp / 100000));
     }
 
     changeRelic(relic: Relic): void {
@@ -314,7 +327,7 @@ export class Player extends EventEmitter implements IPlayer {
             } else {
                 this.itemData.activeItem.disabled = true
             }
-            run.sounds['item'].play();
+            run.sounds['item']?.play();
         }
     }
 
@@ -326,7 +339,7 @@ export class Player extends EventEmitter implements IPlayer {
             } else {
                 this.itemData.activeItem2.disabled = true
             }
-            run.sounds['item'].play();
+            run.sounds['item']?.play();
         }
     }
 
@@ -867,7 +880,7 @@ export class Player extends EventEmitter implements IPlayer {
 
             statsData.push({
                 label: 'XP',
-                value: `${Math.floor(this.xp)}`
+                value: `${formatNumber(Math.floor(this.xp))}`
             });
 
             startShadow(drawingContext);
@@ -906,6 +919,13 @@ export class Player extends EventEmitter implements IPlayer {
             });
         }
 
+    }
+
+    drawInventory() {
+        const canvas: Canvas = Canvas.getInstance();
+        const p5: P5 = canvas.p5;
+        const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
+
         if (this.hasInventoryOpen && this.items.length) {
 
             let epicItems: Item[] = this.items.filter((item: Item) => item.rarity === 'Epic');
@@ -922,7 +942,7 @@ export class Player extends EventEmitter implements IPlayer {
 
             this.items = epicItems.concat(rareItems.concat(commonItems));
 
-            this.items.forEach((item: Item) => item.price = undefined)
+            this.items.forEach((item: Item) => item.price = undefined);
 
             const itemShowcase: Item[] = this.countDuplicates(this.items);
 
@@ -931,7 +951,7 @@ export class Player extends EventEmitter implements IPlayer {
                 0,
                 0,
                 canvas.windowSize.x,
-                canvas.windowSize.y,
+                canvas.windowSize.y
             );
 
             let sideSize: number = canvas.itemSideSize;
@@ -940,7 +960,7 @@ export class Player extends EventEmitter implements IPlayer {
 
             let textMarginCount: number = 3;
             let lengthOffSet: number = 4 + Math.ceil(itemShowcase.length / 10);
-            let maxLength: number = itemShowcase.length > lengthOffSet ? lengthOffSet : itemShowcase.length
+            let maxLength: number = itemShowcase.length > lengthOffSet ? lengthOffSet : itemShowcase.length;
 
             dimension.x = maxLength * sideSize + ((maxLength + 1) * canvas.margin);
             margin.x = (canvas.playfield.x / 2) - (dimension.x / 2);
@@ -959,12 +979,12 @@ export class Player extends EventEmitter implements IPlayer {
             );
             endShadow(drawingContext);
 
-            p5.textAlign(p5.CENTER, p5.CENTER)
+            p5.textAlign(p5.CENTER, p5.CENTER);
 
             p5.fill(255);
             p5.stroke(0);
             p5.strokeWeight(canvas.stroke);
-            p5.textSize(canvas.uiData.fontTitle)
+            p5.textSize(canvas.uiData.fontTitle);
             p5.text(
                 'Inventory',
                 canvas.playfield.x / 2,
@@ -975,11 +995,10 @@ export class Player extends EventEmitter implements IPlayer {
                 let cumulativeMarginX: number = margin.x + ((index % lengthOffSet) * (sideSize + canvas.margin)) + canvas.margin;
                 let cumulativeMarginY: number = margin.y + (Math.floor(index / lengthOffSet) * (sideSize + canvas.margin)) + (canvas.margin * textMarginCount);
 
-                drawItem(item, Position.of(cumulativeMarginX, cumulativeMarginY), Position.of(sideSize, sideSize))
-            })
+                drawItem(item, Position.of(cumulativeMarginX, cumulativeMarginY), Position.of(sideSize, sideSize));
+            });
 
         }
-
     }
 
     drawRelicDetail() {

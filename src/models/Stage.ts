@@ -4,6 +4,7 @@ import { BossEnemy, CommonEnemy, Enemy, MiniBossEnemy } from "./Enemy";
 import { Floor } from "./Floor";
 import { Grid } from "./Grid";
 import { Icon } from "./Icon";
+import { RunConfig } from "./RunConfig";
 
 export class Stage implements IStage {
     number: number;
@@ -57,10 +58,6 @@ export class EnemyStage extends Stage implements IEnemyStage {
         super(number, floor, isLast, icon);
     }
 
-    setupBranchedStage(enemyCount: number): void {
-        this.enemies = [...Array(enemyCount)];
-    }
-
     initStage(x: number, y: number): void {
         this.grid = new Grid(x, y, { ...this });
     }
@@ -72,10 +69,10 @@ export class CommonEnemyStage extends EnemyStage {
         this.color = new Color(86, 101, 115);
     }
 
-    setupBranchedStage(enemyCount: number): void {
+    setupBranchedStage(enemyCount: number, config: RunConfig): void {
         this.enemies = [...Array(enemyCount)].map(
             (enemy: Enemy, index: number) => {
-                return new CommonEnemy(index + 1, { ...this }, index === enemyCount - 1);
+                return new CommonEnemy(index + 1, { ...this }, index === enemyCount - 1, config);
             }
         );
     }
@@ -87,11 +84,11 @@ export class MiniBossStage extends EnemyStage {
         this.color = new Color(235, 152, 78);
     }
 
-    setupBranchedStage(enemyCount: number): void {
-        let miniBossCount: number = Math.ceil(enemyCount / 3);
+    setupBranchedStage(enemyCount: number, config: RunConfig): void {
+        let miniBossCount: number = Math.ceil(enemyCount * config.stage.miniBossCountRatio);
         this.enemies = [...Array(miniBossCount)].map(
             (enemy: Enemy, index: number) => {
-                return new MiniBossEnemy(index + 1, { ...this }, index === miniBossCount - 1);
+                return new MiniBossEnemy(index + 1, { ...this }, index === miniBossCount - 1, config);
             }
         );
     }
@@ -103,14 +100,14 @@ export class BossStage extends EnemyStage {
         this.color = new Color(87, 49, 214);
     }
 
-    setupBranchedStage(enemyCount: number): void {
+    setupBranchedStage(enemyCount: number, config: RunConfig): void {
         let commonEnemyCount: number = Math.floor(enemyCount / 2);
         this.enemies = [...Array(commonEnemyCount)].map(
             (enemy: Enemy, index: number) => {
-                return new CommonEnemy(index + 1, { ...this }, false);
+                return new CommonEnemy(index + 1, { ...this }, false, config);
             }
         );
-        this.enemies.push(new BossEnemy(this.enemies.length + 1, { ...this }, true));
+        this.enemies.push(new BossEnemy(this.enemies.length + 1, { ...this }, true, config));
     }
 
 }

@@ -1,6 +1,7 @@
 import { EventEmitter } from "../controllers/EventEmitter";
 import { IEnemy } from "../interfaces";
 import { Color } from "./Color";
+import { RunConfig } from "./RunConfig";
 import { EnemyStage, Stage } from "./Stage";
 
 export class Enemy extends EventEmitter implements IEnemy {
@@ -40,21 +41,21 @@ export class Enemy extends EventEmitter implements IEnemy {
 
 export class CommonEnemy extends Enemy {
 
-    constructor(number: number, stage: EnemyStage, isLast: boolean) {
+    constructor(number: number, stage: EnemyStage, isLast: boolean, config: RunConfig) {
         super(number, stage, isLast);
 
         this.name = 'Enemy';
         this.color = new Color(86, 101, 115);
-        this.hasDrop = Math.random() > 0.95;
+        this.hasDrop = Math.random() < config.enemy.enemyDropChance;
 
-        this.calculateStats(stage);
+        this.calculateStats(stage, config);
     }
 
-    calculateStats(stage: Stage): void {
+    calculateStats(stage: Stage, config: RunConfig): void {
         const stageIndex = stage.number - 1;
         const floorIndex = stage.floor.number - 1;
 
-        this.gold = Math.floor(Math.random() * (5 - 1));
+        this.gold = Math.floor((Math.random() * (5 - 1)) * config.enemy.enemyGoldScale);
 
         const maxHealth: number = 1500 * (1 + floorIndex);
         const minHealth: number = 500 * (1 + floorIndex);
@@ -64,6 +65,12 @@ export class CommonEnemy extends Enemy {
 
         this.attack = Math.floor(enemyBaseAttack * (1 + ((floorIndex ** 1.25) / 2)) * (1 + (stageIndex / 50)));
         this.maxHealth = enemyBaseHealth * (1 + ((floorIndex ** 1.5) / 10)) * (1 + (stageIndex / 50));
+
+        if (config.enemy.enemyHealthAttackScale) {
+            this.attack = Math.floor(config.enemy.enemyHealthAttackScale * this.attack);
+            this.maxHealth = Math.floor(config.enemy.enemyHealthAttackScale * this.maxHealth);
+        }
+
         this.health = this.maxHealth;
     }
 
@@ -71,22 +78,22 @@ export class CommonEnemy extends Enemy {
 
 export class MiniBossEnemy extends Enemy {
 
-    constructor(number: number, stage: EnemyStage, isLast: boolean) {
+    constructor(number: number, stage: EnemyStage, isLast: boolean, config: RunConfig) {
         super(number, stage, isLast);
 
         this.name = 'Mini Boss';
         this.color = new Color(235, 152, 78);
-        this.hasDrop = Math.random() > 0.80;
+        this.hasDrop = Math.random() < config.enemy.miniBossDropChance;
 
-        this.calculateStats(stage);
+        this.calculateStats(stage, config);
     }
 
-    calculateStats(stage: Stage): void {
+    calculateStats(stage: Stage, config: RunConfig): void {
         const stageIndex = stage.number - 1;
         const floorIndex = stage.floor.number - 1;
 
         const miniBossMultiplier = 1.5 * (floorIndex + 1);
-        this.gold = Math.floor(Math.random() * (10 - 1));
+        this.gold = Math.floor((Math.random() * (10 - 1)) * config.enemy.enemyGoldScale);
 
         const maxHealth: number = 1500 * miniBossMultiplier * (1 + floorIndex);
         const minHealth: number = 1000 * miniBossMultiplier * (1 + floorIndex);
@@ -97,6 +104,11 @@ export class MiniBossEnemy extends Enemy {
         this.attack = Math.floor(enemyBaseAttack * (1 + ((floorIndex ** 1.25) / 2)) * (1 + (stageIndex / 10)));
         this.maxHealth = enemyBaseHealth * (1 + ((floorIndex ** 1.05) / 10)) * (1 + (stageIndex / 100));
 
+        if (config.enemy.miniBossHealthAttackScale) {
+            this.attack = Math.floor(config.enemy.miniBossHealthAttackScale * this.attack);
+            this.maxHealth = Math.floor(config.enemy.miniBossHealthAttackScale * this.maxHealth);
+        }
+
         this.health = this.maxHealth;
     }
 
@@ -104,21 +116,21 @@ export class MiniBossEnemy extends Enemy {
 
 export class BossEnemy extends Enemy {
 
-    constructor(number: number, stage: EnemyStage, isLast: boolean) {
+    constructor(number: number, stage: EnemyStage, isLast: boolean, config: RunConfig) {
         super(number, stage, isLast);
 
         this.name = 'Boss';
         this.color = new Color(87, 49, 214);
 
-        this.calculateStats(stage);
+        this.calculateStats(stage, config);
     }
 
-    calculateStats(stage: Stage): void {
+    calculateStats(stage: Stage, config: RunConfig): void {
         const stageIndex = stage.number - 1;
         const floorIndex = stage.floor.number - 1;
 
         const bossMultiplier = 2 * (floorIndex + 1);
-        this.gold = Math.floor(Math.random() * (25 - 11) + 10);
+        this.gold = Math.floor((Math.random() * (25 - 11) + 10) * config.enemy.enemyGoldScale);
 
         const maxHealth: number = 3000 * bossMultiplier * (1 + floorIndex);
         const minHealth: number = 2500 * bossMultiplier * (1 + floorIndex);
@@ -128,6 +140,11 @@ export class BossEnemy extends Enemy {
 
         this.attack = Math.floor(enemyBaseAttack * (1 + ((floorIndex ** 1.25) / 2)) * (1 + (stageIndex / 10)));
         this.maxHealth = enemyBaseHealth * (1 + ((floorIndex ** 1.10) / 10)) * (1 + (stageIndex / 100));
+
+        if (config.enemy.miniBossHealthAttackScale) {
+            this.attack = Math.floor(config.enemy.miniBossHealthAttackScale * this.attack);
+            this.maxHealth = Math.floor(config.enemy.miniBossHealthAttackScale * this.maxHealth);
+        }
 
         this.health = this.maxHealth;
     }

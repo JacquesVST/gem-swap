@@ -1,5 +1,5 @@
 import { DialogType } from "../interfaces";
-import { Dialog, DialogOption, ItemDialogOption } from "../models/Dialog";
+import { Dialog, DialogOption, ItemDialogOption, RunConfigDialogField } from "../models/Dialog";
 import { Position } from "../models/Position";
 import { Run } from "../models/Run";
 import { Canvas } from "./Canvas";
@@ -41,15 +41,21 @@ export class DialogController extends EventEmitter {
                 this.currentDialog.options.forEach((option: DialogOption, index: number) => {
                     if (option?.limits?.contains(click)) {
 
-                        selected = true;
+
                         if (!option.disabled) {
-                            option.action();
+                            selected = true;
+                            if (this.currentDialog.type === DialogType.CUSTOM_RUN) {
+                                option.action(this.currentDialog.optionsAsRunConfig)
+                            } else {
+                                option.action();
+                            }
                             if (option instanceof ItemDialogOption && option?.item?.price) {
                                 this.emit('ItemPurchased', option.item.price);
                                 option.item.price = Math.floor(option.item.price * 1.25);
                             }
                             this.emit('OptionSelected', option, id);
                         }
+
                     }
                 })
 
@@ -65,6 +71,24 @@ export class DialogController extends EventEmitter {
                 }
             }, 0);
         });
+
+
+        this.on('Main:MouseClicked:Drag', (position: Position, hasDialogOpen: boolean) => {
+            if (hasDialogOpen && this.currentDialog.type === DialogType.CUSTOM_RUN) {
+                this.currentDialog.customRunOptions.forEach((options: RunConfigDialogField) => {
+                    if (options.limits?.contains(position)) {
+                        options.currentValue = this.canvas.p5.map(
+                            position.x,
+                            options.limits.min.x,
+                            options.limits.max.x,
+                            options.minValue,
+                            options.maxValue,
+                            true
+                        )
+                    }
+                })
+            }
+        })
     }
 
     draw(run?: Run): void {

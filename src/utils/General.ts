@@ -1,6 +1,6 @@
 export function writeCamel(camel: string) {
     const camelCase = camel.replace(/([a-z])([A-Z])/g, '$1 $2');
-    
+
     return camelCase.charAt(0).toUpperCase() + camelCase.slice(1);
 }
 
@@ -69,8 +69,12 @@ export function insertLineBreaks(input: string, every: number): string {
 
     return result;
 }
+
+
 export function countOcurrences(input: string, of: string) {
     return (input.match(new RegExp(of, 'g')) || []).length;
-
 }
 
+export function flatten(object: any): any {
+    return Object.assign({}, ...function _flatten(o) { return [].concat(...Object.keys(o).map(k => typeof o[k] === 'object' ? _flatten(o[k]) : ({ [k]: o[k] }))) }(object))
+}

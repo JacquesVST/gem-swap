@@ -11,7 +11,8 @@ import { Color } from './models/Color';
 import { DragAnimation } from './models/DragAnimation';
 import { Item } from './models/Item.js';
 import { Position } from './models/Position';
-import { Run, RunConfig } from './models/Run';
+import { Run } from './models/Run';
+import { RunConfig } from './models/RunConfig.js';
 
 const sketch = (p5Instance: p5) => {
     let run: Run;
@@ -67,7 +68,7 @@ const sketch = (p5Instance: p5) => {
         dragController.draw(run);
         textController.draw();
 
-        run?.player?.draw();
+        run?.player?.drawInventory();
     }
 
     // mouse events
@@ -101,6 +102,9 @@ const sketch = (p5Instance: p5) => {
 
     p5Instance.keyReleased = (event: KeyboardEvent) => {
         if (event.key === 'q' || event.key === 'Q' && run) {
+            if (run?.sounds) {
+                run.sounds = {};
+            }
             dialogController.clear();
             const score: number = run?.score;
             run = undefined;
@@ -131,12 +135,24 @@ const sketch = (p5Instance: p5) => {
             dialogController.add(Run.passiveSelectorDialog());
         });
 
+        eventEmitter.on('DialogController:CustomDifficulty', (item: Item) => {
+            dialogController.add(Run.customRunDialog(item));
+        });
+
+        eventEmitter.on('DialogController:CustomRunReset', (config: RunConfig, item: Item) => {
+            dialogController.add(Run.customRunDialog(item));
+        });
+
         eventEmitter.on('DialogController:PassiveChosen', (item: Item) => {
-            setupGame(undefined, undefined, undefined, item)
+            setupGame(undefined, undefined, undefined, item);
+        });
+
+        eventEmitter.on('DialogController:CustomRunConfigured', (config: RunConfig, item: Item) => {
+            run = new Run(config.withItem(item), sounds);
         });
 
         eventEmitter.on('DialogController:DifficultyChosen', (config: RunConfig) => {
-            run = new Run(config, sounds)
+            run = new Run(config, sounds);
         });
 
         dialogController.add(Run.newGameDialog(status, score, color, item));

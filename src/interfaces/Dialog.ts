@@ -24,6 +24,7 @@ export enum DialogType {
     NAVIGATION,
     SHOP,
     SKIPPABLE_ITEM,
+    CUSTOM_RUN
 }
 
 export interface IButton {

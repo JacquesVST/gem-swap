@@ -1,8 +1,9 @@
 import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
-import { AnimationStatus, DialogType, Frequency, IDialog, IDialogOption } from "../interfaces";
+import { AnimationStatus, DialogType, Difficulty, Frequency, IDialog, IDialogOption, IEnemyConfig, IGeneralConfig, IItemConfig, IPlayerConfig, IRunConfigBase, IRunConfigDialogField, IStageConfig } from "../interfaces";
 import { drawClickableBox, drawItem, endShadow, fillFlat, fillStroke, icon, startShadow } from "../utils/Draw";
-import { generateId, insertLineBreaks } from "../utils/General";
+import { generateId, insertLineBreaks, writeCamel } from "../utils/General";
+import { getRunConfig, setRunConfig } from "../utils/LocalStorage";
 import { Color } from "./Color";
 import { Icon } from "./Icon";
 import { Item } from "./Item";
@@ -10,6 +11,7 @@ import { Limits } from "./Limits";
 import { Position } from "./Position";
 import { Relic } from "./Relic";
 import { Run } from "./Run";
+import { RunConfig } from "./RunConfig";
 import { BossStage, CommonEnemyStage, ItemStage, MiniBossStage, ShopStage, Stage } from "./Stage";
 
 export class Dialog implements IDialog {
@@ -28,6 +30,7 @@ export class Dialog implements IDialog {
     relativeOpacity?: number = 0;
     relativeOpacitySpeed?: number = 0;
 
+    customRunOptions: RunConfigDialogField[] = [];
 
     constructor(title: string, message: string, options: DialogOption[], type: DialogType, closeCallback?: (id?: string) => void, textColor?: Color, run?: Run) {
         this.title = title;
@@ -37,11 +40,77 @@ export class Dialog implements IDialog {
         this.type = type
         this.id = generateId();
 
+        if (type === DialogType.CUSTOM_RUN) {
+            this.customRunOptions = getRunConfig() as RunConfigDialogField[];
+        }
         this.setupAdditionalOptions(closeCallback, run);
     }
 
     get hasAdditionalButton(): boolean {
         return this.type === DialogType.SHOP || this.type === DialogType.SKIPPABLE_ITEM || this.type === DialogType.INITIAL;
+    }
+
+    get optionsAsRunConfig(): RunConfig {
+        setRunConfig(this.customRunOptions);
+
+        let config: IRunConfigBase = {
+            difficulty: Difficulty.CUSTOM
+        };
+        let enemyConfig: IEnemyConfig = {};
+        let stageConfig: IStageConfig = {};
+        let itemConfig: IItemConfig = {};
+        let playerConfig: IPlayerConfig = {};
+        let generalConfig: IGeneralConfig = {};
+
+        this.customRunOptions.forEach((option: RunConfigDialogField) => {
+            option.currentValue = option.rounding(option.currentValue);
+            switch (option.property) {
+                case 'enemyHealthAttackScale':
+                case 'miniBossHealthAttackScale':
+                case 'bossHealthAttackScale':
+                case 'enemyDropChance':
+                case 'miniBossDropChance':
+                case 'enemyGoldScale':
+                    enemyConfig[option.property] = option.currentValue;
+                    break;
+                case 'stageOptions':
+                case 'stageOptionsIncreaseByFloor':
+                case 'miniBossStageChance':
+                case 'itemStageChance':
+                case 'shopStageChance':
+                case 'miniBossCountRatio':
+                    stageConfig[option.property] = option.currentValue;
+                    break;
+                case 'itemOptions':
+                case 'shopOptions':
+                case 'relicPowerMultiplier':
+                case 'relicDropChance':
+                    itemConfig[option.property] = option.currentValue;
+                    break;
+                case 'gold':
+                case 'attack':
+                case 'defense':
+                case 'maxHealth':
+                case 'maxMoves':
+                case 'multiplier':
+                case 'critical':
+                case 'criticalChance':
+                case 'criticalMultiplier':
+                    playerConfig[option.property] = option.currentValue;
+                    break;
+                case 'startWithRelic':
+                    playerConfig[option.property] = option.currentValue > 0.5;
+                    break;
+                case 'shapeCount':
+                    generalConfig[option.property] = option.currentValue;
+                    break;
+                default:
+                    config[option.property] = option.currentValue;
+                    break;
+            }
+        });
+
+        return new RunConfig(config).withEnemyConfig(enemyConfig).withStageConfig(stageConfig).withItemConfig(itemConfig).withPlayerConfig(playerConfig).withGeneralConfig(generalConfig);
     }
 
     setupAdditionalOptions(closeCallback: (id?: string) => void, run?: Run): void {
@@ -109,9 +178,19 @@ export class Dialog implements IDialog {
             margin.y = (canvas.playfield.y / 2) - (dimension.y / 2);
         }
 
+        if (this.type === DialogType.CUSTOM_RUN) {
+            dimension.x = canvas.playfield.x - canvas.margin * 2;
+            dimension.y = canvas.playfield.y - canvas.margin * 2;
+            margin.x = canvas.margin * 2;
+            margin.y = canvas.margin * 2;
+        }
+
         const textOffset: number = margin.y + (textMarginCount * canvas.margin / 2);
         this.drawDialogBackground(dimension, margin, textOffset);
         this.drawOptions(lengthOffSet, dimension, margin, run);
+        if (this.type === DialogType.CUSTOM_RUN) {
+            this.drawCustomForm();
+        }
     }
 
 
@@ -213,7 +292,7 @@ export class Dialog implements IDialog {
 
             cumulativeMarginX = this.options.length === (this.hasAdditionalButton ? 2 : 1) ? canvas.playfield.x / 2 - (canvas.itemSideSize / 2) : cumulativeMarginX;
 
-            if (this.hasAdditionalButton && index === this.options.length - 1) {
+            if ((this.hasAdditionalButton && index === this.options.length - 1)) {
                 optionWidth = (canvas.itemSideSize * 2) + canvas.margin;
                 optionHeight = canvas.itemSideSize / 4;
 
@@ -227,6 +306,14 @@ export class Dialog implements IDialog {
                     cumulativeMarginX = canvas.playfield.x / 2 - optionWidth / 2;
                     cumulativeMarginY = margin.y + dimension.y - canvas.margin - optionHeight;
                 }
+            }
+
+            if (this.type === DialogType.CUSTOM_RUN) {
+                optionWidth = (canvas.itemSideSize * 2) + canvas.margin;
+                optionHeight = canvas.itemSideSize / 4;
+
+                cumulativeMarginX = canvas.playfield.x / 2 - (optionWidth * 1.5 - canvas.margin) + (optionWidth + canvas.margin) * index - 1
+                cumulativeMarginY = margin.y + dimension.y - canvas.margin - optionHeight;
             }
 
             option.limits = new Limits(Position.of(cumulativeMarginX, cumulativeMarginY), Position.of(cumulativeMarginX + optionWidth, cumulativeMarginY + optionHeight));
@@ -278,9 +365,17 @@ export class Dialog implements IDialog {
                     icon(Icon.CLOSE, Position.of(cumulativeMarginX + canvas.margin, textMargin + mainOffset));
                 }
 
-
                 if (option.text === 'Skip') {
                     icon(Icon.SKIP, Position.of(cumulativeMarginX + canvas.margin, textMargin + mainOffset));
+                }
+
+                if (option.text === 'Start') {
+                    icon(Icon.PLAY, Position.of(cumulativeMarginX + canvas.margin, textMargin + mainOffset));
+                }
+
+
+                if (option.text === 'Reset') {
+                    icon(Icon.RESET, Position.of(cumulativeMarginX + canvas.margin, textMargin + mainOffset));
                 }
 
                 if (option.subtext) {
@@ -475,6 +570,79 @@ export class Dialog implements IDialog {
         }
     }
 
+    drawCustomForm(): void {
+        const canvas: Canvas = Canvas.getInstance();
+        const p5: P5 = canvas.p5;
+
+        let marginX: number = canvas.margin * 3;
+        let marginY: number = canvas.margin * 10;
+
+        const width: number = canvas.windowSize.x / 2 - canvas.margin * 4
+
+        const opacity: number = this.initialOpacity + this.relativeOpacity;
+
+        this.customRunOptions.forEach((option: RunConfigDialogField, index: number) => {
+            if (index >= Math.ceil(this.customRunOptions.length / 2)) {
+                marginX = canvas.windowSize.x / 2 + canvas.margin
+                index = index - Math.ceil(this.customRunOptions.length / 2)
+            }
+
+            const height: number = canvas.uiData.uiBarSize
+            const offsetY: number = index * (height + canvas.margin * 1.5);
+
+            if (option) {
+                option.limits = Position.of(marginX, marginY + offsetY).toLimits(Position.of(width, height))
+
+                fillFlat(Color.GRAY_3.alpha(opacity))
+                p5.rect(
+                    marginX,
+                    marginY + offsetY,
+                    width,
+                    height,
+                    canvas.radius * 3
+                );
+
+                fillFlat(Color.WHITE_1.alpha(opacity))
+                p5.rect(
+                    marginX,
+                    marginY + offsetY,
+                    p5.map(option.currentValue, option.minValue, option.maxValue, 0, width),
+                    height,
+                    canvas.radius * 3
+                );
+
+                fillStroke(Color.WHITE, opacity)
+                p5.textAlign(p5.LEFT, p5.CENTER)
+                p5.textSize(canvas.uiData.fontSubText)
+                p5.text(
+                    writeCamel(option.property),
+                    marginX + canvas.margin,
+                    marginY + offsetY,
+                )
+
+                let value: string = option.rounding(option.currentValue) + ''
+
+                if (option.property === 'startWithRelic') {
+                    value = option.rounding(option.currentValue) !== 0 ? 'True' : 'False'
+                }
+
+                if (value.includes('.')){
+                    value = option.rounding(option.currentValue).toFixed(2)
+                }
+
+                fillStroke(Color.WHITE, opacity)
+                p5.textAlign(p5.RIGHT, p5.CENTER)
+                p5.textSize(canvas.uiData.fontSubText)
+                p5.text(
+                    value,
+                    marginX + width - canvas.margin,
+                    marginY + offsetY,
+                )
+            }
+        })
+
+    }
+
     calculateSpeed(): void {
         this.animationStatus = AnimationStatus.IN_PROGRESS;
         this.frames = 15;
@@ -499,13 +667,13 @@ export class Dialog implements IDialog {
 }
 
 export class DialogOption implements IDialogOption {
-    action: () => void;
+    action: (params?: any) => void;
     color: Color;
     disabled: boolean;
     limits: Limits;
     icon: Icon;
 
-    constructor(action: () => void, color: Color, icon?: Icon) {
+    constructor(action: (params?: any) => void, color: Color, icon?: Icon) {
         this.action = action;
         this.color = color;
         this.icon = icon;
@@ -590,7 +758,7 @@ export class DefaultDialogOption extends DialogOption {
     subtext: string;
     subsubtext: string;
 
-    constructor(action: () => void, color: Color, text: string, subtext?: string, subsubtext?: string, icon?: Icon) {
+    constructor(action: (params?: any) => void, color: Color, text: string, subtext?: string, subsubtext?: string, icon?: Icon) {
         super(action, color, icon)
         this.text = text;
         this.subtext = subtext;
@@ -616,4 +784,8 @@ export class NavigationDialogOption extends DialogOption {
         this.stage = stage;
         this.index = index;
     }
+}
+
+export interface RunConfigDialogField extends IRunConfigDialogField {
+    limits?: Limits;
 }

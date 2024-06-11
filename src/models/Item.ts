@@ -188,7 +188,7 @@ export class ItemPools {
                 run.player.heal(run.player.maxHealth / 2);
             }).bind(run),
             Frequency.PASSIVE,
-            Math.floor(20 * run.costMultiplier * (1 + (run.player.hasItem('50% Instant health') * 0.25)))
+            Math.floor(20 * run.runConfig.costMultiplier * (1 + (run.player.hasItem('50% Instant health') * 0.25)))
         );
     }
 
@@ -279,7 +279,7 @@ export class ItemPools {
                 'Epic',
                 'More Options',
                 '+1 item option',
-                (() => run.itemOptions++).bind(run),
+                (() => run.runConfig.items.itemOptions++).bind(run),
                 Frequency.PASSIVE,
                 100,
             ),
@@ -354,11 +354,11 @@ export class ItemPools {
 
         shopPool.forEach((item: Item) => {
             if (!item.name.startsWith('Ban') && !item.name.endsWith('AOE')) {
-                item.price = item.price * run.costMultiplier * (1 + (run.player.hasItem(item.name) * 0.25));
+                item.price = item.price * run.runConfig.costMultiplier * (1 + (run.player.hasItem(item.name) * 0.25));
             } else if (item.name.endsWith('AOE')) {
-                item.price = item.price * run.costMultiplier * (1 + (run.player.hasItem(item.name) * 0.5));
+                item.price = item.price * run.runConfig.costMultiplier * (1 + (run.player.hasItem(item.name) * 0.5));
             } else {
-                item.price = item.price * run.costMultiplier * (1 + (run.player.items.filter((playerItem: Item) => playerItem.name.startsWith('Ban')).length * 0.4));
+                item.price = item.price * run.runConfig.costMultiplier * (1 + (run.player.items.filter((playerItem: Item) => playerItem.name.startsWith('Ban')).length * 0.4));
             }
             item.price = Math.floor(item.price);
         });
@@ -443,9 +443,9 @@ export class ItemPools {
             new Item(
                 'Common',
                 'Defense Gain',
-                '+3 Defense',
+                '+4 Defense',
                 (() => {
-                    run.player.defense += 3;
+                    run.player.defense += 4;
                 }).bind(run)
 
             ),
@@ -575,7 +575,7 @@ export class ItemPools {
                 'Epic',
                 '10% Sale',
                 'Shop prices discounted',
-                (() => run.costMultiplier *= 0.9).bind(run)
+                (() => run.runConfig.costMultiplier *= 0.9).bind(run)
             ),
             new Item(
                 'Epic',
@@ -589,9 +589,9 @@ export class ItemPools {
             defaultPool.push(new Item(
                 'Common',
                 `${shape.id.charAt(0).toUpperCase() + shape.id.slice(1)} Color Boost`,
-                `+50 base DMG on ${shape.id} shapes`,
+                `+60 base DMG on ${shape.id} shapes`,
                 (() => {
-                    run.emit('Item:ColorDamageBoost', shape.id, 50);
+                    run.emit('Item:ColorDamageBoost', shape.id, 60);
                 }).bind(run)
             ));
 
@@ -642,6 +642,15 @@ export class ItemPools {
                 'Epic',
                 'Combos Multiply DMG',
                 'Final DMG multiplies combo counter',
+                (() => { }).bind(run),
+                undefined,
+                undefined,
+                UNIQUE
+            ),
+            new Item(
+                'Epic',
+                'XP Boost',
+                '+50% XP from enemies',
                 (() => { }).bind(run),
                 undefined,
                 undefined,

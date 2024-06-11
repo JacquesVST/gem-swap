@@ -42,6 +42,7 @@ export interface IPlayerItemData {
     moveSaverChance: number;
     omniMoves: number;
     reach: number;
+    relicMultiplier: number;
     rerolls: number;
     bossMoves: number;
     colorDamageBosts: { [key: string]: IShape };

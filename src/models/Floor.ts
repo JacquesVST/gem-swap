@@ -1,6 +1,6 @@
 import { Difficulty, IFloor } from "../interfaces";
 import { Map } from "./Map";
-import { RunConfig } from "./Run";
+import { RunConfig } from "./RunConfig";
 import { BossStage, CommonEnemyStage, ItemStage, MiniBossStage, ShopStage, Stage } from "./Stage";
 
 export class Floor implements IFloor {
@@ -16,41 +16,36 @@ export class Floor implements IFloor {
         this.map = map;
     }
 
-    setupStages(stageCount: number, enemyCount: number, difficulty: Difficulty): void {
+    setupStages(stageCount: number, enemyCount: number, config: RunConfig): void {
         let finalStageCount: number = stageCount;
-        let branchCount: number = 2 + Math.ceil(this.number / 2);
-
-        if (difficulty === Difficulty.MASTER) {
-            branchCount = 3;
-        }
+        let branchCount: number = config.stage.stageOptions + Math.ceil(this.number * config.stage.stageOptionsIncreaseByFloor);
 
         let stageTree: Stage[][] = [];
 
         for (let i: number = 0; i < finalStageCount; i++) {
             if (i === finalStageCount - 1) {
                 let finalStage: BossStage = new BossStage(i + 1, { ...this }, true);
-                finalStage.setupBranchedStage(enemyCount + (this.number - 1));
+                finalStage.setupBranchedStage(enemyCount + (this.number - 1), config);
                 stageTree.push([finalStage]);
             } else if (i === 0) {
                 let firstStage: CommonEnemyStage = new CommonEnemyStage(i + 1, { ...this });
-                firstStage.setupBranchedStage(enemyCount);
+                firstStage.setupBranchedStage(enemyCount, config);
                 stageTree.push([firstStage]);
             } else {
                 let stages: Stage[] = [];
                 for (let j: number = 0; j < branchCount; j++) {
                     let stage: Stage
                     const chance: number = Math.random();
-                    const miniBossChance: number = difficulty === Difficulty.MASTER ? 0.45 : 0.30;
-                    if (chance < 0.05) {
+                    if (chance < config.stage.shopStageChance) {
                         stage = new ShopStage(i + 1, { ...this });
-                    } else if (chance < 0.15) {
+                    } else if (chance < config.stage.itemStageChance) {
                         stage = new ItemStage(i + 1, { ...this });
-                    } else if (chance < miniBossChance) {
+                    } else if (chance < config.stage.miniBossStageChance) {
                         stage = new MiniBossStage(i + 1, { ...this });
-                        (stage as MiniBossStage).setupBranchedStage(enemyCount);
+                        (stage as MiniBossStage).setupBranchedStage(enemyCount, config);
                     } else {
                         stage = new CommonEnemyStage(i + 1, { ...this });
-                        (stage as CommonEnemyStage).setupBranchedStage(enemyCount);
+                        (stage as CommonEnemyStage).setupBranchedStage(enemyCount, config);
                     }
 
                     stages.push(stage);

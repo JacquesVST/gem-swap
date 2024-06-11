@@ -10,7 +10,8 @@ import { Grid } from "./Grid";
 import { Limits } from "./Limits";
 import { FallPieceAnimationParams, Piece, RemovePieceAnimationParams, SwapPieceAnimationParams } from "./Piece";
 import { Position } from "./Position";
-import { Run, RunConfig } from "./Run";
+import { Run } from "./Run";
+import { RunConfig } from "./RunConfig";
 import { CommonEnemyStage, EnemyStage, ItemStage, ShopStage, Stage } from "./Stage";
 
 export class Map extends EventEmitter implements IMap {
@@ -32,24 +33,14 @@ export class Map extends EventEmitter implements IMap {
         this.stageCount = config.stages;
         this.enemyCount = config.enemies;
 
-        if (config?.item?.name === 'No barriers') {
-            config.gridX += 1;
-            config.gridY += 1;
-        }
-
-        if (config?.item?.name === 'Less Is More') {
-            config.gridX -= 1;
-            config.gridY -= 1;
-        }
-
         this.difficulty = config.difficulty;
         this.gridX = config.gridX;
         this.gridY = config.gridY;
         this.run = run;
 
         this.currentFloorIndex = 0;
-        this.floors = this.setupFloors();
-
+        this.floors = this.setupFloors(config);
+        
         this.configureListeners();
     }
 
@@ -308,11 +299,11 @@ export class Map extends EventEmitter implements IMap {
         return undefined;
     }
 
-    setupFloors(): Floor[] {
+    setupFloors(config: RunConfig): Floor[] {
         const floors: Floor[] = [...Array(this.floorCount)].map(
             (_: Floor, index: number) => {
                 let floor: Floor = new Floor(index + 1, { ...this });
-                floor.setupStages(this.stageCount, this.enemyCount, this.difficulty);
+                floor.setupStages(this.stageCount, this.enemyCount, config);
                 return floor;
             }
         );

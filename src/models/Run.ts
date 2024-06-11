@@ -4,10 +4,10 @@ import { DialogController } from "../controllers/DialogController";
 import { EventEmitter } from "../controllers/EventEmitter";
 import { ProgressBarController } from "../controllers/ProgressBarController";
 import { TextController } from "../controllers/TextController";
-import { DialogType, Difficulty, IBestNumbers, IDamageData, IEventParams, IRun, IRunConfig, IRunItemData, IStat, IStatRange, IUnlocks, ProgressBarIndexes } from "../interfaces";
+import { DialogType, Difficulty, IBestNumbers, IDamageData, IEventParams, IRun, IRunItemData, IStat, IStatRange, IUnlocks, ProgressBarIndexes } from "../interfaces";
 import { endShadow, fillFlat, fillStroke, icon, startShadow } from "../utils/Draw";
 import { formatNumber, writeCamel } from "../utils/General";
-import { getBestNumbers, getUnlocks, setBestNumbers, setUnlocks } from "../utils/LocalStorage";
+import { getBestNumbers, getUnlocks, setBestNumbers, setRunConfig, setUnlocks } from "../utils/LocalStorage";
 import { Cell } from "./Cell";
 import { Color } from "./Color";
 import { DefaultDialogOption, Dialog, DialogOption, ItemDialogOption, NavigationDialogOption, PassiveDialogOption, RelicDialogOption } from "./Dialog";
@@ -21,22 +21,21 @@ import { Piece } from "./Piece";
 import { Player } from "./Player";
 import { Position } from "./Position";
 import { Relic } from "./Relic";
+import { RunConfig } from "./RunConfig";
 import { Shape } from "./Shape";
 import { EnemyStage, ItemStage, MiniBossStage, ShopStage, Stage } from "./Stage";
 
 export class Run extends EventEmitter implements IRun {
     player: Player;
-    costMultiplier: number;
     canvas: Canvas;
+    runConfig: RunConfig;
     map: Map;
-    difficulty: Difficulty;
 
     score: number = 0;
     combo: number = 0;
     damage: number = 0;
     dots: number = 0;
 
-    itemOptions: number = 3;
     defeatedEnemies: number = 0;
     consecutiveCombo: number = 0;
     possibleShapes: Shape[] = [];
@@ -57,22 +56,17 @@ export class Run extends EventEmitter implements IRun {
     constructor(config: RunConfig, sounds: { [key: string]: P5.SoundFile }) {
         super('Run');
 
+        this.runConfig = config;
         this.sounds = sounds;
-        this.difficulty = config.difficulty;
-        this.costMultiplier = config.costMultiplier;
-        this.player = Player.defaultPlayerWith(config.item);
-        this.possibleShapes = Shape.defaultShapes();
-
-        if (config.difficulty === Difficulty.MASTER) {
-            this.possibleShapes.push(Shape.extraShape());
-        }
+        this.player = Player.defaultPlayerWith(config);
+        this.possibleShapes = Shape.defaultShapes(config.general.shapeCount);
 
         if (config?.item?.name === 'Less Is More') {
             const index = Math.floor(Math.random() * this.possibleShapes.length);
             this.possibleShapes = this.possibleShapes.filter((shape: Shape) => shape.id !== this.possibleShapes[index].id);
         }
 
-        if (config?.item?.name === 'Collector') {
+        if (config.player.startWithRelic) {
             this.player.changeRelic(this.generateRelic());
         }
 
@@ -162,8 +156,8 @@ export class Run extends EventEmitter implements IRun {
             }
 
             if (stage instanceof ShopStage) {
-                this.newShopDialog(2, true, () => {
-                    this.sounds['item'].play();
+                this.newShopDialog(() => {
+                    this.sounds['item']?.play();
 
                     this.updateHealth();
                     this.updateMoves();
@@ -179,14 +173,14 @@ export class Run extends EventEmitter implements IRun {
 
             if (stage instanceof ItemStage) {
                 this.newPercDialog(() => {
-                    this.sounds['item'].play();
+                    this.sounds['item']?.play();
                     this.emit('AllowNextStage');
                 });
             }
         });
 
         this.on('Run:InitialItemSelected', () => {
-            this.sounds['item'].play();
+            this.sounds['item']?.play();
             this.updateScore([]);
             this.updateCombo([]);
             this.updateDamage(0);
@@ -221,7 +215,7 @@ export class Run extends EventEmitter implements IRun {
             }
 
             if (!enemy.isLast) {
-                this.sounds['enemyDefeat'].play();
+                this.sounds['enemyDefeat']?.play();
             }
 
 
@@ -229,13 +223,13 @@ export class Run extends EventEmitter implements IRun {
                 let isMiniBoss = enemy instanceof MiniBossEnemy;
                 let rarities: string[] = isMiniBoss ? ['Common', 'Rare', 'Epic'] : ['Common', 'Rare'];
 
-                let isRelic: boolean = Math.random() < 0.1;
+                let isRelic: boolean = Math.random() < this.runConfig.items.relicDropChance;
                 if (this.player.passive?.name === 'Collector') {
                     isRelic = Math.random() < 0.2;
                 }
 
                 this.newRandomDropDialog(isRelic, rarities, () => {
-                    this.sounds['item'].play();
+                    this.sounds['item']?.play();
                     this.updateTopProgressBars();
                     this.updateHealth();
                     this.updateMoves();
@@ -265,9 +259,9 @@ export class Run extends EventEmitter implements IRun {
 
         this.on('Grid:SwapValidated', (valid: boolean) => {
             if (valid) {
-                this.sounds['move'].play();
+                this.sounds['move']?.play();
             } else {
-                this.sounds['noMove'].play();
+                this.sounds['noMove']?.play();
             }
         });
 
@@ -288,7 +282,7 @@ export class Run extends EventEmitter implements IRun {
 
         this.on('Grid:FirstClickFound', () => {
             this.stackCombo = false;
-            this.sounds['select'].play();
+            this.sounds['select']?.play();
             this.updateCombo([]);
             this.updateDamage(0);
         });
@@ -300,7 +294,7 @@ export class Run extends EventEmitter implements IRun {
         this.on('Grid:MatchesRemoved:GridCleared:NextStage', () => {
             if (this.map.stage instanceof MiniBossStage) {
                 this.newPercDialog(() => {
-                    this.sounds['item'].play();
+                    this.sounds['item']?.play();
 
                     this.updateTopProgressBars();
                     this.updateHealth();
@@ -313,8 +307,8 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:NextFloor', () => {
-            this.newShopDialog(3, true, () => {
-                this.sounds['item'].play();
+            this.newShopDialog(() => {
+                this.sounds['item']?.play();
 
                 this.updateHealth();
                 this.updateMoves();
@@ -329,12 +323,14 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:GridCleared:MapEnded', () => {
+            this.sounds = {};
             this.pauseTimerAnimation = false;
             const currentUnlock: IUnlocks = {
                 item: this.player?.passive.name,
                 date: new Date(),
-                tier: this.difficulty
+                tier: this.runConfig.difficulty
             }
+
 
             const unlocks: IUnlocks[] = getUnlocks();
 
@@ -350,7 +346,9 @@ export class Run extends EventEmitter implements IRun {
                 }
             }
 
-            setUnlocks(unlocks)
+            if (this.runConfig.difficulty !== Difficulty.CUSTOM) {
+                setUnlocks(unlocks)
+            }
             this.emit('RunEnded', 'You won!', this.score, new Color(46, 204, 113));
         });
 
@@ -361,17 +359,17 @@ export class Run extends EventEmitter implements IRun {
 
         this.on('Grid:ClearingGrid:GridCleared:NextStage', () => {
             this.pauseTimerAnimation = true;
-            this.sounds['bossDefeat'].play();
+            this.sounds['bossDefeat']?.play();
         });
 
         this.on('Grid:ClearingGrid:GridCleared:NextFloor', () => {
             this.pauseTimerAnimation = true;
-            this.sounds['newFloor'].play();
+            this.sounds['newFloor']?.play();
         });
 
         this.on('Grid:ClearingGrid:GridCleared:MapEnded', () => {
             this.pauseTimerAnimation = true;
-            this.sounds['newFloor'].play();
+            this.sounds['newFloor']?.play();
         });
 
         // Item events 
@@ -409,9 +407,9 @@ export class Run extends EventEmitter implements IRun {
                 const item: Item = new Item(
                     'Common',
                     `${id.charAt(0).toUpperCase() + id.slice(1)} Color Boost`,
-                    `+50 base DMG on ${id} shapes`,
+                    `+60 base DMG on ${id} shapes`,
                     () => {
-                        this.emit('Item:ColorDamageBoost', id, 50);
+                        this.emit('Item:ColorDamageBoost', id, 60);
                     }
                 );
                 this.player.items.push(item)
@@ -437,7 +435,7 @@ export class Run extends EventEmitter implements IRun {
             }
 
             if (dialog.type === DialogType.SHOP) {
-                this.newShopDialog(params.amount, params.forceHealth, params.selectCallback, params.closeCallback);
+                this.newShopDialog(params.selectCallback, params.closeCallback);
             }
 
             if (dialog.type === DialogType.SKIPPABLE_ITEM) {
@@ -452,7 +450,7 @@ export class Run extends EventEmitter implements IRun {
 
         this.on('Grid:AnotherFairTrade', (choice: boolean) => {
             if (choice) {
-                this.sounds['defeat'].play();
+                this.sounds['defeat']?.play();
                 TextController.getInstance().damagePlayerAnimation({ damage: Math.floor(this.player.maxHealth / 100), shielded: false });
                 this.updateHealth(this.player.health - Math.floor(this.player.maxHealth / 100), { useCase: 'DamagePlayer', data: { damage: Math.floor(this.player.maxHealth / 100) } })
             }
@@ -492,6 +490,7 @@ export class Run extends EventEmitter implements IRun {
         this.map.grid?.drawPieces();
         this.drawNumbers();
         this.drawEnemyDetails();
+        this.player.draw();
     }
 
     drawNumbers(): void {
@@ -847,9 +846,9 @@ export class Run extends EventEmitter implements IRun {
         }
 
         if (criticalInMatch) {
-            this.sounds['crit'].play();
+            this.sounds['crit']?.play();
         } else {
-            this.sounds['match'].play();
+            this.sounds['match']?.play();
         }
 
         let additiveScore: number = (((this.player.attack) * lengthMultiplier) + bonusDamage) * damageMultiplier / 100;
@@ -909,7 +908,7 @@ export class Run extends EventEmitter implements IRun {
         this.player.updateMoves(this.player.maxMoves + this.player.itemData.bonusMoves);
         let damage: IDamageData = this.player.simulateDamage(this.map.enemy);
 
-        this.sounds['defeat'].play();
+        this.sounds['defeat']?.play();
         TextController.getInstance().damagePlayerAnimation(damage);
         this.updateHealth(this.player.health - damage.damage, { useCase: 'DamagePlayer', data: { damage: damage } })
     }
@@ -964,11 +963,7 @@ export class Run extends EventEmitter implements IRun {
         const chosenStats: IStatRange[] = possibleStats.sort(() => Math.random() - Math.random()).slice(0, 3);
 
         const stats: IStat[] = chosenStats.map((statRange: IStatRange) => {
-            let currentPower: number = p5.random(0, 100);
-
-            if (this.player.passive?.name === 'Collector') {
-                currentPower = currentPower * 1.5;
-            }
+            let currentPower: number = p5.random(0, 100) * this.player.relicPowerMultiplier;
 
             power += currentPower
             return {
@@ -1056,7 +1051,7 @@ export class Run extends EventEmitter implements IRun {
 
     newPercDialog(callback: () => void, withRelic: boolean = false): void {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(
-            withRelic ? this.itemOptions - 1 : this.itemOptions,
+            withRelic ? this.runConfig.items.itemOptions - 1 : this.runConfig.items.itemOptions,
             ItemPools.defaultPool(this),
             ['Common', 'Rare'],
             this.player
@@ -1081,18 +1076,16 @@ export class Run extends EventEmitter implements IRun {
         DialogController.getInstance().dialogs.unshift(dialog);
     }
 
-    newShopDialog(amount: number, forceHealth: boolean, selectCallback: () => void, closeCallback?: (id?: string) => void): void {
+    newShopDialog(selectCallback: () => void, closeCallback?: (id?: string) => void): void {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(
-            amount,
+            this.runConfig.items.shopOptions,
             ItemPools.shopPool(this),
             ['Rare', 'Epic'],
             this.player,
             true
         );
 
-        if (forceHealth) {
-            itemList = [ItemPools.fullHealthShopItem(this), ...itemList];
-        }
+        itemList = [ItemPools.fullHealthShopItem(this), ...itemList];
 
         let dialog: Dialog = new Dialog(
             'Floor item shop',
@@ -1103,8 +1096,6 @@ export class Run extends EventEmitter implements IRun {
         );
 
         this.itemData.lastDialogParams = {
-            amount,
-            forceHealth,
             selectCallback,
             closeCallback
         }
@@ -1114,7 +1105,7 @@ export class Run extends EventEmitter implements IRun {
 
     newInitialItemDialog(): void {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(
-            this.itemOptions,
+            this.runConfig.items.itemOptions,
             ItemPools.defaultPool(this).filter((item: Item) => {
                 return item.name !== 'Instant Health';
             }),
@@ -1161,23 +1152,61 @@ export class Run extends EventEmitter implements IRun {
 
     }
 
+
+    static customRunDialog(item: Item): Dialog {
+        let dialogController = DialogController.getInstance();
+        const options: DefaultDialogOption[] = [
+            new DefaultDialogOption(
+                () => {
+                    setRunConfig([]);
+                    dialogController.emit('CustomRunReset', item)
+                },
+                Color.DISABLED,
+                'Reset'
+            ),
+            new DefaultDialogOption(
+                () => {
+                    dialogController.emit('PassiveChosen', item)
+                },
+                Color.DISABLED,
+                'Close'
+            ),
+            new DefaultDialogOption(
+                (runConfig: RunConfig) => {
+                    dialogController.emit('CustomRunConfigured', runConfig, item)
+                },
+                Color.GREEN,
+                'Start'
+            ),
+        ]
+
+        return new Dialog(
+            'Configure custom run',
+            'Tweak the values to your liking',
+            options,
+            DialogType.CUSTOM_RUN,
+        );
+
+    }
+
+
     static newGameDialog(status?: string, score?: number, color?: Color, item?: Item): Dialog {
         let dialogController = DialogController.getInstance();
 
         let options: DialogOption[] = [
             new DefaultDialogOption(
                 () => {
-                    dialogController.emit('DifficultyChosen', {
-                        enemies: 5,
-                        stages: 3,
-                        floors: 3,
-                        gridX: 12,
-                        gridY: 8,
-                        costMultiplier: 1,
-                        difficulty: Difficulty.EASY,
-                        item
-
-                    })
+                    dialogController.emit('CustomDifficulty', item);
+                },
+                Color.CYAN,
+                'Custom',
+                'Configure your run',
+                'No Progression',
+                Icon.GEAR
+            ),
+            new DefaultDialogOption(
+                () => {
+                    dialogController.emit('DifficultyChosen', RunConfig.easy(item))
                 },
                 Color.GREEN,
                 'Easy',
@@ -1187,16 +1216,7 @@ export class Run extends EventEmitter implements IRun {
             ),
             new DefaultDialogOption(
                 () => {
-                    dialogController.emit('DifficultyChosen', {
-                        enemies: 8,
-                        stages: 5,
-                        floors: 5,
-                        gridX: 10,
-                        gridY: 8,
-                        costMultiplier: 1.5,
-                        difficulty: Difficulty.MEDIUM,
-                        item
-                    })
+                    dialogController.emit('DifficultyChosen', RunConfig.medium(item))
                 },
                 Color.YELLOW,
                 'Normal',
@@ -1206,16 +1226,7 @@ export class Run extends EventEmitter implements IRun {
             ),
             new DefaultDialogOption(
                 () => {
-                    dialogController.emit('DifficultyChosen', {
-                        enemies: 10,
-                        stages: 8,
-                        floors: 8,
-                        gridX: 8,
-                        gridY: 6,
-                        costMultiplier: 2,
-                        difficulty: Difficulty.HARD,
-                        item
-                    })
+                    dialogController.emit('DifficultyChosen', RunConfig.hard(item))
                 },
                 Color.RED,
                 'Hard',
@@ -1225,16 +1236,7 @@ export class Run extends EventEmitter implements IRun {
             ),
             new DefaultDialogOption(
                 () => {
-                    dialogController.emit('DifficultyChosen', {
-                        enemies: 10,
-                        stages: 10,
-                        floors: 10,
-                        gridX: 8,
-                        gridY: 6,
-                        costMultiplier: 2,
-                        difficulty: Difficulty.MASTER,
-                        item
-                    })
+                    dialogController.emit('DifficultyChosen', RunConfig.master(item))
                 },
                 Color.PURPLE,
                 'Master',
@@ -1243,25 +1245,6 @@ export class Run extends EventEmitter implements IRun {
                 Icon.SKULL
             ),
         ];
-
-        if (localStorage.getItem('dev')) {
-            options.unshift(new DefaultDialogOption(
-                () => {
-                    dialogController.emit('DifficultyChosen', {
-                        enemies: 2,
-                        stages: 5,
-                        floors: 5,
-                        gridX: 10,
-                        gridY: 8,
-                        costMultiplier: 1,
-                        difficulty: Difficulty.DEBUG,
-                        item
-                    });
-                },
-                new Color(224, 224, 224),
-                'SpeedRun',
-            ));
-        }
 
         options.push(new PassiveDialogOption(
             () => {
@@ -1282,8 +1265,4 @@ export class Run extends EventEmitter implements IRun {
             color
         );
     }
-}
-
-export interface RunConfig extends IRunConfig {
-    item: Item
 }

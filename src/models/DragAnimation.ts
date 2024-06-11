@@ -51,7 +51,7 @@ export class DragAnimation implements IDrag {
             if (dots !== run.dots && opacity === 255) {
                 run.dots = dots;
                 run.sounds['dot'].setVolume(0.2);
-                run.sounds['dot'].play();
+                run.sounds['dot']?.play();
             }
 
             if (!DragController.getInstance().isDragging || this.isFading) {
