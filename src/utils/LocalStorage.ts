@@ -1,4 +1,5 @@
 import { IBestNumbers, IRunConfigDialogField, IUnlocks } from "../interfaces";
+import { Color } from "../models/Color";
 import { RunConfig } from "../models/RunConfig";
 import { flatten } from "./General";
 
@@ -34,9 +35,9 @@ export function getRunConfig(): IRunConfigDialogField[] {
     config = config ? config : [];
 
     if (config.length === 0) {
-        const base = flatten(RunConfig.easy().withPlayerConfig({ gold: 0 }))
+        const base = flatten(RunConfig.hard());
         Object.keys(base).forEach((key: string) => {
-            if (key !== 'difficulty' && key !== 'item') {
+            if (key !== 'difficulty' && key !== 'passive') {
                 let option: IRunConfigDialogField = rebuildValues(key, base);
                 config.push(option);
             }
@@ -48,181 +49,397 @@ export function getRunConfig(): IRunConfigDialogField[] {
             config[index] = rebuildValues(value.property, base);
         })
     }
+
+    config.sort((a, b) => a.order > b.order ? 1 : -1);
     return config
 }
 
 function rebuildValues(key: string, base: any) {
-    let option: IRunConfigDialogField;
+    let option: IRunConfigDialogField = {
+        property: key,
+        currentValue: base[key],
+    };
 
     switch (key) {
-        // 0 a 1
-        case 'miniBossStageChance':
-        case 'shopStageChance':
-        case 'itemStageChance':
-        case 'relicDropChance':
-            option = {
-                property: key,
-                currentValue: base[key],
-                minValue: 0,
-                maxValue: 1,
-                rounding: (value) => value
-            };
-            break;
-        //0 a 10
-        case 'stageOptionsIncreaseByFloor':
-            option = {
-                property: key,
-                currentValue: base[key],
-                minValue: 0,
-                maxValue: 10,
-                rounding: (value) => value
-            };
-            break;
-        // 0 a 100
-        case 'criticalChance':
-        case 'critical':
-            option = {
-                property: key,
-                currentValue: base[key],
-                minValue: 0,
-                maxValue: 100,
-                rounding: (value) => Math.round(value)
-            };
-            break;
-        //0 a 1000
-        case 'defense':
-            option = {
-                property: key,
-                currentValue: base[key],
-                minValue: 0,
-                maxValue: 1000,
-                rounding: (value) => Math.round(value)
-            };
-            break;
-        //0 a 10000
-        case 'gold':
-        case 'criticalMultiplier':
-            option = {
-                property: key,
-                currentValue: base[key],
-                minValue: 0,
-                maxValue: 10000,
-                rounding: (value) => Math.round(value)
-            };
-            break;
-        // 0.01 a 1
-        case 'enemyDropChance':
-        case 'miniBossDropChance':
-        case 'miniBossCountRatio':
-            option = {
-                property: key,
-                currentValue: base[key],
-                minValue: 0.01,
-                maxValue: 1,
-                rounding: (value) => value
-            };
-            break;
-        // 0.01 a 100
-        case 'costMultiplier':
-        case 'enemyHealthAttackScale':
-        case 'miniBossHealthAttackScale':
-        case 'bossHealthAttackScale':
-        case 'enemyGoldScale':
-        case 'relicPowerMultiplier':
-            option = {
-                property: key,
-                currentValue: base[key],
-                minValue: 0.01,
-                maxValue: 100,
-                rounding: (value) => value
-            };
-            break;
-        //1 a 20
-        case 'stageOptions':
-        case 'itemOptions':
-        case 'shopOptions':
-            option = {
-                property: key,
-                currentValue: base[key],
-                minValue: 1,
-                maxValue: 20,
-                rounding: (value) => Math.round(value)
-            };
-            break;
 
-        // 1 a 100
-        case 'enemies':
-        case 'stages':
-        case 'floors':
+        // IGridConfig
+
+        case 'colorCount':
             option = {
-                property: key,
-                currentValue: base[key],
-                minValue: 1,
-                maxValue: 100,
-                rounding: (value) => Math.round(value)
-            };
-            break;
-        //1 a 1000
-        case 'attack':
-        case 'maxMoves':
-            option = {
-                property: key,
-                currentValue: base[key],
-                minValue: 1,
-                maxValue: 1000,
-                rounding: (value) => Math.round(value)
-            };
-            break;
-        //1 a 10000
-        case 'multiplier':
-        case 'maxHealth':
-            option = {
-                property: key,
-                currentValue: base[key],
-                minValue: 1,
-                maxValue: 10000,
-                rounding: (value) => Math.round(value)
-            };
-            break;
-        //3 a 7
-        case 'shapeCount':
-            option = {
-                property: key,
-                currentValue: base[key],
+                ...option,
                 minValue: 3,
                 maxValue: 7,
-                rounding: (value) => Math.round(value)
+                order: 0,
+                split: 'Grid',
+                color: Color.BLUE,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => `${value} Colors`
             };
             break;
-        //3 a 24
-        case 'gridY':
+        case 'gridWidth':
             option = {
-                property: key,
-                currentValue: base[key],
-                minValue: 3,
-                maxValue: 24,
-                rounding: (value) => Math.round(value)
-            };
-            break;
-        //3 a 36
-        case 'gridX':
-            option = {
-                property: key,
-                currentValue: base[key],
+                ...option,
                 minValue: 3,
                 maxValue: 36,
-                rounding: (value) => Math.round(value)
+                order: 1,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => `${value} Cells`
+            };
+            break;
+        case 'gridHeight':
+            option = {
+                ...option,
+                minValue: 3,
+                maxValue: 24,
+                order: 2,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => `${value} Cells`
             };
             break;
 
-        //bool
+        // IMapConfig
+
+        case 'floors':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 100,
+                order: 10,
+                split: 'Map',
+                color: Color.YELLOW,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
+            };
+            break;
+        case 'stages':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 100,
+                order: 11,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
+            };
+            break;
+        case 'enemies':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 100,
+                order: 12,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
+            };
+            break;
+        case 'miniBossToEnemyRatio':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 100,
+                order: 13,
+                rounding: (value) => value,
+                formatNumber: (value) => Math.round(value) + '%'
+            };
+            break;
+        case 'miniBossStageChance':
+            option = {
+                ...option,
+                minValue: 0,
+                maxValue: 100,
+                order: 14,
+                rounding: (value) => value,
+                formatNumber: (value) => Math.round(value) + '%'
+            };
+            break;
+        case 'itemStageChance':
+            option = {
+                ...option,
+                minValue: 0,
+                maxValue: 100,
+                order: 15,
+                rounding: (value) => value,
+                formatNumber: (value) => Math.round(value) + '%'
+            };
+            break;
+        case 'shopStageChance':
+            option = {
+                ...option,
+                minValue: 0,
+                maxValue: 100,
+                order: 16,
+                rounding: (value) => value,
+                formatNumber: (value) => Math.round(value) + '%'
+            };
+            break;
+        case 'stageOptions':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 20,
+                order: 17,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
+            };
+            break;
+        case 'stageOptionsIncreaseByFloor':
+            option = {
+                ...option,
+                minValue: 0,
+                maxValue: 20,
+                order: 18,
+                rounding: (value) => Math.round(value) / 2,
+                formatNumber: (value) => {
+                    let text: string = `${value}`.padEnd(3, '.0')
+                    if (value === 10) {
+                        text = '10.0'
+                    }
+                    return text
+                }
+            };
+            break;
+
+        // IEnemyConfig
+
+        case 'enemyHealthAttackScale':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 1000,
+                order: 20,
+                split: 'Enemy',
+                color: Color.RED,
+                rounding: (value) => value,
+                formatNumber: (value) => Math.round(value) + '%'
+            };
+            break;
+        case 'enemyDropChance':
+            option = {
+                ...option,
+                minValue: 0,
+                maxValue: 100,
+                order: 21,
+                rounding: (value) => value,
+                formatNumber: (value) => Math.round(value) + '%'
+            };
+            break;
+        case 'miniBossHealthAttackScale':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 1000,
+                order: 22,
+                rounding: (value) => value,
+                formatNumber: (value) => Math.round(value) + '%'
+            };
+            break;
+
+        case 'miniBossDropChance':
+            option = {
+                ...option,
+                minValue: 0,
+                maxValue: 100,
+                order: 23,
+                rounding: (value) => value,
+                formatNumber: (value) => Math.round(value) + '%'
+            };
+            break;
+        case 'bossHealthAttackScale':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 1000,
+                order: 24,
+                rounding: (value) => value,
+                formatNumber: (value) => Math.round(value) + '%'
+            };
+            break;
+        case 'enemyGoldScale':
+            option = {
+                ...option,
+                minValue: 0,
+                maxValue: 1000,
+                order: 25,
+                rounding: (value) => value,
+                formatNumber: (value) => Math.round(value) + '%'
+            };
+            break;
+
+        // IPlayerConfig
+
+        case 'attack':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 1000,
+                order: 30,
+                split: 'Player',
+                color: Color.GREEN,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
+            };
+            break;
+        case 'defense':
+            option = {
+                ...option,
+                minValue: 0,
+                maxValue: 1000,
+                order: 31,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
+            };
+            break;
+        case 'maxHealth':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 10000,
+                order: 32,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
+            };
+            break;
+        case 'maxMoves':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 1000,
+                order: 33,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
+            };
+            break;
+        case 'multiplier':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 1000,
+                order: 34,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + '%'
+            };
+            break;
+        case 'critical':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 1000,
+                order: 35,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
+            };
+            break;
+        case 'criticalChance':
+            option = {
+                ...option,
+                minValue: 0,
+                maxValue: 100,
+                order: 36,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + '%'
+            };
+            break;
+        case 'criticalMultiplier':
+            option = {
+                ...option,
+                minValue: 100,
+                maxValue: 1000,
+                order: 37,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + '%'
+            };
+            break;
+        case 'gold':
+            option = {
+                ...option,
+                minValue: 0,
+                maxValue: 10000,
+                order: 38,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
+            };
+            break;
+        case 'reach':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 10,
+                order: 39,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
+            };
+            break;
+
+        // IItemConfig
+        case 'itemOptions':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 20,
+                order: 40,
+                split: 'Item',
+                color: Color.ORANGE,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
+            };
+            break;
+        case 'shopOptions':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 20,
+                order: 41,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
+            };
+            break;
+        case 'costMultiplier':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 1000,
+                order: 42,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + '%'
+            };
+            break;
+        case 'relicDropChance':
+            option = {
+                ...option,
+                minValue: 0,
+                maxValue: 100,
+                order: 43,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + '%'
+            };
+            break;
+        case 'relicPowerMultiplier':
+            option = {
+                ...option,
+                minValue: 1,
+                maxValue: 1000,
+                order: 44,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + '%'
+            };
+            break;
         case 'startWithRelic':
             option = {
-                property: key,
-                currentValue: base[key],
+                ...option,
                 minValue: 0,
                 maxValue: 1,
-                rounding: (value) => Math.round(value)
+                order: 45,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value > 0 ? 'Yes' : 'No'
+            };
+            break;
+        case 'rerolls':
+            option = {
+                ...option,
+                minValue: 0,
+                maxValue: 100,
+                order: 46,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + ''
             };
             break;
     }

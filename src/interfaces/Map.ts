@@ -4,11 +4,13 @@ import { IGrid } from "./Grid";
 import { IRun } from "./Run";
 
 export interface IMap{
+    /*
     floorCount: number;
     stageCount: number;
     enemyCount: number;
-    gridX: number;
-    gridY: number;
+    */
+    gridWidth: number;
+    gridHeight: number;
     run: IRun;
 
     winState: boolean;

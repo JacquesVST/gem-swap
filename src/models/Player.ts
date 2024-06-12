@@ -20,7 +20,7 @@ import { Shape } from "./Shape";
 export class Player extends EventEmitter implements IPlayer {
     attack: number;
     critical: number;
-    criticalChance: number ;
+    criticalChance: number;
     criticalMultiplier: number;
     damageMultiplier: number;
     defense: number;
@@ -83,8 +83,10 @@ export class Player extends EventEmitter implements IPlayer {
         this.criticalMultiplier = runConfig.player.criticalMultiplier;
         this.gold = runConfig.player.gold;
 
-        this.passive = runConfig.item;
-        this.itemData.relicMultiplier = runConfig.items.relicPowerMultiplier;
+        this.passive = runConfig.passive;
+        this.itemData.reach = runConfig.player.reach;
+        this.itemData.rerolls = runConfig.item.rerolls;
+        this.itemData.relicMultiplier = runConfig.item.relicPowerMultiplier;
 
         this.moves = this.maxMoves;
         this.health = this.maxHealth;
@@ -108,11 +110,8 @@ export class Player extends EventEmitter implements IPlayer {
             case 'Flexible':
                 this.itemData.diagonals = true;
                 break;
-            case 'Gambler':
-                this.itemData.rerolls = 3
-                break;
-            case 'No barriers':
-                this.itemData.reach = 2;
+            case '4x4':
+                this.itemData.moveSaverChance = 0.16;
                 break;
         }
     }
@@ -288,7 +287,7 @@ export class Player extends EventEmitter implements IPlayer {
     }
 
     get relicPowerMultiplier(): number {
-        return this.itemData.relicMultiplier * (1 + (this.xp / 100000));
+        return (this.itemData.relicMultiplier / 100) * (1 + (this.xp / 100000));
     }
 
     changeRelic(relic: Relic): void {
@@ -820,16 +819,16 @@ export class Player extends EventEmitter implements IPlayer {
                     value: `${formatNumber(this.defense)}`
                 },
                 {
+                    label: 'Multiplier',
+                    value: `${Math.floor(this.damageMultiplier)}%`,
+                },
+                {
                     label: 'Crit Count',
                     value: `${formatNumber(this.critical)}`
                 },
                 {
                     label: 'Crit Damage',
                     value: `${Math.floor((this.criticalMultiplier - 100))}%`,
-                },
-                {
-                    label: 'Multiplier',
-                    value: `${Math.floor(this.damageMultiplier)}%`,
                 },
             ]
 

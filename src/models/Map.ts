@@ -15,11 +15,8 @@ import { RunConfig } from "./RunConfig";
 import { CommonEnemyStage, EnemyStage, ItemStage, ShopStage, Stage } from "./Stage";
 
 export class Map extends EventEmitter implements IMap {
-    floorCount: number;
-    stageCount: number;
-    enemyCount: number;
-    gridX: number;
-    gridY: number;
+    gridWidth: number;
+    gridHeight: number;
     run: Run;
     difficulty: Difficulty;
 
@@ -29,13 +26,10 @@ export class Map extends EventEmitter implements IMap {
 
     constructor(config: RunConfig, run: Run) {
         super('Map');
-        this.floorCount = config.floors;
-        this.stageCount = config.stages;
-        this.enemyCount = config.enemies;
 
         this.difficulty = config.difficulty;
-        this.gridX = config.gridX;
-        this.gridY = config.gridY;
+        this.gridWidth = config.grid.gridWidth;
+        this.gridHeight = config.grid.gridHeight;
         this.run = run;
 
         this.currentFloorIndex = 0;
@@ -66,7 +60,7 @@ export class Map extends EventEmitter implements IMap {
         this.on('DialogController:OptionSelected', (option: DialogOption, id: string) => {
             if (option instanceof NavigationDialogOption) {
                 this.setStageBranch(option.index);
-                this.stage.initStage(this.gridX, this.gridY);
+                this.stage.initStage(this.gridWidth, this.gridHeight);
                 DialogController.getInstance().close(id);
                 this.emit('ResumeRun', this.stage);
             }
@@ -300,14 +294,14 @@ export class Map extends EventEmitter implements IMap {
     }
 
     setupFloors(config: RunConfig): Floor[] {
-        const floors: Floor[] = [...Array(this.floorCount)].map(
+        const floors: Floor[] = [...Array(config.map.floors)].map(
             (_: Floor, index: number) => {
                 let floor: Floor = new Floor(index + 1, { ...this });
-                floor.setupStages(this.stageCount, this.enemyCount, config);
+                floor.setupStages(config);
                 return floor;
             }
         );
-        (floors[0].stages[0][0] as CommonEnemyStage).initStage(this.gridX, this.gridY);
+        (floors[0].stages[0][0] as CommonEnemyStage).initStage(this.gridWidth, this.gridHeight);
         return floors;
     }
 
@@ -339,7 +333,7 @@ export class Map extends EventEmitter implements IMap {
         if (this.stage && this.stage.number <= this.floor.stages.length) {
             this.floor.currentStageIndex++;
             this.floor.currentStageBranch = 0
-            this.stage.initStage(this.gridX, this.gridY);
+            this.stage.initStage(this.gridWidth, this.gridHeight);
             this.emit('NextStageReached');
         }
     }
@@ -347,7 +341,7 @@ export class Map extends EventEmitter implements IMap {
     nextFloor(): void {
         if (this.floor && this.floor.number <= this.floors.length) {
             this.currentFloorIndex++;
-            this.stage.initStage(this.gridX, this.gridY);
+            this.stage.initStage(this.gridWidth, this.gridHeight);
             this.emit('NextFloorReached');
         }
     }

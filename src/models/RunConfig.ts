@@ -1,73 +1,60 @@
-import { Difficulty, IEnemyConfig, IGeneralConfig, IItemConfig, IPlayerConfig, IRunConfig, IRunConfigBase, IStageConfig } from "../interfaces";
+import { Difficulty, IEnemyConfig, IFlatRunConfig, IGridConfig, IItemConfig, IMapConfig, IPlayerConfig, IRunConfig } from "../interfaces";
 import { Item } from "./Item";
 
 export class RunConfig implements IRunConfig {
-    enemies: number;
-    stages: number;
-    floors: number;
-    gridX: number;
-    gridY: number
-    costMultiplier: number;
-    difficulty: Difficulty
-    item: Item;
-    enemy: IEnemyConfig
-    stage: IStageConfig
-    items: IItemConfig
-    general: IGeneralConfig
+    difficulty?: Difficulty;
+    passive?: Item;
+    grid: IGridConfig;
+    map: IMapConfig;
+    enemy: IEnemyConfig;
     player: IPlayerConfig;
+    item: IItemConfig;
 
-    constructor(
-        config: IRunConfigBase
-    ) {
-        this.enemies = config.enemies;
-        this.stages = config.stages;
-        this.floors = config.floors;
-        this.gridX = config.gridX;
-        this.gridY = config.gridY;
-        this.costMultiplier = config.costMultiplier;
-        this.difficulty = config.difficulty;
+    constructor(difficulty: Difficulty) {
+        this.difficulty = difficulty;
 
-        this.enemy = RunConfig.defaultEnemyConfig();
-        this.stage = RunConfig.defaultStageConfig();
-        this.items = RunConfig.defaultItemConfig();
-        this.player = RunConfig.defaultPlayerConfig();
-        this.general = RunConfig.defaultGeneralConfig();
+        this.grid = this.defaultGridConfig();
+        this.map = this.defaultMapConfig();
+        this.enemy = this.defaultEnemyConfig();
+        this.player = this.defaultPlayerConfig();
+        this.item = this.defaultItemConfig();
     }
 
-    static defaultEnemyConfig(): IEnemyConfig {
+    defaultGridConfig(): IGridConfig {
         return {
-            enemyHealthAttackScale: 1,
-            miniBossHealthAttackScale: 1,
-            bossHealthAttackScale: 1,
-            enemyDropChance: 0.05,
-            miniBossDropChance: 0.20,
-            enemyGoldScale: 1
+            colorCount: 6,
+            gridWidth: 8,
+            gridHeight: 6
         };
     }
 
-    static defaultStageConfig(): IStageConfig {
+    defaultMapConfig(): IMapConfig {
         return {
-            stageOptions: 2,
-            stageOptionsIncreaseByFloor: 0.5,
-            miniBossStageChance: 0.15,
-            itemStageChance: 0.10,
-            shopStageChance: 0.05,
-            miniBossCountRatio: 0.33
+            floors: 10,
+            stages: 10,
+            enemies: 10,
+            miniBossToEnemyRatio: 33,
+            miniBossStageChance: 15,
+            itemStageChance: 10,
+            shopStageChance: 5,
+            stageOptions: 3,
+            stageOptionsIncreaseByFloor: 0,
         };
     }
 
-    static defaultItemConfig(): IItemConfig {
+    defaultEnemyConfig(): IEnemyConfig {
         return {
-            itemOptions: 3,
-            shopOptions: 3,
-            relicPowerMultiplier: 1,
-            relicDropChance: 0.1,
+            enemyHealthAttackScale: 100,
+            enemyDropChance: 5,
+            miniBossHealthAttackScale: 100,
+            miniBossDropChance: 20,
+            bossHealthAttackScale: 100,
+            enemyGoldScale: 100
         };
     }
 
-    static defaultPlayerConfig(): IPlayerConfig {
+    defaultPlayerConfig(): IPlayerConfig {
         return {
-            gold: 0,
             attack: 100,
             defense: 0,
             maxHealth: 100,
@@ -76,177 +63,151 @@ export class RunConfig implements IRunConfig {
             critical: 1,
             criticalChance: 0,
             criticalMultiplier: 175,
-            startWithRelic: false
+            gold: 0,
+            reach: 1,
         };
     }
 
-
-    static defaultGeneralConfig(): IGeneralConfig {
+    defaultItemConfig(): IItemConfig {
         return {
-            shapeCount: 6
+            itemOptions: 3,
+            shopOptions: 3,
+            costMultiplier: 100,
+            relicDropChance: 10,
+            relicPowerMultiplier: 100,
+            startWithRelic: 0,
+            rerolls: 0,
         };
     }
 
-    withEnemyConfig(newConfig: IEnemyConfig) {
-        this.enemy = RunConfig.defaultEnemyConfig();
-
+    withFlatConfig(newConfig: IFlatRunConfig): RunConfig {
         if (newConfig) {
             Object.keys(newConfig).forEach((key: string) => {
-                if (newConfig[key]) {
-                    this.enemy[key] = newConfig[key];
+                if (newConfig[key] && !isNaN(newConfig[key])) {
+                    if (key in this.grid) {
+                        this.grid[key] = newConfig[key];
+                    }
+
+                    if (key in this.map) {
+                        this.map[key] = newConfig[key];
+                    }
+
+                    if (key in this.enemy) {
+                        this.enemy[key] = newConfig[key];
+                    }
+
+                    if (key in this.player) {
+                        this.player[key] = newConfig[key];
+                    }
+
+                    if (key in this.item) {
+                        this.item[key] = newConfig[key];
+                    }
                 }
             });
         }
         return this;
     }
 
-    withStageConfig(newConfig: IStageConfig) {
-        this.stage = RunConfig.defaultStageConfig();
-
-        if (newConfig) {
-            Object.keys(newConfig).forEach((key: string) => {
-                if (newConfig[key]) {
-                    this.stage[key] = newConfig[key];
-                }
-            });
-        }
-
-        return this;
+    static easy(passive?: Item): RunConfig {
+        return new RunConfig(Difficulty.EASY)
+            .withFlatConfig({
+                enemies: 5,
+                stages: 3,
+                floors: 3,
+                gridWidth: 12,
+                gridHeight: 8,
+                costMultiplier: 100,
+                enemyGoldScale: 200,
+                gold: 30,
+            }).withPassive(passive);
     }
 
-    withItemConfig(newConfig: IItemConfig) {
-        this.items = RunConfig.defaultItemConfig();
-
-        if (newConfig) {
-            Object.keys(newConfig).forEach((key: string) => {
-                if (newConfig[key]) {
-                    this.items[key] = newConfig[key];
-                }
-            });
-        }
-
-        return this;
+    static medium(passive?: Item): RunConfig {
+        return new RunConfig(Difficulty.MEDIUM)
+            .withFlatConfig({
+                enemies: 8,
+                stages: 5,
+                floors: 5,
+                gridWidth: 10,
+                gridHeight: 8,
+                costMultiplier: 150,
+                enemyGoldScale: 150,
+                gold: 15,
+            }).withPassive(passive);
     }
 
-    withPlayerConfig(newConfig: IPlayerConfig) {
-        this.player = RunConfig.defaultPlayerConfig();
 
-        if (newConfig) {
-            Object.keys(newConfig).forEach((key: string) => {
-                if (newConfig[key]) {
-                    this.player[key] = newConfig[key];
-                }
-            });
-        }
-
-        return this;
+    static hard(passive?: Item): RunConfig {
+        return new RunConfig(Difficulty.HARD)
+            .withFlatConfig({
+                enemies: 10,
+                stages: 8,
+                floors: 8,
+                gridWidth: 8,
+                gridHeight: 6,
+                costMultiplier: 200,
+            }).withPassive(passive);
     }
 
-    withGeneralConfig(newConfig: IGeneralConfig) {
-        this.general = RunConfig.defaultGeneralConfig();
-
-        if (newConfig) {
-            Object.keys(newConfig).forEach((key: string) => {
-                if (newConfig[key]) {
-                    this.general[key] = newConfig[key];
-                }
-            });
-        }
-
-        return this;
+    static master(passive?: Item): RunConfig {
+        return new RunConfig(Difficulty.MASTER)
+            .withFlatConfig({
+                enemies: 10,
+                stages: 10,
+                floors: 10,
+                gridWidth: 8,
+                gridHeight: 6,
+                costMultiplier: 2,
+                miniBossStageChance: 30,
+                colorCount: 7
+            }).withPassive(passive);
     }
 
-    static easy(item?: Item): RunConfig {
-        return new RunConfig({
-            enemies: 5,
-            stages: 3,
-            floors: 3,
-            gridX: 12,
-            gridY: 8,
-            costMultiplier: 1,
-            difficulty: Difficulty.EASY
-        }).withEnemyConfig({
-            enemyGoldScale: 2,
-        }).withPlayerConfig({
-            gold: 30,
-        })
-        
-        .withItem(item);
-    }
+    withPassive(passive?: Item): RunConfig {
+        this.passive = passive;
 
-    static medium(item?: Item): RunConfig {
-        return new RunConfig({
-            enemies: 8,
-            stages: 5,
-            floors: 5,
-            gridX: 10,
-            gridY: 8,
-            costMultiplier: 1.5,
-            difficulty: Difficulty.MEDIUM
-        }).withEnemyConfig({
-            enemyGoldScale: 1.5,
-        }).withPlayerConfig({
-            gold: 15,
-        }).withItem(item);
-    }
+        if (passive) {
+            if (passive?.name === '4x4') {
+                this.player.multiplier += 300;
+            }
 
-    static hard(item?: Item): RunConfig {
-        return new RunConfig({
-            enemies: 10,
-            stages: 8,
-            floors: 8,
-            gridX: 8,
-            gridY: 6,
-            costMultiplier: 2,
-            difficulty: Difficulty.HARD
-        }).withItem(item);
-    }
+            if (passive?.name === 'Collector') {
+                this.item.startWithRelic = 1;
+                this.item.relicPowerMultiplier += 50;
+            }
 
-    static master(item?: Item): RunConfig {
-        return new RunConfig({
-            enemies: 10,
-            stages: 10,
-            floors: 10,
-            gridX: 8,
-            gridY: 6,
-            costMultiplier: 2,
-            difficulty: Difficulty.MASTER
-        }).withStageConfig({
-            miniBossStageChance: 0.30
-        }).withGeneralConfig({
-            shapeCount: 7
-        }).withItem(item);
-    }
+            if (passive?.name === 'Gambler') {
+                this.item.rerolls = 3
+            }
 
-    withItem(item: Item): RunConfig {
-        this.item = item;
+            if (passive?.name === 'Less Is More') {
+                this.grid.gridWidth -= 1;
+                this.grid.gridHeight -= 1;
+                this.grid.colorCount -= 1;
+            }
 
-        if (item?.name === 'No Barriers') {
-            this.gridX += 1;
-            this.gridY += 1
-        }
+            if (passive?.name === 'Midas Touched The Walls') {
+                this.map.shopStageChance += 10;
+            }
 
-        if (item?.name === 'Less Is More') {
-            this.gridX -= 1;
-            this.gridY -= 1;
-        }
+            if (passive?.name === 'Natural Crit') {
+                this.player.criticalMultiplier += 75;
+                this.player.criticalChance += 5;
+            }
 
-        if (item?.name === 'Collector') {
-            this.player.startWithRelic = true;
-        }
+            if (passive?.name === 'No Barriers') {
+                this.grid.gridWidth += 1;
+                this.grid.gridHeight += 1;
+                this.player.reach += 1;
+            }
 
-        if (item?.name === 'Natural Crit') {
-            this.player.criticalMultiplier = 250;
-            this.player.criticalChance = 5;
-        }
+            if (passive?.name === 'Tank') {
+                this.player.defense += 10;
+                this.player.maxMoves -= 2;
+            }
 
-        if (item?.name === '4x4') {
-            this.player.multiplier = 400;
-        }
 
-        if (item?.name === 'Tank') {
-            this.player.defense = 10;
-            this.player.maxMoves -= 2;
         }
 
         return this;

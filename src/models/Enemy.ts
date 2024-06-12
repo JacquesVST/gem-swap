@@ -46,7 +46,7 @@ export class CommonEnemy extends Enemy {
 
         this.name = 'Enemy';
         this.color = new Color(86, 101, 115);
-        this.hasDrop = Math.random() < config.enemy.enemyDropChance;
+        this.hasDrop = Math.random() * 100 < config.enemy.enemyDropChance;
 
         this.calculateStats(stage, config);
     }
@@ -55,7 +55,7 @@ export class CommonEnemy extends Enemy {
         const stageIndex = stage.number - 1;
         const floorIndex = stage.floor.number - 1;
 
-        this.gold = Math.floor((Math.random() * (5 - 1)) * config.enemy.enemyGoldScale);
+        this.gold = Math.floor((Math.random() * (5 - 1)) * config.enemy.enemyGoldScale / 100);
 
         const maxHealth: number = 1500 * (1 + floorIndex);
         const minHealth: number = 500 * (1 + floorIndex);
@@ -67,8 +67,8 @@ export class CommonEnemy extends Enemy {
         this.maxHealth = enemyBaseHealth * (1 + ((floorIndex ** 1.5) / 10)) * (1 + (stageIndex / 50));
 
         if (config.enemy.enemyHealthAttackScale) {
-            this.attack = Math.floor(config.enemy.enemyHealthAttackScale * this.attack);
-            this.maxHealth = Math.floor(config.enemy.enemyHealthAttackScale * this.maxHealth);
+            this.attack = Math.floor(config.enemy.enemyHealthAttackScale / 100 * this.attack);
+            this.maxHealth = Math.floor(config.enemy.enemyHealthAttackScale / 100 * this.maxHealth);
         }
 
         this.health = this.maxHealth;
@@ -83,7 +83,7 @@ export class MiniBossEnemy extends Enemy {
 
         this.name = 'Mini Boss';
         this.color = new Color(235, 152, 78);
-        this.hasDrop = Math.random() < config.enemy.miniBossDropChance;
+        this.hasDrop = Math.random() * 100 < config.enemy.miniBossDropChance;
 
         this.calculateStats(stage, config);
     }
@@ -93,7 +93,7 @@ export class MiniBossEnemy extends Enemy {
         const floorIndex = stage.floor.number - 1;
 
         const miniBossMultiplier = 1.5 * (floorIndex + 1);
-        this.gold = Math.floor((Math.random() * (10 - 1)) * config.enemy.enemyGoldScale);
+        this.gold = Math.floor((Math.random() * (10 - 1)) * config.enemy.enemyGoldScale / 100);
 
         const maxHealth: number = 1500 * miniBossMultiplier * (1 + floorIndex);
         const minHealth: number = 1000 * miniBossMultiplier * (1 + floorIndex);
@@ -105,8 +105,8 @@ export class MiniBossEnemy extends Enemy {
         this.maxHealth = enemyBaseHealth * (1 + ((floorIndex ** 1.05) / 10)) * (1 + (stageIndex / 100));
 
         if (config.enemy.miniBossHealthAttackScale) {
-            this.attack = Math.floor(config.enemy.miniBossHealthAttackScale * this.attack);
-            this.maxHealth = Math.floor(config.enemy.miniBossHealthAttackScale * this.maxHealth);
+            this.attack = Math.floor(config.enemy.miniBossHealthAttackScale / 100 * this.attack);
+            this.maxHealth = Math.floor(config.enemy.miniBossHealthAttackScale / 100 * this.maxHealth);
         }
 
         this.health = this.maxHealth;
@@ -130,7 +130,7 @@ export class BossEnemy extends Enemy {
         const floorIndex = stage.floor.number - 1;
 
         const bossMultiplier = 2 * (floorIndex + 1);
-        this.gold = Math.floor((Math.random() * (25 - 11) + 10) * config.enemy.enemyGoldScale);
+        this.gold = Math.floor((Math.random() * (25 - 11) + 10) * config.enemy.enemyGoldScale / 100);
 
         const maxHealth: number = 3000 * bossMultiplier * (1 + floorIndex);
         const minHealth: number = 2500 * bossMultiplier * (1 + floorIndex);
@@ -142,8 +142,8 @@ export class BossEnemy extends Enemy {
         this.maxHealth = enemyBaseHealth * (1 + ((floorIndex ** 1.10) / 10)) * (1 + (stageIndex / 100));
 
         if (config.enemy.miniBossHealthAttackScale) {
-            this.attack = Math.floor(config.enemy.miniBossHealthAttackScale * this.attack);
-            this.maxHealth = Math.floor(config.enemy.miniBossHealthAttackScale * this.maxHealth);
+            this.attack = Math.floor(config.enemy.miniBossHealthAttackScale / 100 * this.attack);
+            this.maxHealth = Math.floor(config.enemy.miniBossHealthAttackScale / 100 * this.maxHealth);
         }
 
         this.health = this.maxHealth;

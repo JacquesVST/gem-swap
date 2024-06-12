@@ -69,10 +69,10 @@ export class CommonEnemyStage extends EnemyStage {
         this.color = new Color(86, 101, 115);
     }
 
-    setupBranchedStage(enemyCount: number, config: RunConfig): void {
-        this.enemies = [...Array(enemyCount)].map(
+    setupBranchedStage(config: RunConfig): void {
+        this.enemies = [...Array(config.map.enemies)].map(
             (enemy: Enemy, index: number) => {
-                return new CommonEnemy(index + 1, { ...this }, index === enemyCount - 1, config);
+                return new CommonEnemy(index + 1, { ...this }, index === config.map.enemies - 1, config);
             }
         );
     }
@@ -84,8 +84,8 @@ export class MiniBossStage extends EnemyStage {
         this.color = new Color(235, 152, 78);
     }
 
-    setupBranchedStage(enemyCount: number, config: RunConfig): void {
-        let miniBossCount: number = Math.ceil(enemyCount * config.stage.miniBossCountRatio);
+    setupBranchedStage(config: RunConfig): void {
+        let miniBossCount: number = Math.ceil(config.map.enemies * (config.map.miniBossToEnemyRatio / 100));
         this.enemies = [...Array(miniBossCount)].map(
             (enemy: Enemy, index: number) => {
                 return new MiniBossEnemy(index + 1, { ...this }, index === miniBossCount - 1, config);

@@ -40,10 +40,11 @@ export class Run extends EventEmitter implements IRun {
     consecutiveCombo: number = 0;
     possibleShapes: Shape[] = [];
     possibleEffects: Effect[] = [];
-    inAnimation: boolean = false;
-    pauseTimerAnimation: boolean = false;
+
     stackCombo: boolean = false;
+    inAnimation: boolean = false;
     enemyDetailsOpen: boolean = false;
+    pauseTimerAnimation: boolean = false;
 
     sounds: { [key: string]: P5.SoundFile };
 
@@ -59,14 +60,9 @@ export class Run extends EventEmitter implements IRun {
         this.runConfig = config;
         this.sounds = sounds;
         this.player = Player.defaultPlayerWith(config);
-        this.possibleShapes = Shape.defaultShapes(config.general.shapeCount);
+        this.possibleShapes = Shape.defaultShapes(config.grid.colorCount);
 
-        if (config?.item?.name === 'Less Is More') {
-            const index = Math.floor(Math.random() * this.possibleShapes.length);
-            this.possibleShapes = this.possibleShapes.filter((shape: Shape) => shape.id !== this.possibleShapes[index].id);
-        }
-
-        if (config.player.startWithRelic) {
+        if (config.item.startWithRelic) {
             this.player.changeRelic(this.generateRelic());
         }
 
@@ -223,7 +219,7 @@ export class Run extends EventEmitter implements IRun {
                 let isMiniBoss = enemy instanceof MiniBossEnemy;
                 let rarities: string[] = isMiniBoss ? ['Common', 'Rare', 'Epic'] : ['Common', 'Rare'];
 
-                let isRelic: boolean = Math.random() < this.runConfig.items.relicDropChance;
+                let isRelic: boolean = (Math.random() * 100) < this.runConfig.item.relicDropChance;
                 if (this.player.passive?.name === 'Collector') {
                     isRelic = Math.random() < 0.2;
                 }
@@ -788,7 +784,10 @@ export class Run extends EventEmitter implements IRun {
 
         let bests: IBestNumbers = getBestNumbers();
         bests.bestCombo = bests.bestCombo > this.combo ? bests.bestCombo : this.combo;
-        setBestNumbers(bests);
+
+        if (this.runConfig.difficulty !== Difficulty.CUSTOM) {
+            setBestNumbers(bests);
+        }
 
     }
 
@@ -832,7 +831,7 @@ export class Run extends EventEmitter implements IRun {
             criticalMultiplier = Math.pow(criticalMultiplier, match.length);
         }
 
-        if (this.player?.passive?.name === 'Midas Touched') {
+        if (this.player?.passive?.name === 'Midas Touched The Walls') {
             let borderPieces: boolean = false
             match.forEach((piece: Piece) => {
                 borderPieces = (
@@ -861,7 +860,9 @@ export class Run extends EventEmitter implements IRun {
 
         let bests: IBestNumbers = getBestNumbers();
         bests.bestScore = bests.bestScore > this.score ? bests.bestScore : this.score;
-        setBestNumbers(bests);
+        if (this.runConfig.difficulty !== Difficulty.CUSTOM) {
+            setBestNumbers(bests);
+        }
 
         if (match?.length) {
             let cell1: Cell = this.map.grid.getCellbyPosition(match[0].gridPosition);
@@ -884,7 +885,10 @@ export class Run extends EventEmitter implements IRun {
 
         let bests: IBestNumbers = getBestNumbers();
         bests.bestDamage = bests.bestDamage > this.damage ? bests.bestDamage : this.damage;
-        setBestNumbers(bests);
+
+        if (this.runConfig.difficulty !== Difficulty.CUSTOM) {
+            setBestNumbers(bests);
+        }
     }
 
     damageEnemy(damage: number): void {
@@ -1051,7 +1055,7 @@ export class Run extends EventEmitter implements IRun {
 
     newPercDialog(callback: () => void, withRelic: boolean = false): void {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(
-            withRelic ? this.runConfig.items.itemOptions - 1 : this.runConfig.items.itemOptions,
+            withRelic ? this.runConfig.item.itemOptions - 1 : this.runConfig.item.itemOptions,
             ItemPools.defaultPool(this),
             ['Common', 'Rare'],
             this.player
@@ -1078,7 +1082,7 @@ export class Run extends EventEmitter implements IRun {
 
     newShopDialog(selectCallback: () => void, closeCallback?: (id?: string) => void): void {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(
-            this.runConfig.items.shopOptions,
+            this.runConfig.item.shopOptions,
             ItemPools.shopPool(this),
             ['Rare', 'Epic'],
             this.player,
@@ -1105,7 +1109,7 @@ export class Run extends EventEmitter implements IRun {
 
     newInitialItemDialog(): void {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(
-            this.runConfig.items.itemOptions,
+            this.runConfig.item.itemOptions,
             ItemPools.defaultPool(this).filter((item: Item) => {
                 return item.name !== 'Instant Health';
             }),
@@ -1132,13 +1136,13 @@ export class Run extends EventEmitter implements IRun {
         let dialogController = DialogController.getInstance();
         let itemList: Item[] = ItemPools.passivePool();
 
-        let options: ItemDialogOption[] = itemList.map((item: Item) => {
+        let options: ItemDialogOption[] = itemList.map((passive: Item) => {
             return new ItemDialogOption(
                 () => {
-                    dialogController.emit('PassiveChosen', item);
+                    dialogController.emit('PassiveChosen', passive);
                 },
-                Item.rarityColors[item.rarity].color,
-                item
+                Item.rarityColors[passive.rarity].color,
+                passive
             );
         });
 
@@ -1153,27 +1157,27 @@ export class Run extends EventEmitter implements IRun {
     }
 
 
-    static customRunDialog(item: Item): Dialog {
+    static customRunDialog(passive: Item): Dialog {
         let dialogController = DialogController.getInstance();
         const options: DefaultDialogOption[] = [
             new DefaultDialogOption(
                 () => {
                     setRunConfig([]);
-                    dialogController.emit('CustomRunReset', item)
+                    dialogController.emit('CustomRunReset', passive)
                 },
                 Color.DISABLED,
                 'Reset'
             ),
             new DefaultDialogOption(
                 () => {
-                    dialogController.emit('PassiveChosen', item)
+                    dialogController.emit('PassiveChosen', passive)
                 },
                 Color.DISABLED,
                 'Close'
             ),
             new DefaultDialogOption(
                 (runConfig: RunConfig) => {
-                    dialogController.emit('CustomRunConfigured', runConfig, item)
+                    dialogController.emit('CustomRunConfigured', runConfig, passive)
                 },
                 Color.GREEN,
                 'Start'
@@ -1190,13 +1194,13 @@ export class Run extends EventEmitter implements IRun {
     }
 
 
-    static newGameDialog(status?: string, score?: number, color?: Color, item?: Item): Dialog {
+    static newGameDialog(status?: string, score?: number, color?: Color, passive?: Item): Dialog {
         let dialogController = DialogController.getInstance();
 
         let options: DialogOption[] = [
             new DefaultDialogOption(
                 () => {
-                    dialogController.emit('CustomDifficulty', item);
+                    dialogController.emit('CustomDifficulty', passive);
                 },
                 Color.CYAN,
                 'Custom',
@@ -1206,7 +1210,7 @@ export class Run extends EventEmitter implements IRun {
             ),
             new DefaultDialogOption(
                 () => {
-                    dialogController.emit('DifficultyChosen', RunConfig.easy(item))
+                    dialogController.emit('DifficultyChosen', RunConfig.easy(passive))
                 },
                 Color.GREEN,
                 'Easy',
@@ -1216,7 +1220,7 @@ export class Run extends EventEmitter implements IRun {
             ),
             new DefaultDialogOption(
                 () => {
-                    dialogController.emit('DifficultyChosen', RunConfig.medium(item))
+                    dialogController.emit('DifficultyChosen', RunConfig.medium(passive))
                 },
                 Color.YELLOW,
                 'Normal',
@@ -1226,7 +1230,7 @@ export class Run extends EventEmitter implements IRun {
             ),
             new DefaultDialogOption(
                 () => {
-                    dialogController.emit('DifficultyChosen', RunConfig.hard(item))
+                    dialogController.emit('DifficultyChosen', RunConfig.hard(passive))
                 },
                 Color.RED,
                 'Hard',
@@ -1236,7 +1240,7 @@ export class Run extends EventEmitter implements IRun {
             ),
             new DefaultDialogOption(
                 () => {
-                    dialogController.emit('DifficultyChosen', RunConfig.master(item))
+                    dialogController.emit('DifficultyChosen', RunConfig.master(passive))
                 },
                 Color.PURPLE,
                 'Master',
@@ -1251,7 +1255,7 @@ export class Run extends EventEmitter implements IRun {
                 dialogController.emit('SelectPassive')
             },
             Color.GRAY_3,
-            item
+            passive
         ));
 
         let subtext: string = !isNaN(score) ? `With a score of ${formatNumber(score)}. Go again?` : 'Select difficulty'

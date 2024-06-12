@@ -70,7 +70,7 @@ export class ProgressBarController extends EventEmitter {
     static floorBar(run: Run): ProgressBar {
         return new ProgressBar(
             run.map.floors.length,
-            run.map.floor.number ?? run.map.floorCount,
+            run.map.floor.number ?? run.runConfig.map.floors,
             'Floor',
             Color.YELLOW,
             true,
@@ -82,7 +82,7 @@ export class ProgressBarController extends EventEmitter {
     static stageBar(run: Run): ProgressBar {
         return new ProgressBar(
             run.map.floor.stages.length,
-            run.map.stage.number ?? run.map.stageCount,
+            run.map.stage.number ?? run.runConfig.map.stages,
             'Stage',
             Color.BLUE,
             true,

@@ -46,33 +46,17 @@ export interface IProgressBar extends IAnimatable {
     limits: ILimits;
 }
 
-export interface IEnemyConfig {
-    enemyHealthAttackScale?: number;
-    miniBossHealthAttackScale?: number;
-    bossHealthAttackScale?: number;
-    enemyDropChance?: number;
-    miniBossDropChance?: number;
-    enemyGoldScale?: number;
-}
-
-export interface IStageConfig {
-    stageOptions?: number;
-    stageOptionsIncreaseByFloor?: number;
-    miniBossStageChance?: number;
-    itemStageChance?: number;
-    shopStageChance?: number;
-    miniBossCountRatio?: number;
-}
-
 export interface IItemConfig {
     itemOptions?: number;
     shopOptions?: number;
-    relicPowerMultiplier?: number;
+    costMultiplier?: number;
     relicDropChance?: number;
+    relicPowerMultiplier?: number;
+    startWithRelic?: number;
+    rerolls?: number;
 }
 
 export interface IPlayerConfig {
-    gold?: number;
     attack?: number;
     defense?: number;
     maxHealth?: number;
@@ -81,39 +65,93 @@ export interface IPlayerConfig {
     critical?: number;
     criticalChance?: number;
     criticalMultiplier?: number;
-    startWithRelic?: boolean;
+    gold?: number;
+    reach?: number;
 }
 
-export interface IGeneralConfig {
-    shapeCount?: number;
+export interface IEnemyConfig {
+    enemyHealthAttackScale?: number;
+    enemyDropChance?: number;
+    miniBossHealthAttackScale?: number;
+    miniBossDropChance?: number;
+    bossHealthAttackScale?: number;
+    enemyGoldScale?: number;
 }
 
-export interface IRunConfigBase {
-    enemies?: number;
-    stages?: number;
+export interface IMapConfig {
     floors?: number;
-    gridX?: number;
-    gridY?: number
-    costMultiplier?: number;
-    item?: IItem;
+    stages?: number;
+    enemies?: number;
+    miniBossToEnemyRatio?: number;
+    miniBossStageChance?: number;
+    itemStageChance?: number;
+    shopStageChance?: number;
+    stageOptions?: number;
+    stageOptionsIncreaseByFloor?: number;
+}
+
+export interface IGridConfig {
+    colorCount?: number;
+    gridWidth?: number;
+    gridHeight?: number;
+}
+
+export interface IRunConfig {
     difficulty?: Difficulty
-}
-
-export interface IRunConfig extends IRunConfigBase {
+    passive?: IItem
+    grid: IGridConfig
+    map: IMapConfig
     enemy: IEnemyConfig
-    general: IGeneralConfig
-    items: IItemConfig
-    player: IPlayerConfig;
-    stage: IStageConfig
+    player: IPlayerConfig
+    item: IItemConfig
 }
 
+export interface IFlatRunConfig {
+    attack?: number;
+    bossHealthAttackScale?: number;
+    colorCount?: number;
+    costMultiplier?: number;
+    critical?: number;
+    criticalChance?: number;
+    criticalMultiplier?: number;
+    defense?: number;
+    enemies?: number;
+    enemyDropChance?: number;
+    enemyGoldScale?: number;
+    enemyHealthAttackScale?: number;
+    floors?: number;
+    gold?: number;
+    gridWidth?: number;
+    gridHeight?: number;
+    itemOptions?: number;
+    itemStageChance?: number;
+    maxHealth?: number;
+    maxMoves?: number;
+    miniBossDropChance?: number;
+    miniBossHealthAttackScale?: number;
+    miniBossStageChance?: number;
+    miniBossToEnemyRatio?: number;
+    multiplier?: number;
+    relicDropChance?: number;
+    relicPowerMultiplier?: number;
+    shopOptions?: number;
+    shopStageChance?: number;
+    stageOptions?: number;
+    stageOptionsIncreaseByFloor?: number;
+    stages?: number;
+    startWithRelic?: number;
+}
 export interface IRunConfigDialogField {
     property: string,
     currentValue: number,
-    minValue: number,
-    maxValue: number,
+    minValue?: number,
+    maxValue?: number,
+    order?: number,
+    split?: string,
     limits?: ILimits;
+    color?: IColor;
     rounding?: (value: number) => number
+    formatNumber?: (value: number) => string
 }
 
 export interface IBestNumbers {

@@ -139,7 +139,7 @@ const sketch = (p5Instance: p5) => {
             dialogController.add(Run.customRunDialog(item));
         });
 
-        eventEmitter.on('DialogController:CustomRunReset', (config: RunConfig, item: Item) => {
+        eventEmitter.on('DialogController:CustomRunReset', (item: Item) => {
             dialogController.add(Run.customRunDialog(item));
         });
 
@@ -148,7 +148,7 @@ const sketch = (p5Instance: p5) => {
         });
 
         eventEmitter.on('DialogController:CustomRunConfigured', (config: RunConfig, item: Item) => {
-            run = new Run(config.withItem(item), sounds);
+            run = new Run(config.withPassive(item), sounds);
         });
 
         eventEmitter.on('DialogController:DifficultyChosen', (config: RunConfig) => {

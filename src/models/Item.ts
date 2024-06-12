@@ -136,7 +136,7 @@ export class ItemPools {
             ),
             new Item(
                 'Passive',
-                'Midas Touched',
+                'Midas Touched The Walls',
                 '+1 Gold for matches with pieces on the extremities, +2 on crit',
                 () => { }
             ),
@@ -148,7 +148,7 @@ export class ItemPools {
             ),
             new Item(
                 'Passive',
-                'No barriers',
+                'No Barriers',
                 'Grid is 1x1 larger, you also have +1 reach',
                 () => { }
             ),
@@ -188,7 +188,7 @@ export class ItemPools {
                 run.player.heal(run.player.maxHealth / 2);
             }).bind(run),
             Frequency.PASSIVE,
-            Math.floor(20 * run.runConfig.costMultiplier * (1 + (run.player.hasItem('50% Instant health') * 0.25)))
+            Math.floor(20 * run.runConfig.item.costMultiplier / 100 * (1 + (run.player.hasItem('50% Instant health') * 0.25)))
         );
     }
 
@@ -219,7 +219,7 @@ export class ItemPools {
                 'Rare',
                 'Horizontal Expansion',
                 '+1 column',
-                (() => run.map.gridX++).bind(run),
+                (() => run.map.gridWidth++).bind(run),
                 Frequency.PASSIVE,
                 75,
             ),
@@ -227,7 +227,7 @@ export class ItemPools {
                 'Rare',
                 'Vertical Expansion',
                 '+1 row',
-                (() => run.map.gridY++).bind(run),
+                (() => run.map.gridHeight++).bind(run),
                 Frequency.PASSIVE,
                 75,
             ),
@@ -279,7 +279,7 @@ export class ItemPools {
                 'Epic',
                 'More Options',
                 '+1 item option',
-                (() => run.runConfig.items.itemOptions++).bind(run),
+                (() => run.runConfig.item.itemOptions++).bind(run),
                 Frequency.PASSIVE,
                 100,
             ),
@@ -354,11 +354,11 @@ export class ItemPools {
 
         shopPool.forEach((item: Item) => {
             if (!item.name.startsWith('Ban') && !item.name.endsWith('AOE')) {
-                item.price = item.price * run.runConfig.costMultiplier * (1 + (run.player.hasItem(item.name) * 0.25));
+                item.price = item.price * (run.runConfig.item.costMultiplier / 100) * (1 + (run.player.hasItem(item.name) * 0.25));
             } else if (item.name.endsWith('AOE')) {
-                item.price = item.price * run.runConfig.costMultiplier * (1 + (run.player.hasItem(item.name) * 0.5));
+                item.price = item.price * (run.runConfig.item.costMultiplier / 100) * (1 + (run.player.hasItem(item.name) * 0.5));
             } else {
-                item.price = item.price * run.runConfig.costMultiplier * (1 + (run.player.items.filter((playerItem: Item) => playerItem.name.startsWith('Ban')).length * 0.4));
+                item.price = item.price * (run.runConfig.item.costMultiplier / 100) * (1 + (run.player.items.filter((playerItem: Item) => playerItem.name.startsWith('Ban')).length * 0.4));
             }
             item.price = Math.floor(item.price);
         });
@@ -575,7 +575,7 @@ export class ItemPools {
                 'Epic',
                 '10% Sale',
                 'Shop prices discounted',
-                (() => run.runConfig.costMultiplier *= 0.9).bind(run)
+                (() => run.runConfig.item.costMultiplier *= 0.9).bind(run)
             ),
             new Item(
                 'Epic',
