@@ -2,8 +2,8 @@ import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
 import { AnimationStatus, DialogType, Difficulty, Frequency, IDialog, IDialogOption, IFlatRunConfig, IRunConfigDialogField } from "../interfaces";
 import { drawClickableBox, drawItem, endShadow, fillFlat, fillStroke, icon, startShadow } from "../utils/Draw";
-import { generateId, insertLineBreaks, writeCamel } from "../utils/General";
-import { getRunConfig, setRunConfig } from "../utils/LocalStorage";
+import { formatNumber, generateId, insertLineBreaks, writeCamel } from "../utils/General";
+import { getRunConfig, getUpgrades, setRunConfig } from "../utils/LocalStorage";
 import { Color } from "./Color";
 import { Icon } from "./Icon";
 import { Item } from "./Item";
@@ -13,6 +13,7 @@ import { Relic } from "./Relic";
 import { Run } from "./Run";
 import { RunConfig } from "./RunConfig";
 import { BossStage, CommonEnemyStage, ItemStage, MiniBossStage, ShopStage, Stage } from "./Stage";
+import { Upgrade, UpgradeOption } from "./Upgrade";
 
 export class Dialog implements IDialog {
     id: string;
@@ -31,6 +32,7 @@ export class Dialog implements IDialog {
     relativeOpacitySpeed?: number = 0;
 
     customRunOptions: RunConfigDialogField[] = [];
+    upgrade: Upgrade;
 
     constructor(title: string, message: string, options: DialogOption[], type: DialogType, closeCallback?: (id?: string) => void, textColor?: Color, run?: Run) {
         this.title = title;
@@ -43,11 +45,16 @@ export class Dialog implements IDialog {
         if (type === DialogType.CUSTOM_RUN) {
             this.customRunOptions = getRunConfig() as RunConfigDialogField[];
         }
+
+        if (type === DialogType.UPGRADES || type === DialogType.INITIAL) {
+            this.upgrade = new Upgrade(getUpgrades());
+        }
+
         this.setupAdditionalOptions(closeCallback, run);
     }
 
     get hasAdditionalButton(): boolean {
-        return this.type === DialogType.SHOP || this.type === DialogType.SKIPPABLE_ITEM || this.type === DialogType.INITIAL;
+        return this.type === DialogType.SHOP || this.type === DialogType.SKIPPABLE_ITEM || this.type === DialogType.INITIAL || this.type === DialogType.UPGRADES;
     }
 
     get optionsAsRunConfig(): RunConfig {
@@ -103,6 +110,7 @@ export class Dialog implements IDialog {
 
     draw(run?: Run): void {
         const canvas: Canvas = Canvas.getInstance();
+
         if (this.animationStatus === AnimationStatus.NOT_STARTED) {
             this.calculateSpeed();
         }
@@ -114,22 +122,26 @@ export class Dialog implements IDialog {
 
         let optionsLength: number = this.hasAdditionalButton ? this.options.length - 1 : this.options.length;
 
+        if (this.type === DialogType.INITIAL) {
+            optionsLength--;
+        }
+
         optionsLength = optionsLength < 3 ? 3 : optionsLength;
 
         dimension.x = (optionsLength > lengthOffSet ? lengthOffSet : optionsLength) * canvas.itemSideSize + (((optionsLength > lengthOffSet ? lengthOffSet : optionsLength) + 1) * canvas.margin);
-        margin.x = (canvas.playfield.x / 2) - (dimension.x / 2);
+        margin.x = (canvas.windowSize.x / 2) - (dimension.x / 2);
 
         dimension.y = (Math.ceil(optionsLength / lengthOffSet) * canvas.itemSideSize) + ((Math.ceil(optionsLength / lengthOffSet) + textMarginCount) * canvas.margin) + (this.hasAdditionalButton ? canvas.margin + (canvas.itemSideSize / 4) : 0);
-        margin.y = (canvas.playfield.y / 2) - (dimension.y / 2);
+        margin.y = (canvas.windowSize.y / 2) - (dimension.y / 2);
 
         if (this.type === DialogType.INITIAL) {
             dimension.y += canvas.itemSideSize / 4
-            margin.y = (canvas.playfield.y / 2) - (dimension.y / 2);
+            margin.y = (canvas.windowSize.y / 2) - (dimension.y / 2);
         }
 
-        if (this.type === DialogType.CUSTOM_RUN) {
-            dimension.x = canvas.playfield.x - canvas.margin * 2;
-            dimension.y = canvas.playfield.y - canvas.margin * 2;
+        if (this.type === DialogType.CUSTOM_RUN || this.type === DialogType.UPGRADES) {
+            dimension.x = canvas.windowSize.x - canvas.margin * 4;
+            dimension.y = canvas.windowSize.y - canvas.margin * 4;
             margin.x = canvas.margin * 2;
             margin.y = canvas.margin * 2;
         }
@@ -139,6 +151,10 @@ export class Dialog implements IDialog {
         this.drawOptions(lengthOffSet, dimension, margin, run);
         if (this.type === DialogType.CUSTOM_RUN) {
             this.drawCustomForm();
+        }
+
+        if (this.type === DialogType.UPGRADES) {
+            this.drawUpgradesForm();
         }
     }
 
@@ -170,7 +186,7 @@ export class Dialog implements IDialog {
         p5.textSize(canvas.uiData.fontTitle)
         p5.text(
             this.title,
-            canvas.playfield.x / 2,
+            canvas.windowSize.x / 2,
             textOffset - canvas.margin
         );
 
@@ -179,7 +195,7 @@ export class Dialog implements IDialog {
         p5.strokeWeight(canvas.stroke);
         p5.text(
             this.message,
-            canvas.playfield.x / 2,
+            canvas.windowSize.x / 2,
             textOffset + canvas.margin
         );
     }
@@ -239,29 +255,34 @@ export class Dialog implements IDialog {
             let cumulativeMarginX: number = margin.x + (index % lengthOffSet * (optionWidth + canvas.margin)) + canvas.margin;
             let cumulativeMarginY: number = margin.y + (Math.floor(index / lengthOffSet) * (canvas.itemSideSize + canvas.margin)) + (canvas.margin * 8);
 
-            cumulativeMarginX = this.options.length === (this.hasAdditionalButton ? 2 : 1) ? canvas.playfield.x / 2 - (canvas.itemSideSize / 2) : cumulativeMarginX;
+            cumulativeMarginX = this.options.length === (this.hasAdditionalButton ? 2 : 1) ? canvas.windowSize.x / 2 - (canvas.itemSideSize / 2) : cumulativeMarginX;
 
-            if ((this.hasAdditionalButton && index === this.options.length - 1)) {
-                optionWidth = (canvas.itemSideSize * 2) + canvas.margin;
-                optionHeight = canvas.itemSideSize / 4;
+            if (this.hasAdditionalButton) {
+                if (index === this.options.length - 1) {
+                    optionWidth = (canvas.itemSideSize * 2) + canvas.margin;
+                    optionHeight = canvas.itemSideSize / 4;
 
-                cumulativeMarginX = canvas.playfield.x / 2 - (optionWidth / 2);
-                cumulativeMarginY = margin.y + dimension.y - canvas.margin - optionHeight;
+                    cumulativeMarginX = canvas.windowSize.x / 2 - (optionWidth / 2);
+                    cumulativeMarginY = margin.y + dimension.y - canvas.margin - optionHeight;
+                }
 
-                if (this.type === DialogType.INITIAL) {
+                if (this.type === DialogType.INITIAL && index >= this.options.length - 2) {
+                    const innerIndex: number = (this.options.length * 2) - 3 - index * 2;
+                    const offset: number = innerIndex * ((canvas.itemSideSize / 2) + (canvas.margin / 2));
+
                     optionWidth = canvas.itemSideSize
                     optionHeight = canvas.itemSideSize / 2;
 
-                    cumulativeMarginX = canvas.playfield.x / 2 - optionWidth / 2;
+                    cumulativeMarginX = canvas.windowSize.x / 2 - (optionWidth / 2) - offset;
                     cumulativeMarginY = margin.y + dimension.y - canvas.margin - optionHeight;
                 }
             }
 
             if (this.type === DialogType.CUSTOM_RUN) {
-                optionWidth = (canvas.itemSideSize * 1.5) + canvas.margin;
+                optionWidth = canvas.itemSideSize * 1.5;
                 optionHeight = canvas.itemSideSize / 4;
 
-                cumulativeMarginX = canvas.playfield.x / 2 - (optionWidth * 1.5 - canvas.margin) + (optionWidth + canvas.margin) * index - 1
+                cumulativeMarginX = canvas.windowSize.x / 2 - (optionWidth + canvas.margin) * (index - 1) - optionWidth / 2
                 cumulativeMarginY = margin.y + dimension.y - canvas.margin - optionHeight;
             }
 
@@ -283,7 +304,6 @@ export class Dialog implements IDialog {
                     optionHeight,
                     canvas.radius * 2
                 );
-
                 endShadow(drawingContext);
 
             }
@@ -322,7 +342,6 @@ export class Dialog implements IDialog {
                     icon(Icon.PLAY, Position.of(cumulativeMarginX + canvas.margin, textMargin + mainOffset));
                 }
 
-
                 if (option.text === 'Reset') {
                     icon(Icon.RESET, Position.of(cumulativeMarginX + canvas.margin, textMargin + mainOffset));
                 }
@@ -348,6 +367,18 @@ export class Dialog implements IDialog {
                         textMargin + (canvas.margin * 2)
                     );
                 }
+
+                if (option.text === 'Upgrades') {
+                    fillStroke(Color.WHITE_1, opacity)
+                    p5.textAlign(p5.CENTER, p5.BOTTOM)
+                    p5.textSize(canvas.uiData.fontDetail)
+                    p5.text(
+                        `${this.upgrade.totalPoints - this.upgrade.spentPoints} Points Available`,
+                        cumulativeMarginX + (optionWidth / 2),
+                        cumulativeMarginY + optionHeight - canvas.padding
+                    );
+                }
+
             }
 
             if (option instanceof NavigationDialogOption) {
@@ -524,7 +555,6 @@ export class Dialog implements IDialog {
         const p5: P5 = canvas.p5;
         const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
 
-
         let marginX: number = canvas.margin * 3;
         let marginY: number = canvas.margin * 10;
 
@@ -633,6 +663,132 @@ export class Dialog implements IDialog {
         })
 
     }
+
+    drawUpgradesForm(): void {
+        const canvas: Canvas = Canvas.getInstance();
+        const p5: P5 = canvas.p5;
+        const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
+
+        let marginY: number = canvas.margin * 10;
+
+        const opacity: number = this.initialOpacity + this.relativeOpacity;
+        const buttonSideSize: number = canvas.itemSideSize / 3;
+
+        fillFlat(Color.GRAY_4.alpha(opacity))
+        p5.rect(
+            canvas.windowSize.x / 4,
+            marginY,
+            canvas.windowSize.x / 2,
+            buttonSideSize,
+            canvas.radius * 2
+        );
+        endShadow(drawingContext);
+
+        fillStroke(Color.WHITE, opacity);
+        p5.textAlign(p5.LEFT, p5.CENTER);
+        p5.text(
+            `Available: ${this.upgrade.totalPoints - this.upgrade.spentPoints}`,
+            canvas.windowSize.x / 4 + canvas.margin,
+            marginY + buttonSideSize / 2
+        );
+
+        fillStroke(Color.WHITE, opacity);
+        p5.textAlign(p5.RIGHT, p5.CENTER);
+        p5.text(
+            `Next at: ${formatNumber(this.upgrade.xp)}/${formatNumber(this.upgrade.nextPoint)} XP`,
+            (canvas.windowSize.x / 4 * 3) - canvas.margin,
+            marginY + buttonSideSize / 2
+        );
+
+        marginY = canvas.margin * 15
+
+        this.upgrade.options.forEach((option: UpgradeOption, index: number) => {
+            let marginXLeft: number = canvas.windowSize.x / 4;
+            let marginXRight: number = canvas.windowSize.x / 4 * 3;
+            const offsetY = (buttonSideSize * 1.25 + canvas.margin) * index;
+
+            option.limitsSub = Position.of(marginXLeft, marginY + offsetY).toLimits(Position.of(buttonSideSize, buttonSideSize))
+
+            const hightlightMinus: number = (option.limitsSub.contains(canvas.mousePosition) ? this.initialOpacity : 200) + this.relativeOpacity
+
+            startShadow(drawingContext);
+            p5.textAlign(p5.CENTER, p5.CENTER)
+            fillFlat(Color.RED.alpha(hightlightMinus))
+            p5.rect(
+                marginXLeft,
+                marginY + offsetY,
+                buttonSideSize,
+                buttonSideSize,
+                canvas.radius * 2
+            );
+            endShadow(drawingContext);
+
+
+            fillStroke(Color.WHITE, opacity);
+            icon(Icon.MINUS, Position.of(marginXLeft + buttonSideSize / 2, marginY + offsetY + buttonSideSize / 2))
+
+            const dotSize = buttonSideSize / 2
+            const gapSize = (canvas.windowSize.x - ((marginXLeft + buttonSideSize) * 2) - (option.maxPoints * dotSize)) / (option.maxPoints + 1)
+            const dotMarginX = marginXLeft + buttonSideSize + gapSize + dotSize / 2;
+
+            startShadow(drawingContext);
+            for (let i: number = 0; i < option.maxPoints; i++) {
+                let offsetX = (dotSize + gapSize) * i;
+
+                const color: Color = option.points > i ? Color.WHITE : Color.GRAY_3;
+
+                fillFlat(color.alpha(opacity))
+                p5.ellipse(
+                    dotMarginX + offsetX,
+                    marginY + offsetY + dotSize,
+                    dotSize
+                );
+            }
+
+            option.limitsAdd = Position.of(marginXRight - buttonSideSize, marginY + offsetY).toLimits(Position.of(buttonSideSize, buttonSideSize))
+
+            const hightlightPlus: number = (option.limitsAdd.contains(canvas.mousePosition) ? this.initialOpacity : 200) + this.relativeOpacity
+
+            fillFlat(Color.GREEN.alpha(hightlightPlus))
+            p5.rect(
+                marginXRight - buttonSideSize,
+                marginY + offsetY,
+                buttonSideSize,
+                buttonSideSize,
+                canvas.radius * 2
+            );
+            endShadow(drawingContext);
+
+
+            fillStroke(Color.WHITE, opacity);
+            icon(Icon.PLUS, Position.of(marginXRight - buttonSideSize + buttonSideSize / 2, marginY + offsetY + buttonSideSize / 2));
+
+            let property = writeCamel(option.property);
+
+            if (property.startsWith('Relic')) {
+                property = 'Relic Power'
+            }
+
+            fillStroke(Color.WHITE, opacity);
+            p5.textSize(canvas.uiData.fontText);
+            p5.textAlign(p5.RIGHT, p5.CENTER);
+            p5.text(
+                property,
+                marginXLeft - canvas.margin,
+                marginY + offsetY + buttonSideSize / 2
+            );
+
+            p5.textAlign(p5.LEFT, p5.CENTER);
+            p5.text(
+                option.formatNumber(option.points),
+                marginXRight + canvas.margin,
+                marginY + offsetY + buttonSideSize / 2
+            );
+
+        });
+
+    }
+
 
     calculateSpeed(): void {
         this.animationStatus = AnimationStatus.IN_PROGRESS;

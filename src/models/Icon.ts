@@ -20,5 +20,7 @@ export enum Icon {
     STORE = 'f54e',
     SWAP = 'f362',
     TROPHY = 'f091',
-    RESET = 'f2f1'
+    RESET = 'f2f1',
+    PLUS = '2b',
+    MINUS = 'f068'
 }

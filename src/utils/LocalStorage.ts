@@ -1,4 +1,4 @@
-import { IBestNumbers, IRunConfigDialogField, IUnlocks } from "../interfaces";
+import { IBestNumbers, IRunConfigDialogField, IUnlocks, IUpgrade } from "../interfaces";
 import { Color } from "../models/Color";
 import { RunConfig } from "../models/RunConfig";
 import { flatten } from "./General";
@@ -27,6 +27,73 @@ export function getUnlocks(): IUnlocks[] {
 
 export function setUnlocks(unlocks: IUnlocks[]): void {
     return localStorage.setItem('unlocks', JSON.stringify(unlocks));
+}
+
+export function getUpgrades(): IUpgrade {
+    const upgrades: IUpgrade = JSON.parse(localStorage.getItem('upgrades'))
+    return upgrades ? upgrades : getDefaultUpgradeObject();
+}
+
+export function getDefaultUpgradeObject(): IUpgrade {
+    return {
+        totalPoints: 30,
+        xp: 0,
+        options: [
+            {
+                property: 'attack',
+                points: 0,
+                maxPoints: 10,
+                formatNumber: (x) => '+' + (x * 10),
+                formatValue: (x) => x * 10
+            },
+            {
+                property: 'defense',
+                points: 0,
+                maxPoints: 10,
+                formatNumber: (x) => '+' + x,
+                formatValue: (x) => x
+            },
+            {
+                property: 'maxHealth',
+                points: 0,
+                maxPoints: 10,
+                formatNumber: (x) => '+' + (x * 10),
+                formatValue: (x) => x * 10
+            },
+            {
+                property: 'maxMoves',
+                points: 0,
+                maxPoints: 10,
+                formatNumber: (x) => '+' + x,
+                formatValue: (x) => x
+            },
+            {
+                property: 'critical',
+                points: 0,
+                maxPoints: 10,
+                formatNumber: (x) => '+' + x,
+                formatValue: (x) => x
+            },
+            {
+                property: 'gold',
+                points: 0,
+                maxPoints: 10,
+                formatNumber: (x) => '+' + (x * 10),
+                formatValue: (x) => x * 10
+            },
+            {
+                property: 'relicPowerMultiplier',
+                points: 0,
+                maxPoints: 10,
+                formatNumber: (x) => '+' + (x * 10) + '%',
+                formatValue: (x) => x * 10
+            },
+        ]
+    }
+}
+
+export function setUpgrades(upgrades: IUpgrade): void {
+    return localStorage.setItem('upgrades', JSON.stringify(upgrades));
 }
 
 export function getRunConfig(): IRunConfigDialogField[] {

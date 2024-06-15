@@ -1,7 +1,10 @@
+import * as p5 from "p5";
 import { DialogType } from "../interfaces";
 import { Dialog, DialogOption, ItemDialogOption, RunConfigDialogField } from "../models/Dialog";
 import { Position } from "../models/Position";
 import { Run } from "../models/Run";
+import { UpgradeOption } from "../models/Upgrade";
+import { setUpgrades } from "../utils/LocalStorage";
 import { Canvas } from "./Canvas";
 import { EventEmitter } from "./EventEmitter";
 
@@ -28,7 +31,7 @@ export class DialogController extends EventEmitter {
     }
 
     configureListeners(): void {
-        this.on('Main:MouseClicked:Click', (click: Position, run: Run) => {
+        this.on('Main:MouseClicked:Click', (click: Position, run: Run, sounds: { [key: string]: p5.SoundFile }) => {
             setTimeout(() => {
 
                 if (!this.currentDialog) {
@@ -38,7 +41,27 @@ export class DialogController extends EventEmitter {
 
                 let selected: boolean = false;
 
-                this.currentDialog.options.forEach((option: DialogOption, index: number) => {
+                if (this.currentDialog.type === DialogType.UPGRADES) {
+                    this.currentDialog.upgrade.options.forEach((option: UpgradeOption) => {
+                        if (option.limitsSub.contains(click)) {
+                            if (option.points > 0) {
+                                option.points--;
+                                sounds['dot'].play();
+                            }
+                        }
+
+                        if (option.limitsAdd?.contains(click)) {
+                            if (this.currentDialog.upgrade.canAfford(option)) {
+                                option.points++;
+                                sounds['dot'].play();
+                            }
+                        }
+                    });
+
+                    setUpgrades(this.currentDialog.upgrade);
+                }
+
+                this.currentDialog.options.forEach((option: DialogOption) => {
                     if (option?.limits?.contains(click)) {
 
 

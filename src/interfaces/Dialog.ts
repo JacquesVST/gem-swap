@@ -19,23 +19,11 @@ export interface IDialogOption {
 }
 
 export enum DialogType {
+    CUSTOM_RUN,
     INITIAL,
     ITEM,
     NAVIGATION,
     SHOP,
     SKIPPABLE_ITEM,
-    CUSTOM_RUN
-}
-
-export interface IButton {
-    id: string;
-    size: IPosition;
-    color: IColor;
-    limits: ILimits;
-    position: IPosition;
-    disabled: boolean;
-    
-    content: (...params: any) => void;
-    action: (...params: any) => void;
-    draw: (run?: IRun) => void;
+    UPGRADES,
 }

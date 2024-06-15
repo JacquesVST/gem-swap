@@ -9,6 +9,9 @@ export function generateId(): string {
 }
 
 export function formatNumber(number: number): string {
+    if (isNaN(number) || number === null) {
+        return '0'
+    }
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 

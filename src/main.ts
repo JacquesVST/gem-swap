@@ -73,7 +73,7 @@ const sketch = (p5Instance: p5) => {
 
     // mouse events
     p5Instance.mouseClicked = () => {
-        eventEmitter.emit('MouseClicked:Click', Position.of(p5Instance.mouseX, p5Instance.mouseY), run)
+        eventEmitter.emit('MouseClicked:Click', Position.of(p5Instance.mouseX, p5Instance.mouseY), run, sounds)
     }
 
     p5Instance.mousePressed = () => {
@@ -133,6 +133,10 @@ const sketch = (p5Instance: p5) => {
 
         eventEmitter.on('DialogController:SelectPassive', () => {
             dialogController.add(Run.passiveSelectorDialog());
+        });
+
+        eventEmitter.on('DialogController:UpgradesDialog', (item: Item) => {
+            dialogController.add(Run.upgradesDialog(item));
         });
 
         eventEmitter.on('DialogController:CustomDifficulty', (item: Item) => {

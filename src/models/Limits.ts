@@ -14,4 +14,8 @@ export class Limits implements ILimits {
         return position.x > this.min.x && position.x < this.max.x && position.y > this.min.y && position.y < this.max.y;
     }
 
+    static from(limits: ILimits): Limits {
+        return new Limits(Position.from(limits?.min), Position.from(limits?.max));
+    }
+
 }

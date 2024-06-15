@@ -63,7 +63,6 @@ export class ProgressBar extends EventEmitter implements IProgressBar {
             commonMargin = canvas.windowSize.y - canvas.margin - canvas.uiData.bottomUiSize + (canvas.uiData.uiBarSize * bottomIndex) + (canvas.margin * bottomIndex) + canvas.margin / 2;
         }
 
-
         const drawingContext: CanvasRenderingContext2D = p5.drawingContext as CanvasRenderingContext2D;
 
         startShadow(drawingContext);

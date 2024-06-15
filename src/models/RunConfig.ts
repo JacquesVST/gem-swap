@@ -109,6 +109,35 @@ export class RunConfig implements IRunConfig {
         return this;
     }
 
+    withAdditiveFlatConfig(newConfig: IFlatRunConfig): RunConfig {
+        if (newConfig) {
+            Object.keys(newConfig).forEach((key: string) => {
+                if (newConfig[key] && !isNaN(newConfig[key])) {
+                    if (key in this.grid) {
+                        this.grid[key] += newConfig[key];
+                    }
+
+                    if (key in this.map) {
+                        this.map[key] += newConfig[key];
+                    }
+
+                    if (key in this.enemy) {
+                        this.enemy[key] += newConfig[key];
+                    }
+
+                    if (key in this.player) {
+                        this.player[key] += newConfig[key];
+                    }
+
+                    if (key in this.item) {
+                        this.item[key] += newConfig[key];
+                    }
+                }
+            });
+        }
+        return this;
+    }
+
     static easy(passive?: Item): RunConfig {
         return new RunConfig(Difficulty.EASY)
             .withFlatConfig({

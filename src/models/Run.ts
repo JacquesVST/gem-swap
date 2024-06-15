@@ -7,7 +7,7 @@ import { TextController } from "../controllers/TextController";
 import { DialogType, Difficulty, IBestNumbers, IDamageData, IEventParams, IRun, IRunItemData, IStat, IStatRange, IUnlocks, ProgressBarIndexes } from "../interfaces";
 import { endShadow, fillFlat, fillStroke, icon, startShadow } from "../utils/Draw";
 import { formatNumber, writeCamel } from "../utils/General";
-import { getBestNumbers, getUnlocks, setBestNumbers, setRunConfig, setUnlocks } from "../utils/LocalStorage";
+import { getBestNumbers, getUnlocks, getUpgrades, setBestNumbers, setRunConfig, setUnlocks } from "../utils/LocalStorage";
 import { Cell } from "./Cell";
 import { Color } from "./Color";
 import { DefaultDialogOption, Dialog, DialogOption, ItemDialogOption, NavigationDialogOption, PassiveDialogOption, RelicDialogOption } from "./Dialog";
@@ -24,6 +24,7 @@ import { Relic } from "./Relic";
 import { RunConfig } from "./RunConfig";
 import { Shape } from "./Shape";
 import { EnemyStage, ItemStage, MiniBossStage, ShopStage, Stage } from "./Stage";
+import { Upgrade, UpgradeOption } from "./Upgrade";
 
 export class Run extends EventEmitter implements IRun {
     player: Player;
@@ -57,7 +58,13 @@ export class Run extends EventEmitter implements IRun {
     constructor(config: RunConfig, sounds: { [key: string]: P5.SoundFile }) {
         super('Run');
 
-        this.runConfig = config;
+        const overrideConfig = {}
+        new Upgrade(getUpgrades()).options.forEach((option: UpgradeOption) => {
+            overrideConfig[option.property] = option.formatValue(option.points)
+        });
+
+        this.runConfig = config.withAdditiveFlatConfig(overrideConfig);
+
         this.sounds = sounds;
         this.player = Player.defaultPlayerWith(config);
         this.possibleShapes = Shape.defaultShapes(config.grid.colorCount);
@@ -1156,6 +1163,26 @@ export class Run extends EventEmitter implements IRun {
 
     }
 
+    static upgradesDialog(passive: Item): Dialog {
+        let dialogController = DialogController.getInstance();
+        const options: DefaultDialogOption[] = [
+            new DefaultDialogOption(
+                () => {
+                    dialogController.emit('PassiveChosen', passive)
+                },
+                Color.DISABLED,
+                'Close'
+            )
+        ];
+
+        return new Dialog(
+            'Experience leads to power',
+            'Spend XP in exchange for upgrade points',
+            options,
+            DialogType.UPGRADES,
+        );
+    }
+
 
     static customRunDialog(passive: Item): Dialog {
         let dialogController = DialogController.getInstance();
@@ -1190,9 +1217,7 @@ export class Run extends EventEmitter implements IRun {
             options,
             DialogType.CUSTOM_RUN,
         );
-
     }
-
 
     static newGameDialog(status?: string, score?: number, color?: Color, passive?: Item): Dialog {
         let dialogController = DialogController.getInstance();
@@ -1256,6 +1281,12 @@ export class Run extends EventEmitter implements IRun {
             },
             Color.GRAY_3,
             passive
+        ), new DefaultDialogOption(
+            () => {
+                dialogController.emit('UpgradesDialog', passive)
+            },
+            Color.BLUE,
+            'Upgrades'
         ));
 
         let subtext: string = !isNaN(score) ? `With a score of ${formatNumber(score)}. Go again?` : 'Select difficulty'

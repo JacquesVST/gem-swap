@@ -73,6 +73,8 @@ export class Player extends EventEmitter implements IPlayer {
 
     constructor(runConfig: RunConfig) {
         super('Player');
+        this.difficulty = runConfig.difficulty;
+
         this.maxHealth = runConfig.player.maxHealth;
         this.maxMoves = runConfig.player.maxMoves;
         this.attack = runConfig.player.attack;
@@ -287,7 +289,7 @@ export class Player extends EventEmitter implements IPlayer {
     }
 
     get relicPowerMultiplier(): number {
-        return (this.itemData.relicMultiplier / 100) * (1 + (this.xp / 100000));
+        return (this.itemData.relicMultiplier / 100);
     }
 
     changeRelic(relic: Relic): void {

@@ -1,3 +1,4 @@
+import { IPosition } from "../interfaces";
 import { Limits } from "./Limits";
 
 export class Position {
@@ -13,6 +14,10 @@ export class Position {
 
     static of(x: number, y: number): Position {
         return new Position(x, y)
+    }
+
+    static from(position: IPosition): Position {
+        return Position.of(position?.x, position?.y);
     }
 
     get checksum(): string {
