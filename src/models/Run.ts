@@ -454,6 +454,24 @@ export class Run extends EventEmitter implements IRun {
             }
         });
 
+        this.on('Run:Item:UniversalTradeoff', () => {
+            const damageBoosts: number = this.player.items.filter((item: Item) => item.name.endsWith('Color Boost')).length
+            this.player.items = this.player.items.filter((item: Item) => !item.name.endsWith('Color Boost'));
+
+            for (let index: number = 0; index < damageBoosts; index++) {
+                const item: Item = new Item(
+                    'Common',
+                    'Damage Boost',
+                    '+30 base DMG',
+                    () => {
+                        this.player.attack += 30;
+                    }
+                );
+                this.player.items.push(item)
+                item.effect();
+            }
+        });
+
         this.on('DialogController:ItemPurchased', (price: number) => {
             this.player.addGold(-price);
         });
@@ -461,6 +479,7 @@ export class Run extends EventEmitter implements IRun {
         this.on('DialogController:Reroll', (dialog: Dialog) => {
             this.player.itemData.rerolls -= 1;
             DialogController.getInstance().clear();
+            this.itemData.rerolled = true;
             const params: any = this.itemData.lastDialogParams;
 
             if (dialog.type === DialogType.ITEM) {
@@ -992,7 +1011,7 @@ export class Run extends EventEmitter implements IRun {
             {
                 name: 'maxHealth',
                 min: 3,
-                max: 15,
+                max: 30,
             },
             {
                 name: 'attack',
@@ -1012,7 +1031,7 @@ export class Run extends EventEmitter implements IRun {
             {
                 name: 'critical',
                 min: 1,
-                max: 5,
+                max: 3,
             },
             {
                 name: 'criticalMultiplier',

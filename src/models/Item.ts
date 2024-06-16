@@ -174,7 +174,9 @@ export class ItemPools {
             'Free Relic',
             'Gain a random Relic',
             (() => {
-                run.newRandomDropDialog(true, [], run.itemData.lastDialogParams.callback);
+                let callback = run.itemData.rerolled ? run.itemData.lastDialogParams.callback : undefined
+                run.newRandomDropDialog(true, [], callback);
+                run.itemData.rerolled = false;
             }).bind(run)
         );
     }
@@ -460,9 +462,9 @@ export class ItemPools {
             new Item(
                 'Common',
                 'Damage Boost',
-                '+25 base DMG',
+                '+30 base DMG',
                 (() => {
-                    run.player.attack += 25;
+                    run.player.attack += 30;
                 }).bind(run)
             ),
 
@@ -484,6 +486,12 @@ export class ItemPools {
                 }).bind(run),
                 Frequency.EVERY_STAGE,
                 undefined
+            ),
+            new Item(
+                'Rare',
+                'Universal Tradeoff',
+                '50% of your color damage becomes base damage',
+                 (() => run.emit('Item:UniversalTradeoff')).bind(run),
             ),
             new Item(
                 'Rare',
