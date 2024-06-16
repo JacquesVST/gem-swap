@@ -250,6 +250,10 @@ export class Dialog implements IDialog {
                 optionWidth = canvas.itemSideSize * 1.5 + canvas.margin / 2;
             }
 
+            if (option instanceof NavigationDialogOption && !(option.stage instanceof CommonEnemyStage) && option.blind) {
+                option.color = Color.RED;
+            }
+
             // option frame
             let cumulativeMarginX: number = margin.x + (index % lengthOffSet * (optionWidth + canvas.margin)) + canvas.margin;
             let cumulativeMarginY: number = margin.y + (Math.floor(index / lengthOffSet) * (canvas.itemSideSize + canvas.margin)) + (canvas.margin * 8);
@@ -383,60 +387,71 @@ export class Dialog implements IDialog {
             if (option instanceof NavigationDialogOption) {
                 p5.textAlign(p5.CENTER, p5.CENTER)
 
-                let text: string;
-                let subtext: string;
+                if (!(option.stage instanceof CommonEnemyStage) && option.blind) {
+                    fillStroke(Color.WHITE, opacity)
+                    p5.textAlign(p5.CENTER, p5.CENTER)
+                    p5.textSize(canvas.margin * 3)
+                    icon(Icon.QUESTION, Position.of(cumulativeMarginX + (optionWidth / 2), cumulativeMarginY + (optionHeight / 2)));
 
-                if (option.stage instanceof CommonEnemyStage) {
-                    text = 'Common Stage';
-                    subtext = `${option.stage.enemies.length} enemies`;
-                }
+                } else {
+                    let text: string;
+                    let subtext: string;
 
-                if (option.stage instanceof BossStage) {
-                    text = 'Boss Stage';
-                    subtext = `${option.stage.enemies.length - 1} enemies and your final challenge`;
-                }
+                    if (option.stage instanceof CommonEnemyStage) {
+                        text = 'Common Stage';
+                        subtext = `${option.stage.enemies.length} enemies`;
+                    }
 
-                if (option.stage instanceof MiniBossStage) {
-                    text = 'Mini Boss Stage';
-                    subtext = `${option.stage.enemies.length} Strong Enemies`;
-                }
+                    if (option.stage instanceof BossStage) {
+                        text = 'Boss Stage';
+                        subtext = `${option.stage.enemies.length - 1} enemies and your final challenge`;
+                    }
 
-                if (option.stage instanceof ItemStage) {
-                    text = 'Item Stage';
-                    subtext = `A free item to help you`;
-                }
+                    if (option.stage instanceof MiniBossStage) {
+                        text = 'Mini Boss Stage';
+                        subtext = `${option.stage.enemies.length} Strong Enemies`;
+                    }
 
-                if (option.stage instanceof ShopStage) {
-                    text = 'Shop Stage';
-                    subtext = `Take only what you can afford`;
-                }
+                    if (option.stage instanceof ItemStage) {
+                        text = 'Item Stage';
+                        subtext = `A free item to help you`;
+                    }
 
-                const textMargin: number = cumulativeMarginY + (optionHeight / 2);
+                    if (option.stage instanceof ShopStage) {
+                        text = 'Shop Stage';
+                        subtext = `Take only what you can afford`;
+                    }
 
-                fillStroke(Color.WHITE, opacity)
-                icon(option.icon, Position.of(cumulativeMarginX + (optionWidth / 2), textMargin - canvas.margin * 3));
+                    const textMargin: number = cumulativeMarginY + (optionHeight / 2);
 
-                fillStroke(Color.WHITE, opacity)
-                p5.textSize(canvas.uiData.fontText)
-                p5.text(
-                    text,
-                    cumulativeMarginX + (optionWidth / 2),
-                    textMargin - canvas.margin
-                );
+                    fillStroke(Color.WHITE, opacity)
+                    p5.textSize(canvas.uiData.fontText)
+                    icon(option.icon, Position.of(cumulativeMarginX + (optionWidth / 2), textMargin - canvas.margin * 3));
 
-                if (subtext) {
-                    fillStroke(Color.WHITE_1, opacity)
-                    p5.textSize(canvas.uiData.fontSubText)
+                    fillStroke(Color.WHITE, opacity)
+                    p5.textSize(canvas.uiData.fontText)
                     p5.text(
-                        insertLineBreaks(subtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(subtext), 0, subtext.length)),
+                        text,
                         cumulativeMarginX + (optionWidth / 2),
-                        textMargin + canvas.margin
+                        textMargin - canvas.margin
                     );
+
+                    if (subtext) {
+                        fillStroke(Color.WHITE_1, opacity)
+                        p5.textSize(canvas.uiData.fontSubText)
+                        p5.text(
+                            insertLineBreaks(subtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(subtext), 0, subtext.length)),
+                            cumulativeMarginX + (optionWidth / 2),
+                            textMargin + canvas.margin
+                        );
+                    }
                 }
             }
 
             if (option instanceof RelicDialogOption) {
-                drawClickableBox(Position.of(cumulativeMarginX, cumulativeMarginY), Position.of(optionWidth, canvas.itemSideSize), Color.BLUE);
+                const boxColor = option.detail === 'Yout Relic' ? Color.DISABLED : Color.BLUE;
+
+                drawClickableBox(Position.of(cumulativeMarginX, cumulativeMarginY), Position.of(optionWidth, canvas.itemSideSize), boxColor);
 
                 p5.textAlign(p5.CENTER, p5.TOP)
                 fillStroke(Color.WHITE, opacity)
@@ -685,7 +700,7 @@ export class Dialog implements IDialog {
 
         this.upgrade.resetLimits = Position.of(canvas.windowSize.x / 4 + canvas.padding, marginY + canvas.padding).toLimits(Position.of(buttonSideSize - canvas.padding * 2, buttonSideSize - canvas.padding * 2));
         const hightlightReset: number = (this.upgrade.resetLimits.contains(canvas.mousePosition) ? this.initialOpacity : 200) + this.relativeOpacity
-        
+
         fillFlat(Color.BLUE.alpha(hightlightReset))
         p5.rect(
             canvas.windowSize.x / 4 + canvas.padding,
@@ -744,19 +759,20 @@ export class Dialog implements IDialog {
             );
             endShadow(drawingContext);
 
-
             fillStroke(Color.WHITE, opacity);
             icon(Icon.MINUS, Position.of(marginXLeft + buttonSideSize / 2, marginY + offsetY + buttonSideSize / 2))
 
+            const normalizedMaxPoints: number = option.maxPoints / option.cost;
+
             const dotSize = buttonSideSize / 2
-            const gapSize = (canvas.windowSize.x - ((marginXLeft + buttonSideSize) * 2) - (option.maxPoints * dotSize)) / (option.maxPoints + 1)
+            const gapSize = (canvas.windowSize.x - dotSize * 2 - ((marginXLeft + buttonSideSize) * 2) - (normalizedMaxPoints * dotSize)) / (normalizedMaxPoints + 1)
             const dotMarginX = marginXLeft + buttonSideSize + gapSize + dotSize / 2;
 
             startShadow(drawingContext);
-            for (let i: number = 0; i < option.maxPoints; i++) {
-                let offsetX = (dotSize + gapSize) * i;
+            for (let i: number = 0; i < normalizedMaxPoints; i++) {
+                let offsetX = (dotSize + gapSize) * i + dotSize;
 
-                const color: Color = option.points > i ? Color.WHITE : Color.GRAY_3;
+                const color: Color = option.points / option.cost > i ? Color.WHITE : Color.GRAY_3;
 
                 fillFlat(color.alpha(opacity))
                 p5.ellipse(
@@ -946,11 +962,13 @@ export class PassiveDialogOption extends DialogOption {
 export class NavigationDialogOption extends DialogOption {
     stage: Stage;
     index: number;
+    blind: boolean;
 
-    constructor(action: () => void, color: Color, stage: Stage, index: number, icon?: Icon) {
+    constructor(action: () => void, color: Color, stage: Stage, index: number, icon?: Icon, blind?: boolean) {
         super(action, color, icon)
         this.stage = stage;
         this.index = index;
+        this.blind = blind
     }
 }
 

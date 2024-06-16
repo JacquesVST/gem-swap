@@ -44,15 +44,15 @@ export class DialogController extends EventEmitter {
                 if (this.currentDialog.type === DialogType.UPGRADES) {
                     this.currentDialog.upgrade.options.forEach((option: UpgradeOption) => {
                         if (option.limitsSub.contains(click)) {
-                            if (option.points > 0) {
-                                option.points--;
+                            if (option.points >= 0 + option.cost) {
+                                option.points -= option.cost;
                                 sounds['dot'].play();
                             }
                         }
 
                         if (option.limitsAdd?.contains(click)) {
                             if (this.currentDialog.upgrade.canAfford(option)) {
-                                option.points++;
+                                option.points += option.cost;
                                 sounds['dot'].play();
                             }
                         }

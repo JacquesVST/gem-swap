@@ -16,6 +16,7 @@ import { BossEnemy, Enemy, MiniBossEnemy } from "./Enemy";
 import { Floor } from "./Floor";
 import { Icon } from "./Icon";
 import { Item, ItemPools } from "./Item";
+import { Limits } from "./Limits";
 import { Map } from "./Map";
 import { Piece } from "./Piece";
 import { Player } from "./Player";
@@ -53,6 +54,12 @@ export class Run extends EventEmitter implements IRun {
         lastShapeIds: [],
         wasDiagonalMove: false,
         lastDialogParams: {}
+    }
+
+    limits: {
+        stats: Limits,
+        inventory: Limits,
+        quit: Limits,
     }
 
     constructor(config: RunConfig, sounds: { [key: string]: P5.SoundFile }) {
@@ -105,6 +112,33 @@ export class Run extends EventEmitter implements IRun {
                 this.enemyDetailsOpen = !this.enemyDetailsOpen;
             }
         });
+
+        this.on('Main:MouseClicked:Click', (position: Position, run?: Run) => {
+            setTimeout(() => {
+                if (DialogController.getInstance().currentDialog) {
+                    return;
+                }
+
+                if (this.limits.stats) {
+                    if (this.limits.stats.contains(position)) {
+                        this.emit('Stats')
+                    }
+                }
+
+                if (this.limits.inventory) {
+                    if (this.limits.inventory.contains(position)) {
+                        this.emit('Inventory')
+                    }
+                }
+
+                if (this.limits.quit) {
+                    if (this.limits.quit.contains(position)) {
+                        this.emit('Quit')
+                    }
+                }
+            }, 0);
+        });
+
 
         this.on('Grid:DiscountDiagonals', () => {
             this.itemData.wasDiagonalMove = true;
@@ -651,27 +685,53 @@ export class Run extends EventEmitter implements IRun {
 
         // Info
 
-        fillStroke();
-        p5.textAlign(p5.RIGHT, p5.CENTER);
-        icon(Icon.STATS, Position.of(canvas.windowSize.x / 2 - canvas.itemSideSize, canvas.windowSize.y - canvas.uiData.bottomUiSize))
-        icon(Icon.GRID, Position.of(canvas.windowSize.x / 2 + canvas.itemSideSize, canvas.windowSize.y - canvas.uiData.bottomUiSize))
-
-        p5.textStyle(p5.ITALIC);
-        p5.textAlign(p5.LEFT, p5.CENTER);
-        p5.textSize(canvas.uiData.fontText);
-
+        fillStroke(Color.WHITE)
+        icon(Icon.STATS, Position.of(textRight, referenceY + height * 3));
         p5.text(
             '(S)tats',
-            canvas.windowSize.x / 2 - canvas.itemSideSize + canvas.margin,
-            canvas.windowSize.y - canvas.uiData.bottomUiSize
+            textRight - canvas.margin * 2,
+            referenceY + height * 3
         );
 
+        icon(Icon.GRID, Position.of(textRight, referenceY + height * 4));
         p5.text(
             '(I)nventory',
-            canvas.windowSize.x / 2 + canvas.itemSideSize + canvas.margin,
-            canvas.windowSize.y - canvas.uiData.bottomUiSize
+            textRight - canvas.margin * 2,
+            referenceY + height * 4
         );
-        p5.textStyle(p5.NORMAL);
+
+        icon(Icon.CLOSE, Position.of(textRight, referenceY + height * 5));
+        p5.text(
+            '(Q)uit',
+            textRight - canvas.margin * 2,
+            referenceY + height * 5
+        );
+
+        this.limits = {
+            stats: Position.of(
+                textLeft + width / 2,
+                referenceY + height * 2.5
+            ).toLimits(Position.of(
+                width / 2,
+                height
+            )),
+            inventory: Position.of(
+                textLeft + width / 2,
+                referenceY + height * 3.5
+            ).toLimits(Position.of(
+                width / 2,
+                height
+            )),
+            quit: Position.of(
+                textLeft + width / 2,
+                referenceY + height * 4.5
+            ).toLimits(Position.of(
+                width / 2,
+                height
+            )),
+        }
+
+
     }
 
     drawEnemyDetails() {
@@ -1001,7 +1061,8 @@ export class Run extends EventEmitter implements IRun {
                 stage.color,
                 stage,
                 index,
-                stage.icon
+                stage.icon,
+                Math.random() < 0.333,
             ));
         let dialog: Dialog = new Dialog(
             'Choose your destination',

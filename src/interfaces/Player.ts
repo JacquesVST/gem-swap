@@ -16,6 +16,7 @@ export interface IPlayer {
     critical: number;
     gold: number;
     xp: number;
+    luck: number;
 
     hasInventoryOpen: boolean;
     hasStatsOpen: boolean;

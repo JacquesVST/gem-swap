@@ -43,50 +43,65 @@ export function getDefaultUpgradeObject(): IUpgrade {
                 property: 'attack',
                 points: 0,
                 maxPoints: 10,
+                cost: 1,
                 formatNumber: (x) => '+' + (x * 10),
                 formatValue: (x) => x * 10
             },
             {
                 property: 'defense',
                 points: 0,
-                maxPoints: 10,
-                formatNumber: (x) => '+' + x,
-                formatValue: (x) => x
+                maxPoints: 20,
+                cost: 2,
+                formatNumber: (x) => '+' + x / 2,
+                formatValue: (x) => x / 2
             },
             {
                 property: 'maxHealth',
                 points: 0,
                 maxPoints: 10,
+                cost: 1,
                 formatNumber: (x) => '+' + (x * 10),
                 formatValue: (x) => x * 10
             },
             {
                 property: 'maxMoves',
                 points: 0,
-                maxPoints: 5,
-                formatNumber: (x) => '+' + x,
-                formatValue: (x) => x
+                maxPoints: 15,
+                cost: 3,
+                formatNumber: (x) => '+' + x / 3,
+                formatValue: (x) => x / 3
             },
             {
                 property: 'critical',
                 points: 0,
-                maxPoints: 5,
-                formatNumber: (x) => '+' + x,
-                formatValue: (x) => x
+                maxPoints: 10,
+                cost: 2,
+                formatNumber: (x) => '+' + x / 2,
+                formatValue: (x) => x / 2
             },
             {
                 property: 'gold',
                 points: 0,
-                maxPoints: 10,
-                formatNumber: (x) => '+' + (x * 10),
-                formatValue: (x) => x * 10
+                maxPoints: 20,
+                cost: 2,
+                formatNumber: (x) => '+' + (x * 5),
+                formatValue: (x) => x * 5
             },
             {
                 property: 'relicPowerMultiplier',
                 points: 0,
-                maxPoints: 10,
+                maxPoints: 20,
+                cost: 1,
                 formatNumber: (x) => '+' + (x * 10) + '%',
                 formatValue: (x) => x * 10
+            },
+            {
+                property: 'luck',
+                points: 0,
+                maxPoints: 20,
+                cost: 2,
+                formatNumber: (x) => '+' + (x / 2) + '%',
+                formatValue: (x) => x / 2
             },
         ]
     }
@@ -425,12 +440,22 @@ function rebuildValues(key: string, base: any) {
                 formatNumber: (value) => value + ''
             };
             break;
+        case 'luck':
+            option = {
+                ...option,
+                minValue: 0,
+                maxValue: 100,
+                order: 39,
+                rounding: (value) => Math.round(value),
+                formatNumber: (value) => value + '%'
+            };
+            break;
         case 'reach':
             option = {
                 ...option,
                 minValue: 1,
                 maxValue: 10,
-                order: 39,
+                order: 40,
                 rounding: (value) => Math.round(value),
                 formatNumber: (value) => value + ''
             };
@@ -442,7 +467,7 @@ function rebuildValues(key: string, base: any) {
                 ...option,
                 minValue: 1,
                 maxValue: 20,
-                order: 40,
+                order: 50,
                 split: 'Item',
                 color: Color.ORANGE,
                 rounding: (value) => Math.round(value),
@@ -454,7 +479,7 @@ function rebuildValues(key: string, base: any) {
                 ...option,
                 minValue: 1,
                 maxValue: 20,
-                order: 41,
+                order: 51,
                 rounding: (value) => Math.round(value),
                 formatNumber: (value) => value + ''
             };
@@ -464,7 +489,7 @@ function rebuildValues(key: string, base: any) {
                 ...option,
                 minValue: 1,
                 maxValue: 1000,
-                order: 42,
+                order: 52,
                 rounding: (value) => Math.round(value),
                 formatNumber: (value) => value + '%'
             };
@@ -474,7 +499,7 @@ function rebuildValues(key: string, base: any) {
                 ...option,
                 minValue: 0,
                 maxValue: 100,
-                order: 43,
+                order: 53,
                 rounding: (value) => Math.round(value),
                 formatNumber: (value) => value + '%'
             };
@@ -484,7 +509,7 @@ function rebuildValues(key: string, base: any) {
                 ...option,
                 minValue: 1,
                 maxValue: 1000,
-                order: 44,
+                order: 54,
                 rounding: (value) => Math.round(value),
                 formatNumber: (value) => value + '%'
             };
@@ -494,7 +519,7 @@ function rebuildValues(key: string, base: any) {
                 ...option,
                 minValue: 0,
                 maxValue: 1,
-                order: 45,
+                order: 55,
                 rounding: (value) => Math.round(value),
                 formatNumber: (value) => value > 0 ? 'Yes' : 'No'
             };
@@ -504,7 +529,7 @@ function rebuildValues(key: string, base: any) {
                 ...option,
                 minValue: 0,
                 maxValue: 100,
-                order: 46,
+                order: 56,
                 rounding: (value) => Math.round(value),
                 formatNumber: (value) => value + ''
             };

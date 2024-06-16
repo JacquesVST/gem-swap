@@ -65,6 +65,7 @@ export class RunConfig implements IRunConfig {
             criticalMultiplier: 175,
             gold: 0,
             reach: 1,
+            luck: 0,
         };
     }
 

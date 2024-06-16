@@ -46,7 +46,7 @@ export class CommonEnemy extends Enemy {
 
         this.name = 'Enemy';
         this.color = new Color(86, 101, 115);
-        this.hasDrop = Math.random() * 100 < config.enemy.enemyDropChance;
+        this.hasDrop = Math.random() * 100 < config.enemy.enemyDropChance + config.player.luck;
 
         this.calculateStats(stage, config);
     }
@@ -56,6 +56,10 @@ export class CommonEnemy extends Enemy {
         const floorIndex = stage.floor.number - 1;
 
         this.gold = Math.floor((Math.random() * (5 - 1)) * config.enemy.enemyGoldScale / 100);
+
+        if (Math.random() * 100 < config.player.luck) {
+            this.gold *= 2;
+        }
 
         const maxHealth: number = 1500 * (1 + floorIndex);
         const minHealth: number = 500 * (1 + floorIndex);
@@ -83,7 +87,7 @@ export class MiniBossEnemy extends Enemy {
 
         this.name = 'Mini Boss';
         this.color = new Color(235, 152, 78);
-        this.hasDrop = Math.random() * 100 < config.enemy.miniBossDropChance;
+        this.hasDrop = Math.random() * 100 < config.enemy.miniBossDropChance + config.player.luck;
 
         this.calculateStats(stage, config);
     }
@@ -94,6 +98,10 @@ export class MiniBossEnemy extends Enemy {
 
         const miniBossMultiplier = 1.5 * (floorIndex + 1);
         this.gold = Math.floor((Math.random() * (10 - 1)) * config.enemy.enemyGoldScale / 100);
+
+        if (Math.random() * 100 < config.player.luck) {
+            this.gold *= 2;
+        }
 
         const maxHealth: number = 1500 * miniBossMultiplier * (1 + floorIndex);
         const minHealth: number = 1000 * miniBossMultiplier * (1 + floorIndex);
@@ -131,6 +139,10 @@ export class BossEnemy extends Enemy {
 
         const bossMultiplier = 2 * (floorIndex + 1);
         this.gold = Math.floor((Math.random() * (25 - 11) + 10) * config.enemy.enemyGoldScale / 100);
+
+        if (Math.random() * 100 < config.player.luck) {
+            this.gold *= 2;
+        }
 
         const maxHealth: number = 3000 * bossMultiplier * (1 + floorIndex);
         const minHealth: number = 2500 * bossMultiplier * (1 + floorIndex);

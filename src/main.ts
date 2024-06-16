@@ -158,6 +158,16 @@ const sketch = (p5Instance: p5) => {
         dialogController.configureListeners();
         dragController.configureListeners();
 
+        eventEmitter.on('Run:Quit', () => {
+            if (run?.sounds) {
+                run.sounds = {};
+            }
+            dialogController.clear();
+            const score: number = run?.score;
+            run = undefined;
+            setupGame('Run Restarted', score ? score : 0, Color.ORANGE);
+        });
+
         eventEmitter.on('Run:RunEnded', (status: string, score: number, color: Color) => {
             setupGame(status, score, color);
         });

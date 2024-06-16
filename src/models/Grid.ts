@@ -10,7 +10,6 @@ import { Limits } from "./Limits";
 import { FallPieceAnimationParams, Piece, RemovePieceAnimationData, RemovePieceAnimationParams } from "./Piece";
 import { Position } from "./Position";
 import { Run } from "./Run";
-import { Stage } from "./Stage";
 
 export class Grid extends EventEmitter implements IGrid {
     width: number;
@@ -22,7 +21,7 @@ export class Grid extends EventEmitter implements IGrid {
 
     isUnstable: boolean = false;
 
-    constructor(width: number, height: number, stage: Stage) {
+    constructor(width: number, height: number) {
         super('Grid');
         this.width = width;
         this.height = height;
@@ -285,15 +284,15 @@ export class Grid extends EventEmitter implements IGrid {
         const extraPieceStack: number = this.runSnapshot.player.hasItem('Extra Piece')
         if (extraPieceStack) {
             matches.forEach((match: Piece[]) => {
-                let itemStack: number = extraPieceStack;
-                let chance: number = 0.10 * itemStack;
+                for (let index: number = 0; index < extraPieceStack; index++) {
+                    if (Math.random() < 0.10) {
+                        let piecesSameColor: Piece[] = this.cells.flat().map((cell: Cell) => cell.piece).filter((piece: Piece) => piece?.shape?.id === match[0].shape.id && match.findIndex((matchPiece: Piece) => matchPiece.gridPosition.checksum === piece.gridPosition.checksum) === -1);
+                        let randomChoice: number = Math.floor(Math.random() * piecesSameColor.length);
 
-                if (Math.random() < chance) {
-                    let piecesSameColor: Piece[] = this.cells.flat().map((cell: Cell) => cell.piece).filter((piece: Piece) => piece?.shape?.id === match[0].shape.id && match.findIndex((matchPiece: Piece) => matchPiece.gridPosition.checksum === piece.gridPosition.checksum) === -1);
-                    let randomChoice: number = Math.floor(Math.random() * piecesSameColor.length);
-
-                    match.push(piecesSameColor[randomChoice]);
+                        match.push(piecesSameColor[randomChoice]);
+                    }
                 }
+
             });
         }
 
@@ -353,7 +352,7 @@ export class Grid extends EventEmitter implements IGrid {
     }
 
     getMatchChecksum(match: Piece[]): string {
-        return match.map((piece: Piece) => piece.gridPosition.checksum).join('-');
+        return match.map((piece: Piece) => piece?.gridPosition?.checksum).join('-');
     }
 
     generatePieces(allowMatches: boolean = true): boolean {
@@ -408,7 +407,7 @@ export class Grid extends EventEmitter implements IGrid {
             row.forEach((piece: Piece) => {
                 generated = true;
                 this.setCellPiece(piece.gridPosition, piece);
-            })
+            });
 
         }
 

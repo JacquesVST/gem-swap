@@ -31,7 +31,9 @@ export class Player extends EventEmitter implements IPlayer {
     maxMoves: number;
     moves: number;
     xp: number;
+    luck: number;
 
+    inventoryLimits: Limits;
     hasInventoryOpen: boolean = false;
     hasStatsOpen: boolean = false;
     hasPassiveDetailsOpen: boolean = false;
@@ -84,6 +86,7 @@ export class Player extends EventEmitter implements IPlayer {
         this.criticalChance = runConfig.player.criticalChance;
         this.criticalMultiplier = runConfig.player.criticalMultiplier;
         this.gold = runConfig.player.gold;
+        this.luck = runConfig.player.luck;
 
         this.passive = runConfig.passive;
         this.itemData.reach = runConfig.player.reach;
@@ -180,7 +183,21 @@ export class Player extends EventEmitter implements IPlayer {
                         this.hasRelicDetailsOpen = !this.hasRelicDetailsOpen;
                     }
                 }
+
+                if (this.inventoryLimits) {
+                    if (!this.inventoryLimits?.contains(position)) {
+                        this.hasInventoryOpen = false
+                    }
+                }
             }, 0);
+        });
+
+        this.on('Run:Inventory', () => {
+            this.hasInventoryOpen = true;
+        });
+
+        this.on('Run:Stats', () => {
+            this.hasStatsOpen = !this.hasStatsOpen;
         });
 
         this.on('Run:Item:AddOmniMove', () => {
@@ -979,6 +996,8 @@ export class Player extends EventEmitter implements IPlayer {
                 canvas.radius * 4
             );
             endShadow(drawingContext);
+
+            this.inventoryLimits = Position.of(margin.x, margin.y).toLimits(Position.of(dimension.x, dimension.y));
 
             p5.textAlign(p5.CENTER, p5.CENTER);
 

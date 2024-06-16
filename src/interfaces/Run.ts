@@ -67,6 +67,7 @@ export interface IPlayerConfig {
     criticalMultiplier?: number;
     gold?: number;
     reach?: number;
+    luck?: number;
 }
 
 export interface IEnemyConfig {
@@ -125,6 +126,7 @@ export interface IFlatRunConfig {
     gridHeight?: number;
     itemOptions?: number;
     itemStageChance?: number;
+    luck?: number;
     maxHealth?: number;
     maxMoves?: number;
     miniBossDropChance?: number;

@@ -174,7 +174,7 @@ export class ItemPools {
             'Free Relic',
             'Gain a random Relic',
             (() => {
-                run.newRandomDropDialog(true, [], undefined);
+                run.newRandomDropDialog(true, [], run.itemData.lastDialogParams.callback);
             }).bind(run)
         );
     }
@@ -409,9 +409,9 @@ export class ItemPools {
             new Item(
                 'Common',
                 'Crit Chance',
-                'Matches have +1% chance of critting',
+                'Matches have +2% chance of critting',
                 (() => {
-                    run.player.criticalChance += 1;
+                    run.player.criticalChance += 2;
                 }).bind(run),
             ),
             new Item(

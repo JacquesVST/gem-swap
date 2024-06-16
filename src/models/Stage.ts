@@ -32,7 +32,7 @@ export class ItemStage extends Stage {
     }
 
     initStage(x: number, y: number): void {
-        this.grid = new Grid(x, y, { ...this });
+        this.grid = new Grid(x, y);
     }
 }
 
@@ -44,7 +44,7 @@ export class ShopStage extends Stage {
     }
 
     initStage(x: number, y: number): void {
-        this.grid = new Grid(x, y, { ...this });
+        this.grid = new Grid(x, y);
     }
 }
 
@@ -59,7 +59,7 @@ export class EnemyStage extends Stage implements IEnemyStage {
     }
 
     initStage(x: number, y: number): void {
-        this.grid = new Grid(x, y, { ...this });
+        this.grid = new Grid(x, y);
     }
 }
 
