@@ -7,12 +7,13 @@ export class Upgrade implements IUpgrade {
     xp: number;
     options: UpgradeOption[];
     nextPoint: number;
+    resetLimits?: Limits;
 
     constructor(upgrade: IUpgrade) {
         this.totalPoints = upgrade.totalPoints;
         this.xp = getXP();
-        this.addOptionsFromInterface(upgrade.options);
         this.calculateTotalPoints();
+        this.addOptionsFromInterface(upgrade.options);
     }
 
     get spentPoints(): number {
@@ -34,16 +35,36 @@ export class Upgrade implements IUpgrade {
         })
 
         getDefaultUpgradeObject().options.forEach((defaultOption: IUpgradeOption) => {
-            options.find((option: UpgradeOption) => option.property === defaultOption.property).formatNumber = defaultOption.formatNumber;
-            options.find((option: UpgradeOption) => option.property === defaultOption.property).formatValue = defaultOption.formatValue;
+            const currentOptions: UpgradeOption = options.find((option: UpgradeOption) => option.property === defaultOption.property);
+            if (currentOptions) {
+                currentOptions.formatNumber = defaultOption.formatNumber;
+                currentOptions.formatValue = defaultOption.formatValue;
+                currentOptions.maxPoints = defaultOption.maxPoints;
+
+                if (currentOptions.points > currentOptions.maxPoints) {
+                    currentOptions.points = currentOptions.maxPoints
+                }
+
+
+            }
         })
 
+
+
         this.options = options;
+
+        if (this.spentPoints > this.totalPoints) {
+            this.reset();
+        }
+    }
+
+    reset(): void {
+        this.options.forEach((option: UpgradeOption) => option.points = 0);
     }
 
     calculateTotalPoints(): void {
         let points: number = 0;
-        while (this.calculatePointCost(points) < this.xp) {
+        while (this.calculatePointCost(points + 1) <= this.xp) {
             points++;
         }
         this.totalPoints = points
@@ -51,10 +72,10 @@ export class Upgrade implements IUpgrade {
     }
 
     calculatePointCost(x: number): number {
-        const a: number = 3;
+        const a: number = 16;
         const b: number = 8;
         const c: number = 0.0888;
-        return Math.floor((a * (Math.pow(b, (x - 1) * c) - 1)) + 1);
+        return Math.floor(a * (Math.pow(b, x * c) - 1));
     }
 
 }

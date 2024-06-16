@@ -58,6 +58,11 @@ export class DialogController extends EventEmitter {
                         }
                     });
 
+                    if (this.currentDialog.upgrade.resetLimits?.contains(click)) {
+                        this.currentDialog.upgrade.reset();
+                        sounds['dot'].play();
+                    }
+
                     setUpgrades(this.currentDialog.upgrade);
                 }
 

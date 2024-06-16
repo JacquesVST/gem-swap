@@ -158,7 +158,6 @@ export class Dialog implements IDialog {
         }
     }
 
-
     drawDialogBackground(dimension: Position, margin: Position, textOffset: number): void {
         const canvas: Canvas = Canvas.getInstance();
         const p5: P5 = canvas.p5;
@@ -674,7 +673,8 @@ export class Dialog implements IDialog {
         const opacity: number = this.initialOpacity + this.relativeOpacity;
         const buttonSideSize: number = canvas.itemSideSize / 3;
 
-        fillFlat(Color.GRAY_4.alpha(opacity))
+        startShadow(drawingContext);
+        fillFlat(Color.GRAY_3.alpha(opacity))
         p5.rect(
             canvas.windowSize.x / 4,
             marginY,
@@ -682,13 +682,34 @@ export class Dialog implements IDialog {
             buttonSideSize,
             canvas.radius * 2
         );
+
+        this.upgrade.resetLimits = Position.of(canvas.windowSize.x / 4 + canvas.padding, marginY + canvas.padding).toLimits(Position.of(buttonSideSize - canvas.padding * 2, buttonSideSize - canvas.padding * 2));
+        const hightlightReset: number = (this.upgrade.resetLimits.contains(canvas.mousePosition) ? this.initialOpacity : 200) + this.relativeOpacity
+        
+        fillFlat(Color.BLUE.alpha(hightlightReset))
+        p5.rect(
+            canvas.windowSize.x / 4 + canvas.padding,
+            marginY + canvas.padding,
+            buttonSideSize - canvas.padding * 2,
+            buttonSideSize - canvas.padding * 2,
+            canvas.radius * 2
+        );
         endShadow(drawingContext);
+
+
+        fillStroke(Color.WHITE, hightlightReset);
+        icon(Icon.RESET,
+            Position.of(
+                canvas.windowSize.x / 4 + canvas.padding + (buttonSideSize - canvas.padding * 2) / 2,
+                marginY + canvas.padding + (buttonSideSize - canvas.padding * 2) / 2
+            )
+        );
 
         fillStroke(Color.WHITE, opacity);
         p5.textAlign(p5.LEFT, p5.CENTER);
         p5.text(
             `Available: ${this.upgrade.totalPoints - this.upgrade.spentPoints}`,
-            canvas.windowSize.x / 4 + canvas.margin,
+            canvas.windowSize.x / 4 + buttonSideSize + canvas.padding * 2,
             marginY + buttonSideSize / 2
         );
 

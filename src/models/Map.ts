@@ -34,7 +34,7 @@ export class Map extends EventEmitter implements IMap {
 
         this.currentFloorIndex = 0;
         this.floors = this.setupFloors(config);
-        
+
         this.configureListeners();
     }
 
@@ -130,6 +130,9 @@ export class Map extends EventEmitter implements IMap {
                 this.grid.removeMatches(matches, 'Loop');
             } else {
                 this.grid.emit('MoveDone');
+                setTimeout(() => {
+                    this.grid.selectedCellPosition = undefined;
+                }, 100)
             }
         });
 

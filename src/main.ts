@@ -26,7 +26,11 @@ const sketch = (p5Instance: p5) => {
 
     let sounds: { [key: string]: p5.SoundFile };
 
+    const isAndroid: boolean = /Android/i.test(navigator.userAgent);
+    const isIOS: boolean = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
     p5Instance.preload = () => {
+
         p5Instance.soundFormats('mp3');
 
         sounds = {
@@ -43,9 +47,14 @@ const sketch = (p5Instance: p5) => {
             noMove: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/no-move.mp3'),
             select: p5Instance.loadSound('https://raw.githubusercontent.com/JacquesVST/gem-swap/main/src/assets/generic.mp3'),
         }
+
     }
 
     p5Instance.setup = () => {
+        if (isAndroid) {
+            p5Instance.pixelDensity(1);
+        }
+
         p5Instance.textFont('Open Sans');
 
         canvas = Canvas.getInstance(p5Instance);
@@ -73,7 +82,9 @@ const sketch = (p5Instance: p5) => {
 
     // mouse events
     p5Instance.mouseClicked = () => {
-        eventEmitter.emit('MouseClicked:Click', Position.of(p5Instance.mouseX, p5Instance.mouseY), run, sounds)
+        if (!isAndroid && !isIOS) {
+            eventEmitter.emit('MouseClicked:Click', Position.of(p5Instance.mouseX, p5Instance.mouseY), run, sounds)
+        }
     }
 
     p5Instance.mousePressed = () => {
@@ -91,6 +102,26 @@ const sketch = (p5Instance: p5) => {
     }
 
     p5Instance.mouseDragged = () => {
+        eventEmitter.emit('MouseClicked:Drag', Position.of(p5Instance.mouseX, p5Instance.mouseY), !!dialogController.currentDialog)
+    }
+
+    // touch events
+    p5Instance.touchStarted = () => {
+        let click: Position = Position.of(p5Instance.mouseX, p5Instance.mouseY)
+        if (dragController) {
+            dragController.add(new DragAnimation(click, 30))
+            dragController.isDragging = true;
+        }
+        eventEmitter.emit('MouseClicked', click, run)
+    }
+
+    p5Instance.touchEnded = () => {
+        dragController.isDragging = false;
+        eventEmitter.emit('MouseClicked', Position.of(p5Instance.mouseX, p5Instance.mouseY), run, true)
+        eventEmitter.emit('MouseClicked:Click', Position.of(p5Instance.mouseX, p5Instance.mouseY), run, sounds)
+    }
+
+    p5Instance.touchMoved = () => {
         eventEmitter.emit('MouseClicked:Drag', Position.of(p5Instance.mouseX, p5Instance.mouseY), !!dialogController.currentDialog)
     }
 

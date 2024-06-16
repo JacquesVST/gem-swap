@@ -9,7 +9,6 @@
         "prepublish": "shx rm -rf dist/*",
         "publish": "parcel build ./src/index.html --public-url ./",
         "postpublish": "push-dir --dir=dist --branch=gh-pages --cleanup --verbose"
-        
     },
     "dependencies": {
         "@types/node": "^20.12.7",
@@ -17,6 +16,8 @@
         "p5": "1.9.2"
     },
     "devDependencies": {
+        "@parcel/packager-raw-url": "^2.12.0",
+        "@parcel/transformer-webmanifest": "^2.12.0",
         "assert": "^2.1.0",
         "events": "^3.3.0",
         "install": "^0.13.0",

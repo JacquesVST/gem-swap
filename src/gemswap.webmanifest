@@ -1,0 +1,16 @@
+{
+    "name": "Gem Swap",
+    "short_name": "Gem Swap",
+    "description": "Gem Swap game by JVST",
+    "icons": [
+      {
+        "src": "assets/icon.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ],
+    "start_url": "/index.html",
+    "display": "fullscreen",
+    "theme_color": "#000000",
+    "background_color": "#000000"
+  }

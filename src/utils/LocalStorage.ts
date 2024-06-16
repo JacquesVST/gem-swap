@@ -63,14 +63,14 @@ export function getDefaultUpgradeObject(): IUpgrade {
             {
                 property: 'maxMoves',
                 points: 0,
-                maxPoints: 10,
+                maxPoints: 5,
                 formatNumber: (x) => '+' + x,
                 formatValue: (x) => x
             },
             {
                 property: 'critical',
                 points: 0,
-                maxPoints: 10,
+                maxPoints: 5,
                 formatNumber: (x) => '+' + x,
                 formatValue: (x) => x
             },
