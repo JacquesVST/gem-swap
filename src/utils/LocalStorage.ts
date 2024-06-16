@@ -98,7 +98,7 @@ export function getDefaultUpgradeObject(): IUpgrade {
             {
                 property: 'luck',
                 points: 0,
-                maxPoints: 40,
+                maxPoints: 20,
                 cost: 4,
                 formatNumber: (x) => '+' + (x / 4) + '%',
                 formatValue: (x) => x / 4
