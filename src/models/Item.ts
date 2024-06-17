@@ -168,15 +168,13 @@ export class ItemPools {
         return passivePool;
     }
 
-    static freeRelicItem(run: Run): Item {
+    static freeRelicItem(run: Run, callback: () => void): Item {
         return new Item(
             'Rare',
             'Free Relic',
             'Gain a random Relic',
             (() => {
-                let callback = run.itemData.rerolled ? run.itemData.lastDialogParams.callback : undefined
                 run.newRandomDropDialog(true, [], callback);
-                run.itemData.rerolled = false;
             }).bind(run)
         );
     }
@@ -238,16 +236,16 @@ export class ItemPools {
                 return new Item(
                     'Rare',
                     name,
-                    '+3% chance of column clearing pieces',
+                    '+2.5% chance of column clearing pieces',
                     (() => {
                         let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
 
                         if (effectIndex === -1) {
                             run.possibleEffects.push(new Effect(name, (params: EffectParams) => {
                                 run.emit('Item:ClearColumn', params);
-                            }, 0.03));
+                            }, 0.025));
                         } else {
-                            run.possibleEffects[effectIndex].chance += 0.03;
+                            run.possibleEffects[effectIndex].chance += 0.025;
                         }
                     }).bind(run),
                     Frequency.PASSIVE,
@@ -259,16 +257,16 @@ export class ItemPools {
                 return new Item(
                     'Rare',
                     name,
-                    '+3% chance of row clearing pieces',
+                    '+2.5% chance of row clearing pieces',
                     (() => {
                         let effectIndex: number = run.possibleEffects.findIndex((effect: Effect) => effect.id === name);
 
                         if (effectIndex === -1) {
                             run.possibleEffects.push(new Effect(name, (params: EffectParams) => {
                                 run.emit('Item:ClearRow', params);
-                            }, 0.03))
+                            }, 0.025))
                         } else {
-                            run.possibleEffects[effectIndex].chance += 0.03;
+                            run.possibleEffects[effectIndex].chance += 0.025;
                         }
                     }).bind(run),
                     Frequency.PASSIVE,
@@ -462,7 +460,7 @@ export class ItemPools {
             new Item(
                 'Common',
                 'Damage Boost',
-                '+30 base DMG',
+                '+25 base DMG',
                 (() => {
                     run.player.attack += 30;
                 }).bind(run)
@@ -491,7 +489,7 @@ export class ItemPools {
                 'Rare',
                 'Universal Tradeoff',
                 '50% of your color damage becomes base damage',
-                 (() => run.emit('Item:UniversalTradeoff')).bind(run),
+                (() => run.emit('Item:UniversalTradeoff')).bind(run),
             ),
             new Item(
                 'Rare',
@@ -597,9 +595,9 @@ export class ItemPools {
             defaultPool.push(new Item(
                 'Common',
                 `${shape.id.charAt(0).toUpperCase() + shape.id.slice(1)} Color Boost`,
-                `+60 base DMG on ${shape.id} shapes`,
+                `+50 base DMG on ${shape.id} shapes`,
                 (() => {
-                    run.emit('Item:ColorDamageBoost', shape.id, 60);
+                    run.emit('Item:ColorDamageBoost', shape.id, 50);
                 }).bind(run)
             ));
 

@@ -285,7 +285,7 @@ export class Grid extends EventEmitter implements IGrid {
         if (extraPieceStack) {
             matches.forEach((match: Piece[]) => {
                 for (let index: number = 0; index < extraPieceStack; index++) {
-                    if (Math.random() < 0.08) {
+                    if (Math.random() < 0.06) {
                         let piecesSameColor: Piece[] = this.cells.flat().map((cell: Cell) => cell.piece).filter((piece: Piece) => piece?.shape?.id === match[0].shape.id && match.findIndex((matchPiece: Piece) => matchPiece.gridPosition.checksum === piece.gridPosition.checksum) === -1);
                         let randomChoice: number = Math.floor(Math.random() * piecesSameColor.length);
 

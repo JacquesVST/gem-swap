@@ -444,9 +444,9 @@ export class Run extends EventEmitter implements IRun {
                 const item: Item = new Item(
                     'Common',
                     `${id.charAt(0).toUpperCase() + id.slice(1)} Color Boost`,
-                    `+60 base DMG on ${id} shapes`,
+                    `+50 base DMG on ${id} shapes`,
                     () => {
-                        this.emit('Item:ColorDamageBoost', id, 60);
+                        this.emit('Item:ColorDamageBoost', id, 50);
                     }
                 );
                 this.player.items.push(item)
@@ -462,9 +462,9 @@ export class Run extends EventEmitter implements IRun {
                 const item: Item = new Item(
                     'Common',
                     'Damage Boost',
-                    '+30 base DMG',
+                    '+25 base DMG',
                     () => {
-                        this.player.attack += 30;
+                        this.player.attack += 25;
                     }
                 );
                 this.player.items.push(item)
@@ -479,7 +479,6 @@ export class Run extends EventEmitter implements IRun {
         this.on('DialogController:Reroll', (dialog: Dialog) => {
             this.player.itemData.rerolls -= 1;
             DialogController.getInstance().clear();
-            this.itemData.rerolled = true;
             const params: any = this.itemData.lastDialogParams;
 
             if (dialog.type === DialogType.ITEM) {
@@ -1149,7 +1148,7 @@ export class Run extends EventEmitter implements IRun {
         );
 
         if (withRelic) {
-            itemList.push(ItemPools.freeRelicItem(this))
+            itemList.push(ItemPools.freeRelicItem(this, callback))
         }
 
         let dialog: Dialog = new Dialog(

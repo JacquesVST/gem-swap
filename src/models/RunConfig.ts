@@ -188,7 +188,7 @@ export class RunConfig implements IRunConfig {
                 floors: 10,
                 gridWidth: 8,
                 gridHeight: 6,
-                costMultiplier: 200,
+                costMultiplier: 225,
                 miniBossStageChance: 30,
                 colorCount: 7
             }).withPassive(passive);

@@ -120,7 +120,7 @@ export class TextController extends EventEmitter {
     }
 
     playerHealedAnimaiton(amount: number): void {
-        if (amount !== 0) {
+        if (amount > 0) {
             amount = Math.floor(amount);
             const animation: TextAnimation = new TextAnimation(
                 `+${amount}`,

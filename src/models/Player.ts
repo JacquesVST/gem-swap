@@ -314,6 +314,18 @@ export class Player extends EventEmitter implements IPlayer {
             const stats: IStat[] = [this.relic.stat1, this.relic.stat2, this.relic.stat3];
             stats.forEach((stat: IStat) => {
                 this[stat.name] -= stat.bonus;
+
+                if (stat.name === 'maxHealth') {
+                    this.heal(0);
+                }
+
+                if (stat.name === 'maxMoves') {
+                    if (this.moves > this.maxMoves) {
+                        this.moves = this.maxMoves
+                    }
+    
+                    this.updateMoves(this.moves);
+                }
             });
         }
         this.relic = relic;
@@ -331,7 +343,11 @@ export class Player extends EventEmitter implements IPlayer {
             }
 
             if (stat.name === 'maxHealth') {
-                this.heal(this.health + stat.bonus);
+                let health = stat.bonus;
+                if (this.health + health > this.maxHealth) {
+                    health = this.health + health - this.maxHealth
+                }
+                this.heal(health);
             }
         });
 
