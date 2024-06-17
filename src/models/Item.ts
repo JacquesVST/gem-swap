@@ -62,7 +62,7 @@ export class Item implements IItem {
         const counts = {};
 
         for (let i: number = 0; i < amount; i++) {
-            let chance = Math.random();
+            let chance = Math.random() + player.luck / 200;
 
             let chosenPool: Item[];
             let chosenRarity: string;
