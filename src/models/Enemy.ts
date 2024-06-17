@@ -103,6 +103,8 @@ export class MiniBossEnemy extends Enemy {
             this.gold *= 2;
         }
 
+        console.log(this.gold)
+
         const maxHealth: number = 1500 * miniBossMultiplier * (1 + floorIndex);
         const minHealth: number = 1000 * miniBossMultiplier * (1 + floorIndex);
 

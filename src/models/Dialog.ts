@@ -250,7 +250,7 @@ export class Dialog implements IDialog {
                 optionWidth = canvas.itemSideSize * 1.5 + canvas.margin / 2;
             }
 
-            if (option instanceof NavigationDialogOption && !(option.stage instanceof CommonEnemyStage) && option.blind) {
+            if (option instanceof NavigationDialogOption && !(option.stage instanceof CommonEnemyStage || option.stage instanceof BossStage) && option.blind) {
                 option.color = Color.RED;
             }
 
@@ -387,7 +387,7 @@ export class Dialog implements IDialog {
             if (option instanceof NavigationDialogOption) {
                 p5.textAlign(p5.CENTER, p5.CENTER)
 
-                if (!(option.stage instanceof CommonEnemyStage) && option.blind) {
+                if (!(option.stage instanceof CommonEnemyStage || option.stage instanceof BossStage)  && option.blind) {
                     fillStroke(Color.WHITE, opacity)
                     p5.textAlign(p5.CENTER, p5.CENTER)
                     p5.textSize(canvas.margin * 3)

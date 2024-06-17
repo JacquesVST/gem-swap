@@ -507,7 +507,7 @@ export class Run extends EventEmitter implements IRun {
             if (choice) {
                 this.sounds['defeat']?.play();
                 TextController.getInstance().damagePlayerAnimation({ damage: Math.floor(this.player.maxHealth / 100), shielded: false });
-                this.updateHealth(this.player.health - Math.floor(this.player.maxHealth / 100), { useCase: 'DamagePlayer', data: { damage: Math.floor(this.player.maxHealth / 100) } })
+                this.updateHealth(this.player.health - Math.floor(this.player.maxHealth / 100), { useCase: 'DamagePlayer', data: { damage: { damage: Math.floor(this.player.maxHealth / 100), shielded: false } } })
             }
         });
 

@@ -503,19 +503,19 @@ export class ItemPools {
             new Item(
                 'Rare',
                 '4+ Match Regeneration',
-                'Gain 1% HP every 4+ match',
+                'Gain 1 HP every 4+ match',
                 (() => { }).bind(run)
             ),
             new Item(
                 'Rare',
                 'Fair Trade',
-                '10% chance of failing a move or healing 1',
+                '10% chance of failing a move or healing 1%',
                 (() => { }).bind(run)
             ),
             new Item(
                 'Rare',
                 'Another Fair Trade',
-                '10% chance of losing 1% health or recovering this move + 1',
+                '10% chance of losing 1% health or saving a move',
                 (() => { }).bind(run)
             ),
             new Item(

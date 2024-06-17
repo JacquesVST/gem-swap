@@ -16,6 +16,7 @@ import { Relic } from "./Relic";
 import { Run } from "./Run";
 import { RunConfig } from "./RunConfig";
 import { Shape } from "./Shape";
+import { TextController } from "../controllers/TextController";
 
 export class Player extends EventEmitter implements IPlayer {
     attack: number;
@@ -255,12 +256,13 @@ export class Player extends EventEmitter implements IPlayer {
         });
 
         this.on('Grid:FairTrade', () => {
-            this.heal(this.maxHealth * 0.01);
+            this.heal(this.maxHealth / 100);
         });
 
         this.on('Grid:AnotherFairTrade', (choice: boolean) => {
             if (!choice) {
                 this.updateMoves(this.moves + 1);
+                TextController.getInstance().moveSavedAnimation();
             }
         });
 
@@ -323,7 +325,7 @@ export class Player extends EventEmitter implements IPlayer {
                     if (this.moves > this.maxMoves) {
                         this.moves = this.maxMoves
                     }
-    
+
                     this.updateMoves(this.moves);
                 }
             });
