@@ -12,9 +12,9 @@ export interface IPiece extends IAnimatable {
 
     renewPosition(position: IPosition): IPiece;
 
-    setupFallAnimation(frames: number, relativePositon: IPosition, params: IFallPieceAnimationParams): void;
+    setupFallAnimation(frames: number, relativePosition: IPosition, params: IFallPieceAnimationParams): void;
     setupRemoveAnimation(frames: number, relativeOpacity: number, params: IRemovePieceAnimationParams): void;
-    setupSwapAnimation(frames: number, relativePositon: IPosition, params: ISwapPieceAnimationParams): void;
+    setupSwapAnimation(frames: number, relativePosition: IPosition, params: ISwapPieceAnimationParams): void;
 }
 
 export interface IShape {

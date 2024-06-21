@@ -25,7 +25,7 @@ export class TextAnimation implements IText {
     relativePosition: Position = Position.ORIGIN;
     relativePositionSpeed: Position = Position.ORIGIN;
 
-    constructor(text: string, color: Color, frames: number, initialPosition: Position, relativePositon: Position, initialLinearSize: number = 20, relativeLinearSize: number = 0) {
+    constructor(text: string, color: Color, frames: number, initialPosition: Position, relativePosition: Position, initialLinearSize: number = 20, relativeLinearSize: number = 0) {
         this.id = generateId();
         this.text = text;
         this.color = color;
@@ -33,7 +33,7 @@ export class TextAnimation implements IText {
         this.frames = frames;
 
         this.initialPosition = initialPosition;
-        this.relativePosition = relativePositon;
+        this.relativePosition = relativePosition;
 
         this.initialLinearSize = initialLinearSize;
         this.relativeLinearSize = relativeLinearSize;

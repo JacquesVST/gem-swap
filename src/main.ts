@@ -146,7 +146,7 @@ const sketch = (p5Instance: p5) => {
     }
     //other events
     p5Instance.windowResized = () => {
-        canvas?.calculateAndCreatePlayfield();
+        canvas?.calculateAndCreatePlayField();
         eventEmitter.emit('WindowResized')
     }
 

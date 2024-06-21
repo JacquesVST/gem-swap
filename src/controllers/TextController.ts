@@ -39,7 +39,7 @@ export class TextController extends EventEmitter {
         this.textAnimations = this.textAnimations.filter((animation: TextAnimation) => animation.id !== textAnimation.id);
     }
 
-    damageAnimation(damage: number, criticalInMatch: boolean, positon: Position, mainShape?: Shape): void {
+    damageAnimation(damage: number, criticalInMatch: boolean, position: Position, mainShape?: Shape): void {
         const color: Color = mainShape ? mainShape.color : Color.WHITE_1;
 
         const varianceX: number = Math.ceil(Math.random() * 50) * (Math.round(Math.random()) ? 1 : -1);
@@ -49,7 +49,7 @@ export class TextController extends EventEmitter {
             `${damage} DMG${criticalInMatch ? '!' : ''}`,
             color,
             120,
-            Position.of(positon.x + varianceX, positon.y + varianceY),
+            Position.of(position.x + varianceX, position.y + varianceY),
             Position.of(0, -100),
             20 * (criticalInMatch ? 2 : 1),
             10 * (criticalInMatch ? 2 : 1)

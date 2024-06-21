@@ -74,7 +74,7 @@ export function insertLineBreaks(input: string, every: number): string {
 }
 
 
-export function countOcurrences(input: string, of: string) {
+export function countOccurrences(input: string, of: string) {
     return (input.match(new RegExp(of, 'g')) || []).length;
 }
 

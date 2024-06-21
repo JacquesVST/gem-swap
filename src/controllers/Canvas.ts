@@ -19,7 +19,7 @@ export class Canvas implements ICanvas {
     private constructor(p5: P5) {
         this.p5 = p5
 
-        this.calculateAndCreatePlayfield();
+        this.calculateAndCreatePlayField();
     }
 
     static getInstance(p5?: P5): Canvas {
@@ -33,7 +33,7 @@ export class Canvas implements ICanvas {
         return Position.of(this.p5.mouseX, this.p5.mouseY);
     }
 
-    calculateAndCreatePlayfield(): void {
+    calculateAndCreatePlayField(): void {
         const screenWidth: number = document.body.clientWidth;
         const screenHeight: number = window.innerHeight
 

@@ -7,7 +7,7 @@ import { Item } from "../models/Item";
 import { Limits } from "../models/Limits";
 import { Position } from "../models/Position";
 import { Run } from "../models/Run";
-import { countOcurrences, insertLineBreaks } from "./General";
+import { countOccurrences, insertLineBreaks } from "./General";
 import { getUnlocks } from "./LocalStorage";
 import { Icon } from "../models/Icon";
 
@@ -45,7 +45,7 @@ export function drawItem(item: Item, margin: Position, sideSize: Position, relat
 
         p5.textSize(canvas.uiData.fontDetail);
         let description: string = insertLineBreaks(item.description, p5.map(sideSize.x - canvas.margin, 0, p5.textWidth(item.description), 0, item.description.length));
-        let subOffset: number = (countOcurrences(name, '\n') + Math.max(1, countOcurrences(description, '\n') - 1)) * canvas.margin;
+        let subOffset: number = (countOccurrences(name, '\n') + Math.max(1, countOccurrences(description, '\n') - 1)) * canvas.margin;
 
         fillStroke(Color.WHITE_1, 255 + relativeFade)
         p5.text(
@@ -305,8 +305,8 @@ export function rectWithStripes(drawingPos: Position, drawingSize: Position, str
     }
 }
 
-export function polygon(x: number, y: number, radius: number, npoints: number, p5: P5): void {
-    let angle = p5.TWO_PI / npoints;
+export function polygon(x: number, y: number, radius: number, points: number, p5: P5): void {
+    let angle = p5.TWO_PI / points;
     p5.beginShape();
     for (let a = p5.HALF_PI * 3; a < p5.HALF_PI * 7; a += angle) {
         let sx = x + p5.cos(a) * radius;

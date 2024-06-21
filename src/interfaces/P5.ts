@@ -17,7 +17,7 @@ export interface ICanvas {
     uiData: IUiData;
     gridData: IGridData;
 
-    calculateAndCreatePlayfield: () => void;
+    calculateAndCreatePlayField: () => void;
     calculateUiSize: (uiData: IUiData) => IUiData;
     draw: () => void;
 }
