@@ -12,7 +12,7 @@ export class Canvas implements ICanvas {
     stroke: number;
     itemSideSize: number;
     windowSize: Position;
-    playfield: Position;
+    playField: Position;
     uiData: IUiData;
     gridData: IGridData;
 
@@ -48,7 +48,7 @@ export class Canvas implements ICanvas {
         const uiBarSize = this.scale(0.020);
         this.uiData = this.calculateUiSize({ uiBarSize, topBarCount: 3, bottomBarCount: 3 });
 
-        this.playfield = Position.of(this.windowSize.x - 2 * this.margin, (this.windowSize.y - 2 * this.margin));
+        this.playField = Position.of(this.windowSize.x - 2 * this.margin, (this.windowSize.y - 2 * this.margin));
 
         this.p5.createCanvas(this.windowSize.x, this.windowSize.y);
     }
@@ -72,8 +72,8 @@ export class Canvas implements ICanvas {
         this.p5.rect(
             this.margin,
             this.margin,
-            this.playfield.x,
-            this.playfield.y,
+            this.playField.x,
+            this.playField.y,
             this.radius + this.padding
         );
     }

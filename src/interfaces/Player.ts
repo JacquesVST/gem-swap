@@ -35,18 +35,18 @@ export interface IPlayerItemData {
     passiveLimits: ILimits
     relicLimits: ILimits
     bonusMoves: number;
-    bossCrits: number;
+    bossCritical: number;
     diagonals: boolean;
     goldAddCount: number;
     hasShield: boolean;
     hasUsedShield: boolean;
     moveSaverChance: number;
-    omniMoves: number;
+    fullReachMoves: number;
     reach: number;
     relicMultiplier: number;
     rerolls: number;
     bossMoves: number;
-    colorDamageBosts: { [key: string]: IShape };
+    colorDamageBoosts: { [key: string]: IShape };
     damageBoostTimer: IDamageBoostTimerData
 }
 

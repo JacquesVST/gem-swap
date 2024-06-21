@@ -45,7 +45,7 @@ export class Grid extends EventEmitter implements IGrid {
         positionsToApplyGravity.forEach((position: Position, index: number) => {
             let piece: Piece = this.getPieceByPosition(position);
             let newPosition: Position = this.getNextAvailablePosition(position);
-            let relativeEndPosition = this.getCellbyPosition(newPosition).canvasPosition.difference(this.getCellbyPosition(position).canvasPosition);
+            let relativeEndPosition = this.getCellByPosition(newPosition).canvasPosition.difference(this.getCellByPosition(position).canvasPosition);
 
             let distance: number = (newPosition.y - position.y) * 0.2;
 
@@ -89,7 +89,7 @@ export class Grid extends EventEmitter implements IGrid {
         let newPosition: Position = position;
         for (let y: number = position.y + 1; y < this.height; y++) {
             newPosition = newPosition.addY(1)
-            let cell: Cell = this.getCellbyPosition(newPosition);
+            let cell: Cell = this.getCellByPosition(newPosition);
             if (cell?.piece) {
                 newPosition = newPosition.addY(-1);
                 break;
@@ -100,7 +100,7 @@ export class Grid extends EventEmitter implements IGrid {
 
     animatePullPieceDown(position: Position, newPosition: Position, eventParams: FallPieceAnimationParams): void {
         let piece: Piece = this.getPieceByPosition(position);
-        let relativeEndPosition = this.getCellbyPosition(newPosition).canvasPosition.difference(this.getCellbyPosition(position).canvasPosition);
+        let relativeEndPosition = this.getCellByPosition(newPosition).canvasPosition.difference(this.getCellByPosition(position).canvasPosition);
 
         let distance = (newPosition.y - position.y) * 0.2;
 
@@ -115,25 +115,25 @@ export class Grid extends EventEmitter implements IGrid {
             return;
         }
 
-        let criticalsLeft: number = amount > this.width * this.height ? this.width * this.height : amount;
-        let chosenCriticals: Position[] = [];
+        let criticalLeft: number = amount > this.width * this.height ? this.width * this.height : amount;
+        const chosenCritical: Position[] = [];
 
         do {
             let randomPosition: Position = Position.of(Math.floor(Math.random() * this.width), Math.floor(Math.random() * this.height));
 
-            if (!chosenCriticals.map((position: Position) => position.checksum).includes(randomPosition.checksum)) {
-                chosenCriticals.push(randomPosition);
-                criticalsLeft--;
+            if (!chosenCritical.map((position: Position) => position.checksum).includes(randomPosition.checksum)) {
+                chosenCritical.push(randomPosition);
+                criticalLeft--;
             }
 
-        } while (criticalsLeft > 0);
+        } while (criticalLeft > 0);
 
-        let chosenCriticalsCheck: String[] = chosenCriticals.map((position: Position) => position.checksum);
+        let chosenCriticalCheck: String[] = chosenCritical.map((position: Position) => position.checksum);
 
         this.iterateXtoY((position: Position) => {
             let piece: Piece = this.getPieceByPosition(position);
 
-            if (chosenCriticalsCheck.includes(piece?.gridPosition?.checksum)) {
+            if (chosenCriticalCheck.includes(piece?.gridPosition?.checksum)) {
                 piece.critical = true;
             } else {
                 piece.critical = false;
@@ -176,8 +176,8 @@ export class Grid extends EventEmitter implements IGrid {
 
         do {
             this.sideSize++;
-            horizontalCenterPadding = canvas.playfield.x - (this.width * this.sideSize) - (this.width * canvas.padding) - canvas.padding;
-            verticalCenterPadding = canvas.playfield.y - canvas.uiData.topUiSize - canvas.uiData.bottomUiSize - (this.height * this.sideSize) - (this.height * canvas.padding) - canvas.padding;
+            horizontalCenterPadding = canvas.playField.x - (this.width * this.sideSize) - (this.width * canvas.padding) - canvas.padding;
+            verticalCenterPadding = canvas.playField.y - canvas.uiData.topUiSize - canvas.uiData.bottomUiSize - (this.height * this.sideSize) - (this.height * canvas.padding) - canvas.padding;
 
             horizontalCenterPadding -= (canvas.itemSideSize + canvas.margin) * 2
 
@@ -200,7 +200,7 @@ export class Grid extends EventEmitter implements IGrid {
                 marginBottom = currentYMargin + this.sideSize;
             }
 
-            this.getCellbyPosition(position).canvasPosition = Position.of(currentXMargin, currentYMargin);
+            this.getCellByPosition(position).canvasPosition = Position.of(currentXMargin, currentYMargin);
         });
 
         Canvas.getInstance().gridData = {
@@ -238,7 +238,7 @@ export class Grid extends EventEmitter implements IGrid {
         let has4x4: boolean = this.runSnapshot?.player?.passive?.name === '4x4';
 
         this.iterateYtoX((position: Position) => {
-            let cell = this.getCellbyPosition(position);
+            let cell = this.getCellByPosition(position);
 
             if (cell.piece) {
                 let piece: Piece = cell.piece;
@@ -248,7 +248,7 @@ export class Grid extends EventEmitter implements IGrid {
                 let sameShape: boolean = true;
                 let increment: number = 1;
                 while (sameShape && (increment + position.x) < this.width) {
-                    let nextPiece: Piece = this.getNeighbourCell(cell, increment, 0).piece;
+                    let nextPiece: Piece = this.getNeighborCell(cell, increment, 0).piece;
                     sameShape = nextPiece && piece.shape.id === nextPiece.shape.id;
                     if (sameShape) {
                         horizontalMatch.push(nextPiece);
@@ -261,7 +261,7 @@ export class Grid extends EventEmitter implements IGrid {
                 increment = 1;
                 let verticalMatch: Piece[] = [piece];
                 while (sameShape && increment + position.y < this.height) {
-                    let nextPiece: Piece = this.getNeighbourCell(cell, 0, increment).piece;
+                    let nextPiece: Piece = this.getNeighborCell(cell, 0, increment).piece;
                     sameShape = nextPiece && piece.shape.id === nextPiece.shape.id;
                     if (sameShape) {
                         verticalMatch.push(nextPiece);
@@ -271,10 +271,10 @@ export class Grid extends EventEmitter implements IGrid {
 
                 const minSize: number = has4x4 ? 3 : 2;
 
-                let omniMatch: Piece[] = [...(horizontalMatch.length > minSize ? horizontalMatch : []), ...(verticalMatch.length > minSize ? verticalMatch : [])];
+                let multiMatch: Piece[] = [...(horizontalMatch.length > minSize ? horizontalMatch : []), ...(verticalMatch.length > minSize ? verticalMatch : [])];
 
-                if (omniMatch.length) {
-                    matches.push(omniMatch);
+                if (multiMatch.length) {
+                    matches.push(multiMatch);
                 }
             }
         });
@@ -385,9 +385,9 @@ export class Grid extends EventEmitter implements IGrid {
                             generatedPiece = Piece.generateRandomPiece(this.cells[x][0].gridPosition, this.runSnapshot);
 
                             let lowerMostPosition: Position = this.getNextAvailablePosition(generatedPiece.gridPosition);
-                            let nextCell: Cell = this.getCellbyPosition(lowerMostPosition.addY(1));
+                            let nextCell: Cell = this.getCellByPosition(lowerMostPosition.addY(1));
                             if (nextCell?.piece?.shape?.id === generatedPiece.shape.id) {
-                                nextCell = this.getCellbyPosition(nextCell.gridPosition.addY(1));
+                                nextCell = this.getCellByPosition(nextCell.gridPosition.addY(1));
                                 if (nextCell?.piece?.shape?.id === generatedPiece.shape.id) {
                                     isVerticalValid = false;
                                 }
@@ -420,8 +420,8 @@ export class Grid extends EventEmitter implements IGrid {
             return false;
         }
 
-        if (this.runSnapshot.player.itemData.omniMoves > 0) {
-            this.emit('OmniMoveDone')
+        if (this.runSnapshot.player.itemData.fullReachMoves > 0) {
+            this.emit('FullReachMoveDone')
         } else {
             if (!this.canReach(position1, position2, this.runSnapshot.player.itemData.reach, this.runSnapshot.player.itemData.diagonals)) {
                 return false;
@@ -479,8 +479,8 @@ export class Grid extends EventEmitter implements IGrid {
 
 
     getSwapDataFromPositions(position1: Position, position2: Position): SwapData {
-        let cell1: Cell = this.getCellbyPosition(position1);
-        let cell2: Cell = this.getCellbyPosition(position2);
+        let cell1: Cell = this.getCellByPosition(position1);
+        let cell2: Cell = this.getCellByPosition(position2);
         let piece1: Piece | undefined = this.getPieceByPosition(position1)?.renewPosition(position2);
         let piece2: Piece | undefined = this.getPieceByPosition(position2)?.renewPosition(position1);
         return { piece1, piece2, cell1, cell2 };
@@ -739,7 +739,7 @@ export class Grid extends EventEmitter implements IGrid {
         });
     }
 
-    getCellbyPosition(position: Position): Cell | undefined {
+    getCellByPosition(position: Position): Cell | undefined {
         if (
             position.x >= 0 &&
             position.x < this.width &&
@@ -768,7 +768,7 @@ export class Grid extends EventEmitter implements IGrid {
         return undefined;
     }
 
-    getNeighbourCell(cell: Cell, xOffset: number = 0, yOffset: number = 0): Cell {
+    getNeighborCell(cell: Cell, xOffset: number = 0, yOffset: number = 0): Cell {
         let absoluteX: number = cell.gridPosition.x + xOffset;
         let absoluteY: number = cell.gridPosition.y + yOffset;
 
@@ -787,7 +787,7 @@ export class Grid extends EventEmitter implements IGrid {
 
         if (validatedSwap) {
             const anotherFairTradeStack: number = this.runSnapshot.player.hasItem('Another Fair Trade')
-            if (anotherFairTradeStack && this.runSnapshot.player.itemData.omniMoves <= 0) {
+            if (anotherFairTradeStack && this.runSnapshot.player.itemData.fullReachMoves <= 0) {
                 const triggerChance: number = Math.random();
                 if (triggerChance < anotherFairTradeStack * 0.10) {
                     this.emit('AnotherFairTrade', Math.random() > 0.5)
@@ -795,7 +795,7 @@ export class Grid extends EventEmitter implements IGrid {
             }
 
             const fairTradeStack: number = this.runSnapshot.player.hasItem('Fair Trade')
-            if (fairTradeStack && this.runSnapshot.player.itemData.omniMoves <= 0) {
+            if (fairTradeStack && this.runSnapshot.player.itemData.fullReachMoves <= 0) {
                 let valid = true;
                 const triggerChance: number = Math.random();
                 if (triggerChance < fairTradeStack * 0.10) {

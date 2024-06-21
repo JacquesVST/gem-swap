@@ -100,7 +100,7 @@ export class Run extends EventEmitter implements IRun {
 
         this.on('Player:Healed', (heal: number) => {
             this.updateHealth();
-            TextController.getInstance().playerHealedAnimaiton(heal);
+            TextController.getInstance().playerHealedAnimation(heal);
         })
 
         this.on('Player:PlayerDied', () => {
@@ -209,7 +209,7 @@ export class Run extends EventEmitter implements IRun {
             }
 
             if (stage instanceof ItemStage) {
-                this.newPercDialog(() => {
+                this.newRewardDialog(() => {
                     this.sounds['item']?.play();
                     this.emit('AllowNextStage');
                 });
@@ -279,7 +279,7 @@ export class Run extends EventEmitter implements IRun {
 
         this.on('Grid:MoveDone', () => {
             if (this.combo > 0) {
-                this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
+                this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCritical : 0));
             } else {
                 this.map.grid.isUnstable = false;
             }
@@ -291,7 +291,7 @@ export class Run extends EventEmitter implements IRun {
         });
 
         this.on('Grid:MatchesRemoved:Loop', (matches: Piece[][]) => {
-            this.processMacthList(matches);
+            this.processMatchList(matches);
         });
 
         this.on('Grid:SwapValidated', (valid: boolean) => {
@@ -308,7 +308,7 @@ export class Run extends EventEmitter implements IRun {
 
         this.on('Grid:GridStabilized:Init', () => {
             this.pauseTimerAnimation = false
-            this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCrits : 0));
+            this.emit('ApplyCritical', this.player.critical + (this.map.isBoss ? this.player.itemData.bossCritical : 0));
             this.updateTopProgressBars();
             this.map.debugEnemies();
 
@@ -330,7 +330,7 @@ export class Run extends EventEmitter implements IRun {
 
         this.on('Grid:MatchesRemoved:GridCleared:NextStage', () => {
             if (this.map.stage instanceof MiniBossStage) {
-                this.newPercDialog(() => {
+                this.newRewardDialog(() => {
                     this.sounds['item']?.play();
 
                     this.updateTopProgressBars();
@@ -415,7 +415,7 @@ export class Run extends EventEmitter implements IRun {
             this.possibleShapes.forEach((shape: Shape) => {
                 if (shape.id === id) {
                     shape.itemData.bonusDamage += bonus;
-                    this.player.itemData.colorDamageBosts[shape.id] = shape
+                    this.player.itemData.colorDamageBoosts[shape.id] = shape
                 }
             });
         });
@@ -435,8 +435,8 @@ export class Run extends EventEmitter implements IRun {
 
             this.possibleShapes.forEach((shape: Shape) => {
                 shape.itemData.bonusDamage = 0;
-                if (this.player.itemData.colorDamageBosts[shape.id]?.itemData?.bonusDamage) {
-                    this.player.itemData.colorDamageBosts[shape.id].itemData.bonusDamage = 0;
+                if (this.player.itemData.colorDamageBoosts[shape.id]?.itemData?.bonusDamage) {
+                    this.player.itemData.colorDamageBoosts[shape.id].itemData.bonusDamage = 0;
                 }
             });
 
@@ -485,7 +485,7 @@ export class Run extends EventEmitter implements IRun {
                 if (params.isRelic) {
                     this.newRandomDropDialog(params.isRelic, params.rarities, params.callback);
                 } else {
-                    this.newPercDialog(params.callback);
+                    this.newRewardDialog(params.callback);
                 }
             }
 
@@ -493,7 +493,7 @@ export class Run extends EventEmitter implements IRun {
                 this.newShopDialog(params.selectCallback, params.closeCallback);
             }
 
-            if (dialog.type === DialogType.SKIPPABLE_ITEM) {
+            if (dialog.type === DialogType.ITEM_SKIP) {
                 if (params.initial) {
                     this.newInitialItemDialog();
                 } else {
@@ -534,7 +534,7 @@ export class Run extends EventEmitter implements IRun {
     }
 
     updateMoves(): void {
-        if (this.player.hasItem('2 Crits, 1 Move')) {
+        if (this.player.hasItem('2 Critical, 1 Move')) {
             this.player.itemData.bonusMoves = Math.floor(this.player.critical / 2)
         }
         this.emit('UpdateProgressBar', ProgressBarIndexes.MOVES, ProgressBarController.yourMovesBar(this.player.totalMoves, this.player.moves));
@@ -811,7 +811,7 @@ export class Run extends EventEmitter implements IRun {
         }
     }
 
-    processMacthList(matches: Piece[][]): void {
+    processMatchList(matches: Piece[][]): void {
         if (this.combo === 0) {
             let shapeIds: string[] = [];
 
@@ -899,7 +899,7 @@ export class Run extends EventEmitter implements IRun {
 
         if (Math.random() < (this.player.criticalChance / 100)) {
             criticalInMatch = true;
-            if (this.player?.passive?.name === 'Natural Crit') {
+            if (this.player?.passive?.name === 'Natural Critical') {
                 damageMultiplier = damageMultiplier * 1.1;
             }
         }
@@ -930,7 +930,7 @@ export class Run extends EventEmitter implements IRun {
         }
 
         if (criticalInMatch) {
-            this.sounds['crit']?.play();
+            this.sounds['critical']?.play();
         } else {
             this.sounds['match']?.play();
         }
@@ -950,8 +950,8 @@ export class Run extends EventEmitter implements IRun {
         }
 
         if (match?.length) {
-            let cell1: Cell = this.map.grid.getCellbyPosition(match[0].gridPosition);
-            let cell2: Cell = this.map.grid.getCellbyPosition(match[match.length - 1].gridPosition);
+            let cell1: Cell = this.map.grid.getCellByPosition(match[0].gridPosition);
+            let cell2: Cell = this.map.grid.getCellByPosition(match[match.length - 1].gridPosition);
             let position: Position = cell1.canvasPosition.average(cell2.canvasPosition);
 
             TextController.getInstance().damageAnimation(additiveScore, criticalInMatch, position, match[0]?.shape);
@@ -1120,7 +1120,7 @@ export class Run extends EventEmitter implements IRun {
                 'Enemy Loot',
                 'You may take it',
                 ItemDialogOption.itemListToDialogOption(items, this, callback),
-                DialogType.SKIPPABLE_ITEM,
+                DialogType.ITEM_SKIP,
                 () => {
                     this.player.addGold(items[0].rarity === 'Common' ? 10 : 25);
                     if (callback) {
@@ -1139,7 +1139,7 @@ export class Run extends EventEmitter implements IRun {
         DialogController.getInstance().dialogs.unshift(dialog);
     }
 
-    newPercDialog(callback: () => void, withRelic: boolean = false): void {
+    newRewardDialog(callback: () => void, withRelic: boolean = false): void {
         let itemList: Item[] = Item.generateItemsBasedOnRarity(
             withRelic ? this.runConfig.item.itemOptions - 1 : this.runConfig.item.itemOptions,
             ItemPools.defaultPool(this),
@@ -1207,7 +1207,7 @@ export class Run extends EventEmitter implements IRun {
             'Pick a starting item',
             'Make your run different from the last',
             ItemDialogOption.itemListToDialogOption(itemList, this, () => this.emit('InitialItemSelected')),
-            DialogType.SKIPPABLE_ITEM,
+            DialogType.ITEM_SKIP,
             () => this.emit('InitialItemSelected')
         );
 
@@ -1236,7 +1236,7 @@ export class Run extends EventEmitter implements IRun {
             'Select a passive ability to build around',
             'You can switch freely before starting the run',
             options,
-            DialogType.SKIPPABLE_ITEM,
+            DialogType.ITEM_SKIP,
             () => { dialogController.emit('PassiveChosen', undefined) },
         );
 

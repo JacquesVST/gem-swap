@@ -30,7 +30,7 @@ export class DragController extends EventEmitter {
     configureListeners(): void {
         this.on('Main:MouseClicked:Drag', (position: Position, hasDialogOpen: boolean) => {
             if (!hasDialogOpen && this.currentDragAnimation) {
-                this.currentDragAnimation.relativePositon = position;
+                this.currentDragAnimation.relativePosition = position;
             }
         })
     }

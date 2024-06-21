@@ -12,7 +12,7 @@ export interface ICanvas {
     padding: number;
     itemSideSize: number
     windowSize: IPosition;
-    playfield: IPosition;
+    playField: IPosition;
     mousePosition: IPosition;
     uiData: IUiData;
     gridData: IGridData;

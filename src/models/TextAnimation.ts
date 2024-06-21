@@ -22,8 +22,8 @@ export class TextAnimation implements IText {
     relativeOpacitySpeed: number;
 
     initialPosition: Position = Position.ORIGIN;
-    relativePositon: Position = Position.ORIGIN;
-    relativePositonSpeed: Position = Position.ORIGIN;
+    relativePosition: Position = Position.ORIGIN;
+    relativePositionSpeed: Position = Position.ORIGIN;
 
     constructor(text: string, color: Color, frames: number, initialPosition: Position, relativePositon: Position, initialLinearSize: number = 20, relativeLinearSize: number = 0) {
         this.id = generateId();
@@ -33,7 +33,7 @@ export class TextAnimation implements IText {
         this.frames = frames;
 
         this.initialPosition = initialPosition;
-        this.relativePositon = relativePositon;
+        this.relativePosition = relativePositon;
 
         this.initialLinearSize = initialLinearSize;
         this.relativeLinearSize = relativeLinearSize;
@@ -46,8 +46,8 @@ export class TextAnimation implements IText {
         this.relativeOpacitySpeed = -200 / this.frames;
         this.relativeOpacity = 0
 
-        this.relativePositonSpeed = this.relativePositon.divide(this.frames);
-        this.relativePositon = Position.ORIGIN
+        this.relativePositionSpeed = this.relativePosition.divide(this.frames);
+        this.relativePosition = Position.ORIGIN
 
         this.relativeLinearSizeSpeed = this.relativeLinearSize / this.frames;
         this.relativeLinearSize = 0
@@ -66,15 +66,15 @@ export class TextAnimation implements IText {
         p5.textAlign(p5.CENTER, p5.CENTER);
         p5.text(
             this.text,
-            this.initialPosition.x + this.relativePositon.x,
-            this.initialPosition.y + this.relativePositon.y
+            this.initialPosition.x + this.relativePosition.x,
+            this.initialPosition.y + this.relativePosition.y
         );
         p5.noStroke();
         this.updateAnimation();
     }
 
     updateAnimation(): void {
-        this.relativePositon = this.relativePositon.sum(this.relativePositonSpeed);
+        this.relativePosition = this.relativePosition.sum(this.relativePositionSpeed);
         this.relativeOpacity += this.relativeOpacitySpeed
         this.relativeLinearSize += this.relativeLinearSizeSpeed;
 

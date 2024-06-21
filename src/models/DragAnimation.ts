@@ -14,7 +14,7 @@ export class DragAnimation implements IDrag {
     frames: number;
 
     initialPosition: Position;
-    relativePositon: Position;
+    relativePosition: Position;
 
     initialOpacity: number;
     relativeOpacity: number;
@@ -37,8 +37,8 @@ export class DragAnimation implements IDrag {
     draw(run: Run): void {
         const p5: P5 = Canvas.getInstance().p5;
 
-        if (this.relativePositon && this.relativePositon.checksum !== this.initialPosition.checksum) {
-            const color: Color = run.player.itemData.omniMoves > 0 ? Color.GREEN : Color.WHITE
+        if (this.relativePosition && this.relativePosition.checksum !== this.initialPosition.checksum) {
+            const color: Color = run.player.itemData.fullReachMoves > 0 ? Color.GREEN : Color.WHITE
             const opacity: number = this.initialOpacity + this.relativeOpacity;
 
             p5.strokeWeight(Canvas.getInstance().stroke);
@@ -46,7 +46,7 @@ export class DragAnimation implements IDrag {
             p5.fill(color.alpha(opacity).value);
 
             const size: number = Canvas.getInstance().gridData.cellSideSize / 3.5;
-            const dots: number = dottedLine(this.initialPosition, this.relativePositon, size, size * 1.25, p5);
+            const dots: number = dottedLine(this.initialPosition, this.relativePosition, size, size * 1.25, p5);
 
             if (dots !== run.dots && opacity === 255) {
                 run.dots = dots;

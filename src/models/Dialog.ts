@@ -54,7 +54,7 @@ export class Dialog implements IDialog {
     }
 
     get hasAdditionalButton(): boolean {
-        return this.type === DialogType.SHOP || this.type === DialogType.SKIPPABLE_ITEM || this.type === DialogType.INITIAL || this.type === DialogType.UPGRADES;
+        return this.type === DialogType.SHOP || this.type === DialogType.ITEM_SKIP || this.type === DialogType.INITIAL || this.type === DialogType.UPGRADES;
     }
 
     get optionsAsRunConfig(): RunConfig {
@@ -82,7 +82,7 @@ export class Dialog implements IDialog {
             ));
         }
 
-        if (this.type === DialogType.SKIPPABLE_ITEM) {
+        if (this.type === DialogType.ITEM_SKIP) {
             this.options.push(new DefaultDialogOption(
                 () => {
                     if (closeCallback) {
@@ -293,13 +293,13 @@ export class Dialog implements IDialog {
 
             const isMouseOver: boolean = option.limits.contains(canvas.mousePosition)
 
-            const opacityHightlight: number = (isMouseOver ? 255 : 200) + this.relativeOpacity
+            const opacityHighlight: number = (isMouseOver ? 255 : 200) + this.relativeOpacity
 
             if (!(option instanceof ItemDialogOption) && !(option instanceof PassiveDialogOption) && !(option instanceof RelicDialogOption)) {
 
                 startShadow(drawingContext);
 
-                fillFlat((option.disabled ? Color.DISABLED : option.color).alpha(opacityHightlight <= 0 ? 0 : opacityHightlight));
+                fillFlat((option.disabled ? Color.DISABLED : option.color).alpha(opacityHighlight <= 0 ? 0 : opacityHighlight));
                 p5.rect(
                     cumulativeMarginX,
                     cumulativeMarginY,
@@ -318,7 +318,7 @@ export class Dialog implements IDialog {
                 p5.textAlign(p5.CENTER, p5.CENTER)
 
                 const textMargin: number = cumulativeMarginY + (optionHeight / 2);
-                const mainOffset: number = (option.subsubtext || option.subtext ? -1 : 0) * canvas.margin;
+                const mainOffset: number = (option.detail || option.subText ? -1 : 0) * canvas.margin;
 
                 if (option.icon) {
                     fillStroke(Color.WHITE, opacity)
@@ -349,23 +349,23 @@ export class Dialog implements IDialog {
                     icon(Icon.RESET, Position.of(cumulativeMarginX + canvas.margin, textMargin + mainOffset));
                 }
 
-                if (option.subtext) {
-                    let subOffset: number = canvas.margin / 2 + (option.subsubtext ? 0 : 1) * (canvas.margin * 0.5);
+                if (option.subText) {
+                    let subOffset: number = canvas.margin / 2 + (option.detail ? 0 : 1) * (canvas.margin * 0.5);
 
                     fillStroke(Color.WHITE_1, opacity)
                     p5.textSize(canvas.uiData.fontSubText)
                     p5.text(
-                        insertLineBreaks(option.subtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(option.subtext), 0, option.subtext.length)),
+                        insertLineBreaks(option.subText, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(option.subText), 0, option.subText.length)),
                         cumulativeMarginX + (optionWidth / 2),
                         textMargin + subOffset
                     );
                 }
 
-                if (option.subsubtext) {
+                if (option.detail) {
                     fillStroke(Color.WHITE_1, opacity)
                     p5.textSize(canvas.uiData.fontSubText)
                     p5.text(
-                        insertLineBreaks(option.subsubtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(option.subsubtext), 0, option.subsubtext.length)),
+                        insertLineBreaks(option.detail, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(option.detail), 0, option.detail.length)),
                         cumulativeMarginX + (optionWidth / 2),
                         textMargin + (canvas.margin * 2)
                     );
@@ -395,31 +395,31 @@ export class Dialog implements IDialog {
 
                 } else {
                     let text: string;
-                    let subtext: string;
+                    let subText: string;
 
                     if (option.stage instanceof CommonEnemyStage) {
                         text = 'Common Stage';
-                        subtext = `${option.stage.enemies.length} enemies`;
+                        subText = `${option.stage.enemies.length} enemies`;
                     }
 
                     if (option.stage instanceof BossStage) {
                         text = 'Boss Stage';
-                        subtext = `${option.stage.enemies.length - 1} enemies and your final challenge`;
+                        subText = `${option.stage.enemies.length - 1} enemies and your final challenge`;
                     }
 
                     if (option.stage instanceof MiniBossStage) {
                         text = 'Mini Boss Stage';
-                        subtext = `${option.stage.enemies.length} Strong Enemies`;
+                        subText = `${option.stage.enemies.length} Strong Enemies`;
                     }
 
                     if (option.stage instanceof ItemStage) {
                         text = 'Item Stage';
-                        subtext = `A free item to help you`;
+                        subText = `A free item to help you`;
                     }
 
                     if (option.stage instanceof ShopStage) {
                         text = 'Shop Stage';
-                        subtext = `Take only what you can afford`;
+                        subText = `Take only what you can afford`;
                     }
 
                     const textMargin: number = cumulativeMarginY + (optionHeight / 2);
@@ -436,11 +436,11 @@ export class Dialog implements IDialog {
                         textMargin - canvas.margin
                     );
 
-                    if (subtext) {
+                    if (subText) {
                         fillStroke(Color.WHITE_1, opacity)
                         p5.textSize(canvas.uiData.fontSubText)
                         p5.text(
-                            insertLineBreaks(subtext, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(subtext), 0, subtext.length)),
+                            insertLineBreaks(subText, p5.map(optionWidth - canvas.margin, 0, p5.textWidth(subText), 0, subText.length)),
                             cumulativeMarginX + (optionWidth / 2),
                             textMargin + canvas.margin
                         );
@@ -449,7 +449,7 @@ export class Dialog implements IDialog {
             }
 
             if (option instanceof RelicDialogOption) {
-                const boxColor = option.detail === 'Yout Relic' ? Color.DISABLED : Color.BLUE;
+                const boxColor = option.detail === 'Your Relic' ? Color.DISABLED : Color.BLUE;
 
                 drawClickableBox(Position.of(cumulativeMarginX, cumulativeMarginY), Position.of(optionWidth, canvas.itemSideSize), boxColor);
 
@@ -531,7 +531,7 @@ export class Dialog implements IDialog {
             if (option instanceof PassiveDialogOption) {
                 (p5.drawingContext as CanvasRenderingContext2D).setLineDash([10, 10]);
 
-                p5.fill(Color.GRAY_3.alpha(opacityHightlight).value);
+                p5.fill(Color.GRAY_3.alpha(opacityHighlight).value);
                 p5.rect(
                     cumulativeMarginX,
                     cumulativeMarginY,
@@ -699,9 +699,9 @@ export class Dialog implements IDialog {
         );
 
         this.upgrade.resetLimits = Position.of(canvas.windowSize.x / 4 + canvas.padding, marginY + canvas.padding).toLimits(Position.of(buttonSideSize - canvas.padding * 2, buttonSideSize - canvas.padding * 2));
-        const hightlightReset: number = (this.upgrade.resetLimits.contains(canvas.mousePosition) ? this.initialOpacity : 200) + this.relativeOpacity
+        const highlightReset: number = (this.upgrade.resetLimits.contains(canvas.mousePosition) ? this.initialOpacity : 200) + this.relativeOpacity
 
-        fillFlat(Color.BLUE.alpha(hightlightReset))
+        fillFlat(Color.BLUE.alpha(highlightReset))
         p5.rect(
             canvas.windowSize.x / 4 + canvas.padding,
             marginY + canvas.padding,
@@ -712,7 +712,7 @@ export class Dialog implements IDialog {
         endShadow(drawingContext);
 
 
-        fillStroke(Color.WHITE, hightlightReset);
+        fillStroke(Color.WHITE, highlightReset);
         icon(Icon.RESET,
             Position.of(
                 canvas.windowSize.x / 4 + canvas.padding + (buttonSideSize - canvas.padding * 2) / 2,
@@ -745,11 +745,11 @@ export class Dialog implements IDialog {
 
             option.limitsSub = Position.of(marginXLeft, marginY + offsetY).toLimits(Position.of(buttonSideSize, buttonSideSize))
 
-            const hightlightMinus: number = (option.limitsSub.contains(canvas.mousePosition) ? this.initialOpacity : 200) + this.relativeOpacity
+            const highlightMinus: number = (option.limitsSub.contains(canvas.mousePosition) ? this.initialOpacity : 200) + this.relativeOpacity
 
             startShadow(drawingContext);
             p5.textAlign(p5.CENTER, p5.CENTER)
-            fillFlat(Color.RED.alpha(hightlightMinus))
+            fillFlat(Color.RED.alpha(highlightMinus))
             p5.rect(
                 marginXLeft,
                 marginY + offsetY,
@@ -784,9 +784,9 @@ export class Dialog implements IDialog {
 
             option.limitsAdd = Position.of(marginXRight - buttonSideSize, marginY + offsetY).toLimits(Position.of(buttonSideSize, buttonSideSize))
 
-            const hightlightPlus: number = (option.limitsAdd.contains(canvas.mousePosition) ? this.initialOpacity : 200) + this.relativeOpacity
+            const highlightPlus: number = (option.limitsAdd.contains(canvas.mousePosition) ? this.initialOpacity : 200) + this.relativeOpacity
 
-            fillFlat(Color.GREEN.alpha(hightlightPlus))
+            fillFlat(Color.GREEN.alpha(highlightPlus))
             p5.rect(
                 marginXRight - buttonSideSize,
                 marginY + offsetY,
@@ -939,14 +939,14 @@ export class RelicDialogOption extends DialogOption {
 
 export class DefaultDialogOption extends DialogOption {
     text: string;
-    subtext: string;
-    subsubtext: string;
+    subText: string;
+    detail: string;
 
-    constructor(action: (params?: any) => void, color: Color, text: string, subtext?: string, subsubtext?: string, icon?: Icon) {
+    constructor(action: (params?: any) => void, color: Color, text: string, subText?: string, detail?: string, icon?: Icon) {
         super(action, color, icon)
         this.text = text;
-        this.subtext = subtext;
-        this.subsubtext = subsubtext;
+        this.subText = subText;
+        this.detail = detail;
     }
 }
 

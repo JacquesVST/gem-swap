@@ -14,8 +14,8 @@ export interface IAnimatable {
     relativeOpacitySpeed?: number;
 
     initialPosition?: IPosition;
-    relativePositon?: IPosition;
-    relativePositonSpeed?: IPosition;
+    relativePosition?: IPosition;
+    relativePositionSpeed?: IPosition;
 
     initialSize?: IPosition;
     relativeSize?: IPosition;

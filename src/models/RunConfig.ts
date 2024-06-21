@@ -221,7 +221,7 @@ export class RunConfig implements IRunConfig {
                 this.map.shopStageChance += 10;
             }
 
-            if (passive?.name === 'Natural Crit') {
+            if (passive?.name === 'Natural Critical') {
                 this.player.criticalMultiplier += 75;
                 this.player.criticalChance += 5;
             }

@@ -21,9 +21,9 @@ export interface IDialogOption {
 export enum DialogType {
     CUSTOM_RUN,
     INITIAL,
+    ITEM_SKIP,
     ITEM,
     NAVIGATION,
     SHOP,
-    SKIPPABLE_ITEM,
     UPGRADES,
 }

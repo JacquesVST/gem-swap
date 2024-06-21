@@ -68,10 +68,10 @@ export class ProgressBar extends EventEmitter implements IProgressBar {
         startShadow(drawingContext);
 
         const percentageOfBar: number = (this.value + this.relativeLinearSize) / this.maxValue;
-        const maxBarSize: number = (canvas.playfield.x - (2 * canvas.margin));
+        const maxBarSize: number = (canvas.playField.x - (2 * canvas.margin));
         const finalElementSize: number = (maxBarSize * percentageOfBar) > maxBarSize ? maxBarSize : (maxBarSize * percentageOfBar);
 
-        this.limits = new Limits(Position.of(canvas.margin * 1.5, commonMargin - canvas.margin / 2), Position.of(canvas.playfield.x - canvas.margin * 1.5, commonMargin - canvas.margin / 2 + canvas.uiData.uiBarSize + canvas.margin))
+        this.limits = new Limits(Position.of(canvas.margin * 1.5, commonMargin - canvas.margin / 2), Position.of(canvas.playField.x - canvas.margin * 1.5, commonMargin - canvas.margin / 2 + canvas.uiData.uiBarSize + canvas.margin))
 
         if (this.limits.contains(canvas.mousePosition) && this.top) {
             p5.fill(Color.GRAY_3.alpha(200).value);

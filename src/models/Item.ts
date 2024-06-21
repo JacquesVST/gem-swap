@@ -137,12 +137,12 @@ export class ItemPools {
             new Item(
                 'Passive',
                 'Midas Touched The Walls',
-                '+1 Gold for matches with pieces on the extremities, +2 on crit',
+                '+1 Gold for matches with pieces on the extremities, +2 on critical',
                 () => { }
             ),
             new Item(
                 'Passive',
-                'Natural Crit',
+                'Natural Critical',
                 'Innate 5% critical chance on every match, +75% critical multiplier',
                 () => { }
             ),
@@ -199,9 +199,9 @@ export class ItemPools {
             new Item(
                 'Rare',
                 'Boss Preparation',
-                '+1 Crit and Move on a boss fight',
+                '+1 Critical and Move on a boss fight',
                 (() => {
-                    run.player.itemData.bossCrits += 1;
+                    run.player.itemData.bossCritical += 1;
                     run.player.itemData.bossMoves += 1;
                 }).bind(run),
                 Frequency.PASSIVE,
@@ -408,7 +408,7 @@ export class ItemPools {
             ),
             new Item(
                 'Common',
-                'Crit Chance',
+                'Critical Chance',
                 'Matches have +2% chance of being critical',
                 (() => {
                     run.player.criticalChance += 2;
@@ -416,16 +416,16 @@ export class ItemPools {
             ),
             new Item(
                 'Common',
-                'Extra Crit',
-                '+1 crit on grid',
+                'Extra Critical',
+                '+1 critical on grid',
                 (() => {
                     run.player.critical += 1;
                 }).bind(run)
             ),
             new Item(
                 'Common',
-                'Crit Multiplier',
-                '+50% crit multiplier',
+                'Critical Multiplier',
+                '+50% critical multiplier',
                 (() => {
                     run.player.criticalMultiplier += 50;
                 }).bind(run)
@@ -480,7 +480,7 @@ export class ItemPools {
                 'Teleport',
                 'Make a match anywhere',
                 (() => {
-                    run.emit('Item:AddOmniMove');
+                    run.emit('Item:AddFullReachMove');
                 }).bind(run),
                 Frequency.EVERY_STAGE,
                 undefined
@@ -564,8 +564,8 @@ export class ItemPools {
             ),
             new Item(
                 'Epic',
-                'Big Crit Boost',
-                '+2 crits on grid and +100% multiplier',
+                'Big Critical Boost',
+                '+2 critical on grid and +100% multiplier',
                 (() => {
                     run.player.criticalMultiplier += 100;
                     run.player.critical += 2;
@@ -585,7 +585,7 @@ export class ItemPools {
             ),
             new Item(
                 'Epic',
-                'Big Crit Chance',
+                'Big Critical Chance',
                 'Matches have +10% chance of being critical',
                 (() => run.player.criticalChance += 10).bind(run),
             ),
@@ -664,8 +664,8 @@ export class ItemPools {
             ),
             new Item(
                 'Epic',
-                '2 Crits, 1 Move',
-                'Extra move for every 2 Crits you have',
+                '2 Critical, 1 Move',
+                'Extra move for every 2 Critical you have',
                 (() => {
                     run.player.moves += Math.floor(run.player.critical / 2);
                     run.player.itemData.bonusMoves = Math.floor(run.player.critical / 2);

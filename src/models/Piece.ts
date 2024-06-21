@@ -20,8 +20,8 @@ export class Piece extends EventEmitter implements IPiece {
 
     frames: number = 0;
     initialPosition: Position = Position.ORIGIN;
-    relativePositon: Position = Position.ORIGIN;
-    relativePositonSpeed: Position = Position.ORIGIN;
+    relativePosition: Position = Position.ORIGIN;
+    relativePositionSpeed: Position = Position.ORIGIN;
 
     initialOpacity: number = 0;
     relativeOpacity: number = 0
@@ -54,36 +54,36 @@ export class Piece extends EventEmitter implements IPiece {
 
     renewPosition(position: IPosition): Piece {
         this.gridPosition = Position.of(position.x, position.y);
-        this.relativePositon = Position.ORIGIN
+        this.relativePosition = Position.ORIGIN
         return this;
     }
 
-    setupFallAnimation(frames: number, relativePositon: Position, params: FallPieceAnimationParams): void {
+    setupFallAnimation(frames: number, relativePosition: Position, params: FallPieceAnimationParams): void {
         this.params = params;
         this.frames = frames;
-        this.relativePositon = relativePositon;
+        this.relativePosition = relativePosition;
         this.calculateSpeed();
     }
 
     setupRemoveAnimation(frames: number, relativeOpacity: number, params: RemovePieceAnimationParams): void {
         this.params = params;
         this.frames = frames;
-        this.relativePositon = Position.ORIGIN;
+        this.relativePosition = Position.ORIGIN;
         this.relativeOpacity = relativeOpacity;
         this.calculateSpeed();
     }
 
-    setupSwapAnimation(frames: number, relativePositon: Position, params: SwapPieceAnimationParams): void {
+    setupSwapAnimation(frames: number, relativePosition: Position, params: SwapPieceAnimationParams): void {
         this.params = params;
         this.frames = frames;
-        this.relativePositon = relativePositon;
+        this.relativePosition = relativePosition;
         this.calculateSpeed();
     }
 
     calculateSpeed(): void {
         this.emit('StartedAnimation');
-        this.relativePositonSpeed = this.relativePositon.divide(this.frames)
-        this.relativePositon = Position.ORIGIN;
+        this.relativePositionSpeed = this.relativePosition.divide(this.frames)
+        this.relativePosition = Position.ORIGIN;
         this.relativeOpacitySpeed = this.relativeOpacity / this.frames;
         this.relativeOpacity = 0;
     }
@@ -98,8 +98,8 @@ export class Piece extends EventEmitter implements IPiece {
 
         fillStroke(this.shape.color, 255 - this.initialOpacity)
         polygon(
-            this.initialPosition.x + (this.cellSideSize / 2) + this.relativePositon.x,
-            this.initialPosition.y + (this.cellSideSize / 2) + this.relativePositon.y,
+            this.initialPosition.x + (this.cellSideSize / 2) + this.relativePosition.x,
+            this.initialPosition.y + (this.cellSideSize / 2) + this.relativePosition.y,
             (this.cellSideSize / 3) + this.relativeLinearSize,
             this.shape.sides,
             p5
@@ -112,8 +112,8 @@ export class Piece extends EventEmitter implements IPiece {
             p5.textSize(canvas.uiData.fontTitle);
             p5.text(
                 '!',
-                this.initialPosition.x + (this.cellSideSize / 2) + this.relativePositon.x,
-                this.initialPosition.y + (this.cellSideSize / 2) + this.relativePositon.y,
+                this.initialPosition.x + (this.cellSideSize / 2) + this.relativePosition.x,
+                this.initialPosition.y + (this.cellSideSize / 2) + this.relativePosition.y,
             );
         }
 
@@ -133,7 +133,7 @@ export class Piece extends EventEmitter implements IPiece {
         }
 
         if (this.frames) {
-            this.relativePositon = this.relativePositon.minus(this.relativePositonSpeed);
+            this.relativePosition = this.relativePosition.minus(this.relativePositionSpeed);
             this.initialOpacity += this.relativeOpacitySpeed;
 
             this.frames--;
@@ -144,8 +144,8 @@ export class Piece extends EventEmitter implements IPiece {
                 }
                 this.emit('AnimationEnded');
 
-                this.relativePositon = Position.ORIGIN;
-                this.relativePositonSpeed = Position.ORIGIN;
+                this.relativePosition = Position.ORIGIN;
+                this.relativePositionSpeed = Position.ORIGIN;
 
                 this.relativeOpacity = 0;
                 this.relativeOpacitySpeed = 0;

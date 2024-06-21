@@ -2,6 +2,7 @@ import * as P5 from "p5";
 import { Canvas } from "../controllers/Canvas";
 import { DialogController } from "../controllers/DialogController";
 import { EventEmitter } from "../controllers/EventEmitter";
+import { TextController } from "../controllers/TextController";
 import { Difficulty, Frequency, IDamageBoostTimerData, IDamageData, IPlayer, IPlayerItemData, IStat } from "../interfaces";
 import { drawItem, endShadow, fillFlat, fillStroke, rectWithStripes, startShadow } from "../utils/Draw";
 import { formatNumber, formatTimer, insertLineBreaks } from "../utils/General";
@@ -16,7 +17,6 @@ import { Relic } from "./Relic";
 import { Run } from "./Run";
 import { RunConfig } from "./RunConfig";
 import { Shape } from "./Shape";
-import { TextController } from "../controllers/TextController";
 
 export class Player extends EventEmitter implements IPlayer {
     attack: number;
@@ -50,15 +50,15 @@ export class Player extends EventEmitter implements IPlayer {
         activeItem2Limits: undefined,
         activeItemLimits: undefined,
         bonusMoves: 0,
-        bossCrits: 0,
+        bossCritical: 0,
         bossMoves: 0,
-        colorDamageBosts: {},
+        colorDamageBoosts: {},
         diagonals: false,
         goldAddCount: 0,
         hasShield: false,
         hasUsedShield: false,
         moveSaverChance: 0,
-        omniMoves: 0,
+        fullReachMoves: 0,
         passiveLimits: undefined,
         reach: 1,
         relicLimits: undefined,
@@ -201,8 +201,8 @@ export class Player extends EventEmitter implements IPlayer {
             this.hasStatsOpen = !this.hasStatsOpen;
         });
 
-        this.on('Run:Item:AddOmniMove', () => {
-            this.itemData.omniMoves++;
+        this.on('Run:Item:AddFullReachMove', () => {
+            this.itemData.fullReachMoves++;
         });
 
         this.on('Grid:GridStabilized:Init', () => {
@@ -247,8 +247,8 @@ export class Player extends EventEmitter implements IPlayer {
             this.xp += Math.floor(amount);
         });
 
-        this.on('Grid:OmniMoveDone', () => {
-            this.itemData.omniMoves--;
+        this.on('Grid:FullReachMoveDone', () => {
+            this.itemData.fullReachMoves--;
         });
 
         this.on('Run:MidasTouched', (gold: number) => {
@@ -860,18 +860,18 @@ export class Player extends EventEmitter implements IPlayer {
                     value: `${Math.floor(this.damageMultiplier)}%`,
                 },
                 {
-                    label: 'Crit Count',
+                    label: 'Critical Count',
                     value: `${formatNumber(this.critical)}`
                 },
                 {
-                    label: 'Crit Damage',
+                    label: 'Critical Damage',
                     value: `${Math.floor((this.criticalMultiplier - 100))}%`,
                 },
             ]
 
             if (this.criticalChance > 0) {
                 statsData.push({
-                    label: 'Crit Chance',
+                    label: 'Critical Chance',
                     value: `${Math.floor((this.criticalChance))}%`,
                 })
             }
@@ -903,7 +903,7 @@ export class Player extends EventEmitter implements IPlayer {
 
                         statsData.push({
                             label: item.name,
-                            value: `+${Math.floor(this.itemData.colorDamageBosts[item.name.split(' ')[0].toLowerCase()].itemData.bonusDamage)}`,
+                            value: `+${Math.floor(this.itemData.colorDamageBoosts[item.name.split(' ')[0].toLowerCase()].itemData.bonusDamage)}`,
                         })
                     }
                 })
@@ -999,10 +999,10 @@ export class Player extends EventEmitter implements IPlayer {
             let maxLength: number = itemShowcase.length > lengthOffSet ? lengthOffSet : itemShowcase.length;
 
             dimension.x = maxLength * sideSize + ((maxLength + 1) * canvas.margin);
-            margin.x = (canvas.playfield.x / 2) - (dimension.x / 2);
+            margin.x = (canvas.playField.x / 2) - (dimension.x / 2);
 
             dimension.y = (Math.ceil(itemShowcase.length / lengthOffSet) * sideSize) + ((Math.ceil(itemShowcase.length / lengthOffSet) + textMarginCount) * canvas.margin);
-            margin.y = (canvas.playfield.y / 2) - (dimension.y / 2);
+            margin.y = (canvas.playField.y / 2) - (dimension.y / 2);
 
             startShadow(drawingContext);
             fillFlat(Color.GRAY_2);
@@ -1025,7 +1025,7 @@ export class Player extends EventEmitter implements IPlayer {
             p5.textSize(canvas.uiData.fontTitle);
             p5.text(
                 'Inventory',
-                canvas.playfield.x / 2,
+                canvas.playField.x / 2,
                 margin.y + (textMarginCount * canvas.margin / 2)
             );
 
@@ -1176,7 +1176,7 @@ export interface PlayerItemData extends IPlayerItemData {
     activeItem2Limits: Limits;
     passiveLimits: Limits;
     relicLimits: Limits
-    colorDamageBosts: { [key: string]: Shape }
+    colorDamageBoosts: { [key: string]: Shape }
     damageBoostTimer: DamageBoostTimerData
 }
 

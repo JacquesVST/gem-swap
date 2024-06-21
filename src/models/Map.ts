@@ -80,7 +80,7 @@ export class Map extends EventEmitter implements IMap {
             this.grid.pullPieceDown(params);
         });
 
-        // Click usecase
+        // Click useCase
 
         this.on('Main:MouseClicked', (click: Position, run?: Run) => {
             if (!run || run.hasDialogOpen || run.player.hasInventoryOpen) {
@@ -94,7 +94,7 @@ export class Map extends EventEmitter implements IMap {
             let clickFound: boolean;
             this.grid.setRunSnapshot(run);
             this.grid.iterateXtoY((position: Position) => {
-                const cell: Cell = this.grid.getCellbyPosition(position);
+                const cell: Cell = this.grid.getCellByPosition(position);
                 const limits: Limits = new Limits(Position.of(cell.canvasPosition.x, cell.canvasPosition.y), Position.of(cell.canvasPosition.x + this.grid.sideSize, cell.canvasPosition.y + this.grid.sideSize))
 
                 if (limits.contains(click)) {
