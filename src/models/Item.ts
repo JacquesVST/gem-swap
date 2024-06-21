@@ -143,7 +143,7 @@ export class ItemPools {
             new Item(
                 'Passive',
                 'Natural Crit',
-                'Inate 5% critical chance on every match, +75% critical multiplier',
+                'Innate 5% critical chance on every match, +75% critical multiplier',
                 () => { }
             ),
             new Item(
@@ -409,7 +409,7 @@ export class ItemPools {
             new Item(
                 'Common',
                 'Crit Chance',
-                'Matches have +2% chance of critting',
+                'Matches have +2% chance of being critical',
                 (() => {
                     run.player.criticalChance += 2;
                 }).bind(run),
@@ -527,7 +527,7 @@ export class ItemPools {
             new Item(
                 'Rare',
                 'Shield',
-                'Block one letal hit',
+                'Block one lethal hit',
                 (() => {
                     run.player.itemData.hasShield = true;
                     run.player.itemData.hasUsedShield = false;
@@ -586,7 +586,7 @@ export class ItemPools {
             new Item(
                 'Epic',
                 'Big Crit Chance',
-                'Matches have +10% chance of critting',
+                'Matches have +10% chance of being critical',
                 (() => run.player.criticalChance += 10).bind(run),
             ),
         ];
